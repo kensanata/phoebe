@@ -31,7 +31,7 @@ Gemini sites, if servers allow this. Gemini Wiki, you can edit the "raw" pages.
 That is, at the bottom of a page you'll see a link to the "raw" page. If you
 follow it, you'll see the page content as plain text. You can submit a changed
 version of this text to the same URL using Titan. There is more information for
-developers available \[on Community Wiki\](https://communitywiki.org/wiki/Titan).
+developers available [on Community Wiki](https://communitywiki.org/wiki/Titan).
 
 ## Dependencies
 

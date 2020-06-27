@@ -703,9 +703,27 @@ sub serve_html {
   my $self = shift;
   my $id = shift;
   my $revision = shift;
-  my $text = $self->text($id, $revision);
   $self->success('text/html');
   $self->log(3, "Serving $id as HTML");
+  $self->html($id, $revision);
+}
+
+sub serve_html_via_http {
+  my $self = shift;
+  my $id = shift;
+  my $revision = shift;
+  $self->log(3, "Serving $id as HTML via HTTP");
+  say "HTTP/1.1 200 OK\r";
+  say "Content-Type: text/html\r";
+  say "\r";
+  $self->html($id, $revision);
+}
+
+sub html {
+  my $self = shift;
+  my $id = shift;
+  my $revision = shift;
+  my $text = $self->text($id, $revision);
   say "<!DOCTYPE html>";
   say "<html>";
   say "<head>";
@@ -976,6 +994,24 @@ sub valid {
   return 0;
 }
 
+sub headers {
+  my $self = shift;
+  my %result;
+  my ($key, $value);
+  while (<STDIN>) {
+    if (/^(\S+?): (.*?)\r$/) {
+      ($key, $value) = (lc($1), $2);
+      $result{$key} = $value;
+    } elsif (/^\s+(.*)\r$/) {
+      $result{$key} .= " $2";
+    } else {
+      last;
+    }
+  }
+  $self->log(4, "HTTP headers: " . join(", ", map { "$_ => '$result{$_}'" } keys %result));
+  return \%result;
+}
+
 sub process_request {
   my $self = shift;
   eval {
@@ -1045,6 +1081,9 @@ sub process_request {
       $self->serve_raw($1, $2);
     } elsif ($url =~ m!^gemini://$host(?::$port)?/html/([^/]*)(?:/(\d+))?$!) {
       $self->serve_html($1, $2);
+    } elsif (($id, $n) = $url =~ m!^GET /html/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
+	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+      $self->serve_html_via_http($id, $n);
     } elsif ($url =~ m!gemini://$host(?::$port)?/page/([^/]+)(?:/(\d+))?$!) {
       $self->serve_gemini($1, $2);
     } else {
@@ -1052,7 +1091,8 @@ sub process_request {
       print "40 Don't know how to handle $url\r\n";
     }
     $self->log(4, "Done");
-  }
+  };
+  $self->log(1, $@) if $@;
 }
 
 __DATA__

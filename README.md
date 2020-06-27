@@ -44,6 +44,9 @@ Perl libraries you need to install if you want to run Gemini wiki:
 - [Net::Server](https://metacpan.org/pod/Net::Server)
 - [URI::Escape](https://metacpan.org/pod/URI::Escape)
 
+We are also going to be using `curl` and `openssl` in these installation
+instructions.
+
 On Debian:
 
     sudo apt install \
@@ -52,79 +55,138 @@ On Debian:
       libfile-slurper-perl \
       libmodern-perl-perl \
       libnet-server-perl \
-      liburi-escape-xs-perl
+      liburi-escape-xs-perl \
+      curl openssl
 
-## Installing Gemini Wiki
+## Quickstart
 
-It implements [Net::Server](https://metacpan.org/pod/Net::Server) and thus all the options available to
-`Net::Server` are also available here. Additional options are available:
+Right now there aren't any releases. You just get the latest version from the
+repository and that's it. These instructions assume that you're going to create
+a new user in order to be safe.
 
-    wiki           - the path to the Oddmuse script
-    wiki_dir       - the path to the Oddmuse data directory
-    wiki_pages     - a page to show on the entry menu
-    cert_file      - the filename containing a certificate in PEM format
-    key_file       - the filename containing a private key in PEM format
+    sudo adduser --disabled-login --disabled-password gemini
+    sudo su gemini
+    cd
 
-There are many more options in the `Net::Server` documentation. This is
-important if you want to daemonize the server. You'll need to use `--pid_file`
-so that you can stop it using a script, `--setsid` to daemonize it,
-`--log_file` to write keep logs, and you'll need to set the user or group using
-`--user` or `--group` such that the server has write access to the data
-directory.
+Now you're in your home directory, `/home/gemini`. We're going to install
+things right here.
 
-For testing purposes, you can start with the following:
+    curl --output gemini-wiki.pl \
+      https://alexschroeder.ch/cgit/gemini-wiki/plain/gemini-wiki.pl?h=main
 
-    --port=2000
-        The port to listen to, defaults to 1965
-    --log_level=4
-        The log level to use, defaults to 2
-    --wiki_dir=/var/wiki
-        The wiki directory, defaults to the value of the "GEMINI_WIKI_DATA_DIR"
-        environment variable, or the "./wiki" subdirectory
-    --wiki_pages=HomePage
-    --wiki_pages=About
-        This adds pages to the main index; can be used multiple times
-    --cert_file=/var/lib/dehydrated/certs/alexschroeder.ch/fullchain.pem
-    --key_file=/var/lib/dehydrated/certs/alexschroeder.ch/privkey.pem
-        Gemini requires certificates. You can use C<make cert> to generate new
-        certificates! The default values are C<cert.pem> and C<key.pem>.
-    --help
-        Prints this message
-
-You need to provide PEM files containing certificate and private key. To create
-self-signed files, use the following (or use `make cert`):
+Since Gemini traffic is encrypted, we need to generate a certificate and a key.
+These are both stored in PEM files. To create these files, use the following:
 
     openssl req -new -x509 -nodes -out cert.pem -keyout key.pem
 
-Example invocation, using all the defaults:
+You should have three files, now: `gemini-wiki.pl`, `cert.pem`, and
+`key.pem`. That's enough to get started! Start the server:
 
-    ./gemini-wiki.pl
+    perl gemini-wiki.pl
 
-Run Gemini Wiki and test it from the command-line:
+This starts the server in the foreground. Open a second terminal and test it:
 
-    (sleep 1; echo gemini://localhost) \
-        | openssl s_client --quiet --connect localhost:1965 2>/dev/null
+    echo gemini://localhost \
+      | openssl s_client --quiet --connect localhost:1965 2>/dev/null
 
-You should see something like the following:
+You should see a Gemini page starting with the following:
 
     20 text/gemini; charset=UTF-8
-    Welcome to the Gemini Wiki.
+    Welcome to the Gemini version of this wiki.
+
+Success!! 😀 🚀🚀
+
+Let's create a new page using the Titan protocol, from the command line:
+
+    echo "Welcome to the wiki!" > test.txt
+    echo "Please be kind." >> test.txt
+    echo "titan://localhost/raw/"`date --iso-8601=date`";mime=text/plain;size="`wc --bytes < test.txt`";token=hello" \
+      | cat - test.txt | openssl s_client --quiet --connect localhost:1965 2>/dev/null
+
+You should get a nice redirect message, with an appropriate date.
+
+    30 gemini://localhost:1965/page/2020-06-27
+
+You can check the page, now (replacing the appropriate date):
+
+    echo gemini://localhost:1965/page/2020-06-27 \
+      | openssl s_client --quiet --connect localhost:1965 2>/dev/null
+
+You should get back a page that starts as follows:
+
+    20 text/gemini; charset=UTF-8
+    Welcome to the wiki!
+    Please be kind.
 
 ## Wiki Directory
 
-There are various files and subdirectories that will be created in your wiki
-directory.
+You home directory should now also contain a wiki directory called `wiki`. In
+it, you'll find a few more files:
 
-- `page` is a directory where the current pages are stored.
-- `keep` is a directory where older revisions of the pages are stored. If
-      you don't care about the older revisions, you can delete them. Surely
-      there is a command involving `find` and `rm` that you could run from a
-      `cron` job to do this.
-- `index` is a file listing all the pages. It is updated whenever a new
-      page is created, It will be regenerated if you delete it.
-- `changes.log` is a the log file of all changes.
-- `config` is an optional file containing Perl code where you can mess with
-      the code. See _Configuration_ below.
+- `page` is the directory with all the page files in it
+- `keep` is the directory with all the old revisions of pages in it – if
+      you've only made one change, then it won't exist, yet; and if you don't
+      care about the older revisions, you can delete them
+- `index` is a file containing all the files in your `page` directory for
+      quick access; if you create new files in the `page` directory, you should
+      delete the `index` file – dont' worry, it will get regenerated when
+      needed
+- `changes.log` is a file listing all the pages made to the wiki; if you
+      make changes to the files in the `page` directory, they aren't going to
+      be listed in this file and thus people will be confused by the changes you
+      made – your call (but in all fairness, if you're collaborating with others
+      you probably shouldn't do this)
+- `config` probably doesn't exist, yet; it is an optional file containing
+      Perl code where you can mess with the code (see _Configuration_ below)
+
+The server uses "access tokens" to check whether people are allowed to edit
+files. You could also call them passwords, if you want. They aren't associated
+with a username. By default, the only password is "hello". That's why the Titan
+command above contained "token=hello". 😊
+
+## Options
+
+The Gemini Wiki has a bunch of options, and it uses [Net::Server](https://metacpan.org/pod/Net::Server) in the
+background, which has even more options. Let's try to focus on the options you
+might want to use right away.
+
+Here's an example:
+
+    perl gemini-wiki.pl \
+      --wiki_token=Elrond \
+      --wiki_token=Thranduil \
+      --wiki_pages=Welcome \
+      --wiki_pages=About
+
+And here's some documentation:
+
+- `--wiki_token` is for the token that users editing pages have to provide;
+      the default is "hello"; you use this option multiple times and give
+      different users different passwords, if you want
+- `--wiki_pages` is an extra page to show in the main menu; you can use
+      this option multiple times
+- `--port` is the port to use; the default is 1965
+- `--wiki_dir` is the wiki data directory to use; the default is either the
+      value of the `GEMINI_WIKI_DATA_DIR` environment variable, or the "./wiki"
+      subdirectory
+- `--cert_file` is the certificate PEM file to use; the default is
+      "cert.pem"
+- `--key_file` is the private key PEM file to use; the default is
+      "key.pem"
+- `--log_level` is the log level to use, 0 is quiet, 1 is errors, 2 is
+      warnings, 3 is info, and 4 is debug; the default is 2
+
+If you want to start the Gemini Wiki as a daemon, the following options come in
+handy:
+
+- `--setsid` makes sure the Gemini Wiki runs as a daemon in the background
+- `--pid_file` is the file where the process id (pid) gets written once the
+      server starts up; this is useful if you run the server in the background
+      and you need to kill it
+- `--log_file` is the file to write logs into; the default is to write log
+      output to the standard error (stderr)
+- `--user` and `--group` might come in handy if you start the Gemini Wiki
+      using a different user
 
 ## Configuration
 

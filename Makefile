@@ -1,6 +1,9 @@
 start:
 	./gemini-wiki.pl
 
+README.md: gemini-wiki.pl
+	rm -f README.md && pod2readme --format markdown $<
+
 test:
 	prove t
 

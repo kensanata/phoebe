@@ -14,9 +14,84 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=encoding utf8
+
 =head1 Gemini Wiki
 
-This server serves a wiki as a gemini site.
+This server serves a wiki as a Gemini site.
+
+It does two things:
+
+=over
+
+=item It's a program that you run on a computer and other people connect to it
+      using their L<client|https://gemini.circumlunar.space/clients.html> in
+      order to read the pages on it.
+
+=item It's a wiki, which means that people can edit the pages without needing an
+      account. All they need is a client that speaks both
+      L<Gemini|https://gemini.circumlunar.space/> and Titan, and the password.
+      The default password is "hello". 😃
+
+=back
+
+=head2 How do you edit a Gemini Wiki?
+
+You need to use a Titan-enabled client.
+
+Known clients:
+
+=over
+
+=item L<Gemini Write|https://alexschroeder.ch/cgit/gemini-write/> is an
+      extension for the Emacs Gopher and Gemini client
+      L<Elpher|https://thelambdalab.xyz/elpher/>
+
+=item L<Gemini & Titan for Bash|https://alexschroeder.ch/cgit/gemini-titan/about/?h=main>
+      are two shell functions that allow you to download and upload files
+
+=back
+
+=head2 What is Titan?
+
+Titan is a companion protocol to Gemini: it allows clients to upload files to
+Gemini sites, if servers allow this. Gemini Wiki, you can edit the "raw" pages.
+That is, at the bottom of a page you'll see a link to the "raw" page. If you
+follow it, you'll see the page content as plain text. You can submit a changed
+version of this text to the same URL using Titan. There is more information for
+developers available [on Community Wiki](https://communitywiki.org/wiki/Titan).
+
+=head2 Dependencies
+
+Perl libraries you need to install if you want to run Gemini wiki:
+
+=over
+
+=item L<Algorithm::Diff>
+
+=item L<File::ReadBackwards>
+
+=item L<File::Slurper>
+
+=item L<Modern::Perl>
+
+=item L<Net::Server>
+
+=item L<URI::Escape>
+
+=back
+
+On Debian:
+
+    sudo apt install \
+      libalgorithm-diff-xs-perl \
+      libfile-readbackwards-perl \
+      libfile-slurper-perl \
+      libmodern-perl-perl \
+      libnet-server-perl \
+      liburi-escape-xs-perl
+
+=head2 Installing Gemini Wiki
 
 It implements L<Net::Server> and thus all the options available to
 C<Net::Server> are also available here. Additional options are available:
@@ -24,15 +99,15 @@ C<Net::Server> are also available here. Additional options are available:
     wiki           - the path to the Oddmuse script
     wiki_dir       - the path to the Oddmuse data directory
     wiki_pages     - a page to show on the entry menu
-    wiki_cert_file - the filename containing a certificate in PEM format
-    wiki_key_file  - the filename containing a private key in PEM format
+    cert_file      - the filename containing a certificate in PEM format
+    key_file       - the filename containing a private key in PEM format
 
-For many of the options, more information can be had in the C<Net::Server>
-documentation. This is important if you want to daemonize the server. You'll
-need to use C<--pid_file> so that you can stop it using a script, C<--setsid> to
-daemonize it, C<--log_file> to write keep logs, and you'll need to set the user
-or group using C<--user> or C<--group> such that the server has write access to
-the data directory.
+There are many more options in the C<Net::Server> documentation. This is
+important if you want to daemonize the server. You'll need to use C<--pid_file>
+so that you can stop it using a script, C<--setsid> to daemonize it,
+C<--log_file> to write keep logs, and you'll need to set the user or group using
+C<--user> or C<--group> such that the server has write access to the data
+directory.
 
 For testing purposes, you can start with the following:
 
@@ -45,27 +120,27 @@ For testing purposes, you can start with the following:
 	environment variable, or the "./wiki" subdirectory
     --wiki_pages=HomePage
     --wiki_pages=About
-	This adds a page to the main index; can be used multiple times
+	This adds pages to the main index; can be used multiple times
     --cert_file=/var/lib/dehydrated/certs/alexschroeder.ch/fullchain.pem
     --key_file=/var/lib/dehydrated/certs/alexschroeder.ch/privkey.pem
-        These two options are mandatory for TLS support, defaulting to cert.pem
-        and key.pem
+        Gemini requires certificates. You can use C<make cert> to generate new
+        certificates! The default values are C<cert.pem> and C<key.pem>.
     --help
 	Prints this message
 
 You need to provide PEM files containing certificate and private key. To create
-self-signed files, use the following:
+self-signed files, use the following (or use C<make cert>):
 
-    openssl req -new -x509 -days 365 -nodes -out \
-	    cert.pem -keyout key.pem
+    openssl req -new -x509 -nodes -out cert.pem -keyout key.pem
 
 Example invocation, using all the defaults:
 
     ./gemini-wiki.pl
 
-Run the script and test it:
+Run Gemini Wiki and test it from the command-line:
 
-    (sleep 1; echo gemini://localhost) | gnutls-cli --quiet localhost:1965 2>/dev/null
+    (sleep 1; echo gemini://localhost) \
+        | openssl s_client --quiet --connect localhost:1965 2>/dev/null
 
 You should see something like the following:
 
@@ -88,6 +163,8 @@ directory.
 
 =item C<index> is a file listing all the pages. It is updated whenever a new
       page is created, It will be regenerated if you delete it.
+
+=item C<changes.log> is a the log file of all changes.
 
 =item C<config> is an optional file containing Perl code where you can mess with
       the code. See I<Configuration> below.
@@ -226,7 +303,6 @@ via Gemini.
       return;
     }
 
-
 =cut
 
 package Gemini::Wiki;
@@ -236,7 +312,6 @@ use List::Util qw(first min);
 use MIME::Base64;
 use Modern::Perl '2018';
 use Pod::Text;
-use Term::ANSIColor;
 use URI::Escape;
 use Algorithm::Diff;
 use File::ReadBackwards;

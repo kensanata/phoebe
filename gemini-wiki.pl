@@ -496,6 +496,8 @@ sub serve_main_menu {
   say "";
 
   $self->print_link("Index of all pages", "do/index");
+  # a requirement of the GNU Affero General Public License
+  $self->print_link("Source code", "do/source");
   say "";
 }
 
@@ -1012,6 +1014,11 @@ sub process_request {
       $self->serve_blog();
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/index$!) {
       $self->serve_index();
+    } elsif ($url =~ m!^gemini://$host(?::$port)?/do/source$!) {
+      $self->success('text/plain; charset=UTF-8');
+      seek DATA, 0, 0;
+      local $/ = undef; # slurp
+      print <DATA>;
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/match$!) {
       print "10 Find page by name (Perl regexp)\r\n";
     } elsif ($query and $url =~ m!^gemini://$host(?::$port)?/do/match\?!) {
@@ -1047,3 +1054,5 @@ sub process_request {
     $self->log(4, "Done");
   }
 }
+
+__DATA__

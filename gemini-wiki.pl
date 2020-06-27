@@ -214,6 +214,10 @@ And here's some documentation:
 =item C<--wiki_pages> is an extra page to show in the main menu; you can use
       this option multiple times
 
+=item C<--host> is the hostname to serve; the default is C<localhost> – you
+      probably want to pick the name of your machine, if it is reachable from
+      the Internet
+
 =item C<--port> is the port to use; the default is 1965
 
 =item C<--wiki_dir> is the wiki data directory to use; the default is either the
@@ -249,6 +253,14 @@ handy:
       using a different user
 
 =back
+
+=head2 Limited, read-only HTTP support
+
+You can actually look at your wiki pages using a browser! But beware: these days
+browser will refuse to connect to sites that have self-signed certificates.
+You'll have to click buttons and make exceptions and all of that, or get your
+certificate from Let's Encrypt or the like. Anyway, it works in theory:
+C<https://localhost:1965/> should work, now!
 
 =head2 Configuration
 

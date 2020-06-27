@@ -165,6 +165,9 @@ And here's some documentation:
       different users different passwords, if you want
 - `--wiki_pages` is an extra page to show in the main menu; you can use
       this option multiple times
+- `--host` is the hostname to serve; the default is `localhost` – you
+      probably want to pick the name of your machine, if it is reachable from
+      the Internet
 - `--port` is the port to use; the default is 1965
 - `--wiki_dir` is the wiki data directory to use; the default is either the
       value of the `GEMINI_WIKI_DATA_DIR` environment variable, or the "./wiki"
@@ -187,6 +190,14 @@ handy:
       output to the standard error (stderr)
 - `--user` and `--group` might come in handy if you start the Gemini Wiki
       using a different user
+
+## Limited, read-only HTTP support
+
+You can actually look at your wiki pages using a browser! But beware: these days
+browser will refuse to connect to sites that have self-signed certificates.
+You'll have to click buttons and make exceptions and all of that, or get your
+certificate from Let's Encrypt or the like. Anyway, it works in theory:
+`https://localhost:1965/` should work, now!
 
 ## Configuration
 

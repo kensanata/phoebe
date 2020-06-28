@@ -500,18 +500,14 @@ sub port {
       || $self->{server}->{sockport};
 }
 
-sub base {
-  my $self = shift;
-  my $host = $self->host();
-  my $port = $self->port();
-  return "gemini://$host:$port/";
-}
-
 sub link {
   my $self = shift;
   my $id = shift;
+  my $host = $self->host();
+  my $port = $self->port();
   # don't encode the slash
-  return $self->base() . join("/", map { uri_escape_utf8($_) } split (/\//, $id));
+  return "gemini://$host:$port/"
+      . join("/", map { uri_escape_utf8($_) } split (/\//, $id));
 }
 
 sub link_html {
@@ -1190,7 +1186,6 @@ sub process_request {
     alarm(10); # timeout
     my $host = $self->host();
     my $port = $self->port();
-    my $base = $self->base();
     $self->log(4, "Serving $host:$port");
     my $url = <STDIN>; # no loop
     $url =~ s/\s+$//g; # no trailing whitespace
@@ -1234,7 +1229,7 @@ sub process_request {
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/new$!) {
       print "10 New page\r\n";
     } elsif ($query and $url =~ m!^gemini://$host(?::$port)?/do/new\?!) {
-      print "30 $base/raw/$query\r\n";
+      print "30 gemini://$host:$port/raw/$query\r\n";
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/changes$!) {
       $self->serve_changes();
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/rss$!) {

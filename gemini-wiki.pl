@@ -218,6 +218,10 @@ And here's some documentation:
 =item C<--wiki_pages> is an extra page to show in the main menu; you can use
       this option multiple times
 
+=item C<--wiki_mime_type> is a MIME type to allow for uploads; text/plain is
+      always allowed and doesn't need to be listed; you can also just list the
+      type without a subtype, eg. C<text> will allow all sorts of texts
+
 =item C<--host> is the hostname to serve; the default is C<localhost> – you
       probably want to pick the name of your machine, if it is reachable from
       the Internet
@@ -306,14 +310,14 @@ The following example illustrates this:
 
 package Gemini::Wiki;
 use Encode qw(encode_utf8 decode_utf8);
-use File::Slurper qw(read_text read_lines read_dir write_text);
+use File::Slurper qw(read_text read_binary read_lines read_dir write_text write_binary);
 use List::Util qw(first min);
-use MIME::Base64;
 use Modern::Perl '2018';
 use Pod::Text;
 use URI::Escape;
 use Algorithm::Diff;
 use File::ReadBackwards;
+use B;
 use base qw(Net::Server::Fork); # any personality will do
 
 # Gemini server variables you can set in the config file
@@ -348,6 +352,7 @@ sub default_values {
     host => 'localhost',
     port => 1965,
     wiki_token => ['hello'],
+    wiki_mime_type => [],
     wiki_dir => './wiki',
     wiki_main_page => '',
     wiki_page_size_limit => 100000,
@@ -367,6 +372,8 @@ sub options {
   $template->{wiki_token} = $prop->{wiki_token};
   $prop->{wiki_pages} ||= [];
   $template->{wiki_pages} = $prop->{wiki_pages};
+  $prop->{wiki_mime_type} ||= [];
+  $template->{wiki_mime_type} = $prop->{wiki_mime_type};
   $prop->{wiki_page_size_limit} ||= undef;
   $template->{wiki_page_size_limit} = \$prop->{wiki_page_size_limit};
 }
@@ -380,6 +387,7 @@ sub post_configure_hook {
   $self->log(3, "Token @{$self->{server}->{wiki_token}}");
   $self->log(3, "Main $self->{server}->{wiki_main_page}");
   $self->log(3, "Pages @{$self->{server}->{wiki_pages}}");
+  $self->log(3, "MIME types @{$self->{server}->{wiki_mime_type}}");
 
   # Note: if you use sudo to run gemini-server.pl, these options might not work!
   $self->log(4, "--wikir_dir says $self->{server}->{wiki_dir}");
@@ -954,6 +962,30 @@ sub text {
   return "This page does not yet exist.";
 }
 
+sub serve_file {
+  my $self = shift;
+  my $id = shift;
+  my $revision = shift;
+  $self->log(3, "Serve file $id");
+  my $dir = $self->{server}->{wiki_dir};
+  my $file = "$dir/file/$id";
+  my $meta = "$dir/meta/$id";
+  if (not -f $file) {
+    say "40 File not found\r";
+    return;
+  } elsif (not -f $meta) {
+    say "40 Metadata not found\r";
+    return;
+  }
+  my %meta = (map { split(/: /, $_, 2) } read_lines($meta));
+  if (not $meta{'content-type'}) {
+    say "59 Metadata corrupt\r";
+    return;
+  }
+  $self->success($meta{'content-type'});
+  print read_binary($file);
+}
+
 sub newest_first {
   my $self = shift;
   my ($date_a, $article_a) = $a =~ /^(\d\d\d\d-\d\d(?:-\d\d)? ?)?(.*)/;
@@ -972,12 +1004,55 @@ sub bogus_hash {
   return substr($code, 0, 4); # four numbers
 }
 
+sub write_file {
+  my $self = shift;
+  my $id = shift;
+  my $data = shift;
+  my $type = shift;
+  $self->log(3, "Writing file $id");
+  my $dir = $self->{server}->{wiki_dir};
+  mkdir $dir unless -d $dir;
+  my $file = "$dir/file/$id";
+  my $meta = "$dir/meta/$id";
+  if (-e $file) {
+    my $old = read_binary($file);
+    if ($old eq $data) {
+      $self->log(3, "$id is unchanged");
+      print "30 " . $self->link("page/$id") . "\r\n";
+      return;
+    }
+  }
+  my $log = "$dir/changes.log";
+  if (not open(my $fh, ">>:encoding(UTF-8)", $log)) {
+    $self->log(1, "Cannot write log $log");
+    print "59 Unable to write log: $!\r\n";
+    return;
+  } else {
+    my $peeraddr = $self->{server}->{'peeraddr'};
+    say $fh join("\x1f", scalar(time), "$id", 0, $self->bogus_hash($peeraddr));
+    close($fh);
+  }
+  mkdir "$dir/file" unless -d "$dir/file";
+  eval { write_binary($file, $data) };
+  if ($@) {
+    print "59 Unable to save $id: $@\r\n";
+    return;
+  }
+  mkdir "$dir/meta" unless -d "$dir/meta";
+  eval { write_text($meta, "content-type: $type\n") };
+  if ($@) {
+    print "59 Unable to save metadata for $id: $@\r\n";
+    return;
+  }
+  $self->log(3, "Wrote $id");
+  print "30 " . $self->link("file/$id") . "\r\n";
+}
+
 sub write {
   my $self = shift;
   my $id = shift;
-  my $token = shift;
   my $text = shift;
-  $self->log(3, "Writing $id");
+  $self->log(3, "Writing page $id");
   my $dir = $self->{server}->{wiki_dir};
   mkdir $dir unless -d $dir;
   my $file = "$dir/page/$id.gmi";
@@ -1053,10 +1128,12 @@ sub write_page {
     return;
   }
   my $type = $params->{mime};
+  my ($main_type) = split(/\//, $type, 1);
+  my @types = @{$self->{server}->{wiki_mime_type}};
   if (not $type) {
     print "59 Uploads require a MIME type\r\n";
     return;
-  } elsif ($type ne "text/plain") {
+  } elsif ($type ne "text/plain" and not grep(/^$type$/, @types) and not grep(/^$main_type$/, @types)) {
     print "59 This wiki does not allow $type\r\n";
     return;
   }
@@ -1077,11 +1154,11 @@ sub write_page {
   }
   if ($type ne "text/plain") {
     $self->log(3, "Writing $type to $id, $actual bytes");
-    $self->write($id, $token, "#FILE $type\n" . encode_base64($data));
+    $self->write_file($id, $data, $type);
     return;
   } elsif (utf8::decode($data)) {
     $self->log(3, "Writing $type to $id, $actual bytes");
-    $self->write($id, $token, $data);
+    $self->write($id, $data);
     return;
   } else {
     print "59 The text is invalid UTF-8\r\n";
@@ -1155,11 +1232,8 @@ sub process_request {
     my ($id, $n, $answer);
     if ($self->run_extensions($url)) {
       # config file goes first
-    } elsif ($url =~ m!^titan://$host(?::$port)?! and $path !~ /^\/raw\//) {
-      $self->log(3, "Cannot write $url");
-      print "59 This server only allows writing of raw pages\r\n";
     } elsif ($url =~ m!^titan://$host(?::$port)?!) {
-      if ($path !~ m!^/raw/([^/;=&]+(?:;\w+=[^;=&]+)+)!) {
+      if ($path !~ m!^(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!) {
 	print "59 The path $path is malformed.\r\n";
       } else {
 	my ($id, %params) = split(/[;=&]/, $1);
@@ -1204,6 +1278,8 @@ sub process_request {
       $self->serve_html(decode_utf8(uri_unescape($1)), $2);
     } elsif ($url =~ m!gemini://$host(?::$port)?/page/([^/]+)(?:/(\d+))?$!) {
       $self->serve_gemini(decode_utf8(uri_unescape($1)), $2);
+    } elsif ($url =~ m!gemini://$host(?::$port)?/file/([^/]+)?$!) {
+      $self->serve_file(decode_utf8(uri_unescape($1)), $2);
     } elsif (($id, $n) = $url =~ m!^GET / HTTP/1.[01]$!
 	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_main_menu_via_http(decode_utf8(uri_unescape($id)), $n);

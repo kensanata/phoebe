@@ -163,6 +163,9 @@ And here's some documentation:
 - `--wiki_token` is for the token that users editing pages have to provide;
       the default is "hello"; you use this option multiple times and give
       different users different passwords, if you want
+- `--wiki_main_page` is the page containing your header for the main page;
+      that's were you would put your ASCII art header, your welcome message, and
+      so on
 - `--wiki_pages` is an extra page to show in the main menu; you can use
       this option multiple times
 - `--host` is the hostname to serve; the default is `localhost` – you
@@ -206,8 +209,8 @@ This section describes some hooks you can use to customize your wiki using the
 
 - `@extensions` is a list of additional URLs you want the wiki to handle;
       return 1 if you handle a URL
-- `@main_menu` adds more links to the main menu that aren't simply
-      links to existing pages
+- `@main_menu` adds more lines to the main menu, possibly links that aren't
+      simply links to existing pages
 
 The following example illustrates this:
 

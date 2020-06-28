@@ -211,6 +211,10 @@ And here's some documentation:
       the default is "hello"; you use this option multiple times and give
       different users different passwords, if you want
 
+=item C<--wiki_main_page> is the page containing your header for the main page;
+      that's were you would put your ASCII art header, your welcome message, and
+      so on
+
 =item C<--wiki_pages> is an extra page to show in the main menu; you can use
       this option multiple times
 
@@ -345,6 +349,7 @@ sub default_values {
     port => 1965,
     wiki_token => ['hello'],
     wiki_dir => './wiki',
+    wiki_main_page => '',
     wiki_page_size_limit => 100000,
   };
 }
@@ -356,6 +361,8 @@ sub options {
   $self->SUPER::options($template);
   $prop->{wiki_dir} ||= undef;
   $template->{wiki_dir} = \$prop->{wiki_dir};
+  $prop->{wiki_main_page} ||= undef;
+  $template->{wiki_main_page} = \$prop->{wiki_main_page};
   $prop->{wiki_token} ||= [];
   $template->{wiki_token} = $prop->{wiki_token};
   $prop->{wiki_pages} ||= [];
@@ -371,6 +378,7 @@ sub post_configure_hook {
   $self->log(3, "Host " . ("@{$self->{server}->{host}}" || "*"));
   $self->log(3, "Port @{$self->{server}->{port}}");
   $self->log(3, "Token @{$self->{server}->{wiki_token}}");
+  $self->log(3, "Main $self->{server}->{wiki_main_page}");
   $self->log(3, "Pages @{$self->{server}->{wiki_pages}}");
 
   # Note: if you use sudo to run gemini-server.pl, these options might not work!
@@ -494,8 +502,13 @@ sub serve_main_menu {
   my $self = shift;
   $self->log(3, "Serving main menu");
   $self->success();
-  say "Welcome to the Gemini Wiki.";
-  say "";
+  my $page = $self->{server}->{wiki_main_page};
+  if ($page) {
+    say $self->text($page);
+  } else {
+    say "# Welcome to the Gemini Wiki!";
+    say "";
+  }
   $self->blog();
   for my $id (@{$self->{server}->{wiki_pages}}) {
     $self->print_link($id);

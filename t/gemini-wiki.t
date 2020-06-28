@@ -203,8 +203,8 @@ like($page, qr/2017-12-27.*2017-12-26.*2017-12-25/s,
 
 # rc
 $page = query_gemini("$base/do/changes");
-like($page, qr/^=> $base\/page\/Haiku Haiku \(current\)\r/m, "Current revision of Haiku in recent chanegs");
-like($page, qr/^=> $base\/page\/Haiku\/1 Haiku \(1\)\r/m, "Older revision of Haiku in recent chanegs");
+like($page, qr/^=> $base\/page\/Haiku Haiku \(current\) by /m, "Current revision of Haiku in recent chanegs");
+like($page, qr/^=> $base\/page\/Haiku\/1 Haiku \(1\) by /m, "Older revision of Haiku in recent chanegs");
 
 # extension
 

@@ -722,7 +722,7 @@ sub serve_changes {
     my %seen;
     for (1 .. 100) {
       last unless $_ = $fh->readline;
-      my ($ts, $id, $revision, $addr) = split(/\x1f/);
+      my ($ts, $id, $revision, $code) = split(/\x1f/);
       my $day = $self->day($ts);
       if ($day ne $last_day) {
 	say "## $day";
@@ -732,10 +732,18 @@ sub serve_changes {
       my $time = $self->time_of_day($ts);
       say $time if $time ne $last_time;
       if ($seen{$id}) {
-	$self->print_link("$id ($revision)", "page/$id/$revision");
+	if ($revision) {
+	  $self->print_link("$id ($revision) by $code", "page/$id/$revision");
+	} else {
+	  say "$id (file) by $code";
+	}
       } else {
 	$seen{$id} = 1;
-	$self->print_link("$id (current)", "page/$id");
+	if ($revision) {
+	  $self->print_link("$id (current) by $code", "page/$id");
+	} else {
+	  $self->print_link("$id (file) by $code", "file/$id");
+	}
       }
     }
   } else {

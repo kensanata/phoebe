@@ -548,7 +548,7 @@ sub serve_main_menu_via_http {
   if ($page) {
     $self->print_html($page);
   } else {
-    say "<p>Welcome to the Gemini Wiki.";
+    say "<h1>Welcome to the Gemini Wiki!</h1>";
   }
   $self->blog_html();
   say "<p>Important links:";

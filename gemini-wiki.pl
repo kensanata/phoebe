@@ -164,20 +164,29 @@ it, you'll find a few more files:
 
 =item C<page> is the directory with all the page files in it
 
-=item C<keep> is the directory with all the old revisions of pages in it – if
-      you've only made one change, then it won't exist, yet; and if you don't
-      care about the older revisions, you can delete them
-
 =item C<index> is a file containing all the files in your C<page> directory for
       quick access; if you create new files in the C<page> directory, you should
       delete the C<index> file – dont' worry, it will get regenerated when
       needed
 
+=item C<keep> is the directory with all the old revisions of pages in it – if
+      you've only made one change, then it won't exist, yet; and if you don't
+      care about the older revisions, you can delete them
+
+=item C<file> is the directory with all the uploaded files in it – if you
+      haven't uploaded any files, then it won't exist, yet; you must explicitly
+      allow MIME types for upload using the C<--wiki_mime_type> option
+
+=item C<meta> is the directory with all the meta data for uploaded files in it –
+      there should be a file here for every file in the C<file> directory; if
+      you create new files in the C<file> directory, you should create a
+      matching file here
+
 =item C<changes.log> is a file listing all the pages made to the wiki; if you
-      make changes to the files in the C<page> directory, they aren't going to
-      be listed in this file and thus people will be confused by the changes you
-      made – your call (but in all fairness, if you're collaborating with others
-      you probably shouldn't do this)
+      make changes to the files in the C<page> or C<file> directory, they aren't
+      going to be listed in this file and thus people will be confused by the
+      changes you made – your call (but in all fairness, if you're collaborating
+      with others you probably shouldn't do this)
 
 =item C<config> probably doesn't exist, yet; it is an optional file containing
       Perl code where you can mess with the code (see I<Configuration> below)

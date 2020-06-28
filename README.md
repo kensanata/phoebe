@@ -124,18 +124,25 @@ You home directory should now also contain a wiki directory called `wiki`. In
 it, you'll find a few more files:
 
 - `page` is the directory with all the page files in it
-- `keep` is the directory with all the old revisions of pages in it – if
-      you've only made one change, then it won't exist, yet; and if you don't
-      care about the older revisions, you can delete them
 - `index` is a file containing all the files in your `page` directory for
       quick access; if you create new files in the `page` directory, you should
       delete the `index` file – dont' worry, it will get regenerated when
       needed
+- `keep` is the directory with all the old revisions of pages in it – if
+      you've only made one change, then it won't exist, yet; and if you don't
+      care about the older revisions, you can delete them
+- `file` is the directory with all the uploaded files in it – if you
+      haven't uploaded any files, then it won't exist, yet; you must explicitly
+      allow MIME types for upload using the `--wiki_mime_type` option
+- `meta` is the directory with all the meta data for uploaded files in it –
+      there should be a file here for every file in the `file` directory; if
+      you create new files in the `file` directory, you should create a
+      matching file here
 - `changes.log` is a file listing all the pages made to the wiki; if you
-      make changes to the files in the `page` directory, they aren't going to
-      be listed in this file and thus people will be confused by the changes you
-      made – your call (but in all fairness, if you're collaborating with others
-      you probably shouldn't do this)
+      make changes to the files in the `page` or `file` directory, they aren't
+      going to be listed in this file and thus people will be confused by the
+      changes you made – your call (but in all fairness, if you're collaborating
+      with others you probably shouldn't do this)
 - `config` probably doesn't exist, yet; it is an optional file containing
       Perl code where you can mess with the code (see _Configuration_ below)
 
@@ -168,6 +175,9 @@ And here's some documentation:
       so on
 - `--wiki_pages` is an extra page to show in the main menu; you can use
       this option multiple times
+- `--wiki_mime_type` is a MIME type to allow for uploads; text/plain is
+      always allowed and doesn't need to be listed; you can also just list the
+      type without a subtype, eg. `text` will allow all sorts of texts
 - `--host` is the hostname to serve; the default is `localhost` – you
       probably want to pick the name of your machine, if it is reachable from
       the Internet

@@ -530,6 +530,7 @@ sub serve_main_menu {
 sub serve_main_menu_via_http {
   my $self = shift;
   $self->log(3, "Serving main menu via HTTP");
+  my $page = $self->{server}->{wiki_main_page};
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: text/html\r";
   say "\r";
@@ -537,10 +538,18 @@ sub serve_main_menu_via_http {
   say "<html>";
   say "<head>";
   say "<meta charset=\"utf-8\">";
-  say "<title>Gemini Wiki</title>";
+  if ($page) {
+    say "<title>$page</title>";
+  } else {
+    say "<title>Gemini Wiki</title>";
+  }
   say "</head>";
   say "<body>";
-  say "<p>Welcome to the Gemini Wiki.";
+  if ($page) {
+    $self->print_html($page);
+  } else {
+    say "<p>Welcome to the Gemini Wiki.";
+  }
   $self->blog_html();
   say "<p>Important links:";
   say "<ul>";
@@ -796,7 +805,7 @@ sub serve_html {
   my $revision = shift;
   $self->success('text/html');
   $self->log(3, "Serving $id as HTML");
-  $self->html($id, $revision);
+  $self->html_page($id, $revision);
 }
 
 sub serve_html_via_http {
@@ -807,14 +816,13 @@ sub serve_html_via_http {
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: text/html\r";
   say "\r";
-  $self->html($id, $revision);
+  $self->html_page($id, $revision);
 }
 
-sub html {
+sub html_page {
   my $self = shift;
   my $id = shift;
   my $revision = shift;
-  my $text = $self->text($id, $revision);
   say "<!DOCTYPE html>";
   say "<html>";
   say "<head>";
@@ -822,6 +830,16 @@ sub html {
   say "<title>$id</title>";
   say "</head>";
   say "<body>";
+  $self->print_html($id, $revision);
+  say "</body>";
+  say "</html>";
+}
+
+sub print_html {
+  my $self = shift;
+  my $id = shift;
+  my $revision = shift;
+  my $text = $self->text($id, $revision);
   my $list;
   my $code;
   for (split /\n/, $text) {
@@ -844,14 +862,17 @@ sub html {
       $text ||= $url;
       say "<li><a href=\"$url\">$text</a>";
       $list = 1;
+    } elsif (/^(#{1,6})\s*(.*)/) {
+      say "</ul>" if $list;
+      $list = 0;
+      my $level = length($1);
+      say "<h$level>$2</h$level>";
     } else {
       say "</ul>" if $list;
       $list = 0;
       say "<p>$_";
     }
   }
-  say "</body>";
-  say "</html>";
 }
 
 sub day {

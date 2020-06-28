@@ -1320,7 +1320,6 @@ sub process_request {
     }
     $self->log(4, "Done");
   };
-  $self->log(1, $@) if $@;
 }
 
 __DATA__

@@ -16,7 +16,7 @@
 use Modern::Perl;
 use Test::More;
 use IO::Socket::SSL;
-use File::Slurper qw(write_text);
+use File::Slurper qw(write_text read_binary);
 use utf8; # tests contain UTF-8 characters and it matters
 
 sub random_port {
@@ -88,6 +88,7 @@ if (!defined $pid) {
        "--port=$port",
        "--log_level=0", # set to 4 for verbose logging
        "--wiki_dir=$dir",
+       "--wiki_mime_type=image/jpeg",
        "--wiki_pages=Alex",
        "--wiki_pages=Berta",
        "--wiki_pages=Chris")
@@ -107,8 +108,8 @@ sub query_gemini {
     SSL_verify_mode => SSL_VERIFY_NONE)
       or die "Cannot construct client socket: $@";
 
-  $socket->print("$query\r\n");
-  $socket->print($text) if defined $text;
+  print $socket "$query\r\n";
+  print $socket $text if defined $text;
 
   undef $/; # slurp
   return <$socket>;
@@ -149,6 +150,19 @@ like($page, qr/^20 text\/gemini; charset=UTF-8\r\n$haiku/, "Haiku saved");
 
 $page = query_gemini("$base\/raw\/Haiku");
 like($page, qr/$haiku/m, "Raw text");
+
+# upload image
+
+my $data = read_binary("t/alex.jpg");
+my $size = length($data);
+$page = query_gemini("$titan/raw/Alex;size=$size;mime=image/png;token=hello", $data);
+# in this situation the client simply returns undef!?
+# like($page, qr/^59 This wiki does not allow image\/png$/, "Upload image with wrong MIME type");
+$page = query_gemini("$base/page/Alex");
+like($page, qr/This page does not yet exist/, "Save of unsupported MIME type failed");
+
+$page = query_gemini("$titan/raw/Alex;size=$size;mime=image/jpeg;token=hello", $data);
+like($page, qr/^30 $base\/file\/Alex\r/, "Upload image");
 
 # fake creation of some files for the blog
 

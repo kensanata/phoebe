@@ -964,6 +964,14 @@ sub newest_first {
 	  || ($a cmp $b));
 }
 
+sub bogus_hash {
+  my $self = shift;
+  my $str = shift;
+  my $num = unpack("L",B::hash($str)); # 32-bit integer
+  my $code = sprintf("%o", $num); # octal is 0-7
+  return substr($code, 0, 4); # four numbers
+}
+
 sub write {
   my $self = shift;
   my $id = shift;
@@ -1010,11 +1018,10 @@ sub write {
     return;
   } else {
     my $peeraddr = $self->{server}->{'peeraddr'};
-    say $fh join("\x1f", scalar(time), "$id", $revision + 1, $peeraddr);
+    say $fh join("\x1f", scalar(time), "$id", $revision + 1, $self->bogus_hash($peeraddr));
     close($fh);
     $revision = 1;
   }
-
   mkdir "$dir/page" unless -d "$dir/page";
   eval { write_text($file, $text) };
   if ($@) {

@@ -51,8 +51,8 @@ mkdir($dir);
 write_text("$dir/config", <<'EOT');
 package Gemini::Wiki;
 use Modern::Perl;
-our (@extensions, @main_menu_links);
-push(@main_menu_links, "=> gemini://localhost:1965/do/test Test");
+our (@extensions, @main_menu);
+push(@main_menu, "=> gemini://localhost:1965/do/test Test");
 push(@extensions, \&serve_test);
 sub serve_test {
   my $self = shift;

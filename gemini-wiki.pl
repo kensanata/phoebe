@@ -267,132 +267,36 @@ C<https://localhost:1965/> should work, now!
 This section describes some hooks you can use to customize your wiki using the
 C<config> file.
 
-=head3 @extensions
+=over
 
-C<@extensions> is a list of additional URLs you want the wiki to handle. One
-example to do this would be:
+=item C<@extensions> is a list of additional URLs you want the wiki to handle;
+      return 1 if you handle a URL
 
-    package Gemini::Wiki;
+=item C<@main_menu> adds more lines to the main menu, possibly links that aren't
+      simply links to existing pages
 
-    # shared with gemini-wiki.pl
-    our (@extensions);
+=back
 
-    push(@extensions, \&serve_other);
-
-    sub serve_other {
-      my $self = shift;
-      my $url = shift;
-      if ($url =~ m!^gemini://communitywiki.org:1965/(.*)!) {
-	say "30 gemini://communitywiki.org:1966/$1\r";
-	return 1;
-      }
-      return;
-    }
-
-The example above is from my setup where the C<alexschroeder.ch> and
-C<communitywiki.org> point to the same machine. On this machine, I have two
-Gemini servers running: one of them is serving port 1965 and the other is
-serving port 1966. If you visit C<communitywiki.org:1965> you're ending up on
-the Gemini server that serves C<alexschroeder.ch>. So what it does is when it
-sees the domain C<communitywiki.org>, it redirects you to
-C<communitywiki.org:1966>.
-
-=head3 @main_menu_links
-
-C<@main_menu_links> adds more links to the main menu that aren't simply links to
-existing pages. You probably want to use this together with the previous code to
-handle new URLs. The following code is how I make my photo galleries available
-via Gemini.
+The following example illustrates this:
 
     package Gemini::Wiki;
     use Modern::Perl;
-    use Mojo::JSON;
-    use Mojo::DOM;
-    use File::Slurper qw(read_text read_binary read_dir);
-
-    # shared with gemini-wiki.pl
-    our (@extensions, @main_menu_links);
-
-    # galleries
-    push(@extensions, \&galleries);
-
-    push(@main_menu_links, "=> gemini://alexschroeder.ch/do/gallery Galleries");
-
-    push(@extensions, \&galleries);
-
-    my $parent = "/home/alex/alexschroeder.ch/gallery";
-
-    sub galleries {
+    our (@extensions, @main_menu);
+    push(@main_menu, "=> gemini://localhost/do/test Test");
+    push(@extensions, \&serve_test);
+    sub serve_test {
       my $self = shift;
       my $url = shift;
-      if ($url =~ m!/do/gallery$!) {
-	$self->success();
-	$self->log(3, "Serving galleries");
-	say "# Galleries";
-	for my $dir (
-	  sort {
-	    my ($year_a, $title_a) = split(/-/, $a, 2);
-	    my ($year_b, $title_b) = split(/-/, $b, 2);
-	    return ($year_b <=> $year_a || $title_a cmp $title_b);
-	  } grep {
-	    -d "$parent/$_"
-	  } read_dir($parent)) {
-	  $self->print_link(ucfirst($dir), "do/gallery/$dir");
-	};
-	return 1;
-      } elsif (my ($dir) = $url =~ m!/do/gallery/([^/?]*)$!) {
-	if (not -d "$parent/$dir") {
-	  say "40 This is not actuall a gallery";
-	  return 1;
-	}
-	if (not -r "$parent/$dir/data.json") {
-	  say "40 This gallery does not contain a data.json file like the one created by sitelen-mute or fgallery";
-	  return 1;
-	}
-	my $bytes = read_binary("$parent/$dir/data.json");
-	if (not $bytes) {
-	  say "40 Cannot read the data.json file in this gallery";
-	  return 1;
-	}
-	my $data;
-	eval { $data = decode_json $bytes };
-	$self->log(1, "decode_json: $@") if $@;
-	if ($@ or not %$data) {
-	  say "40 Cannot decode the data.json file in this gallery";
-	  return 1;
-	}
-	$self->success();
-	$self->log(3, "Serving gallery $dir");
-	if (-r "$parent/$dir/index.html") {
-	  my $dom = Mojo::DOM->new(read_text("$parent/$dir/index.html"));
-	  $self->log(3, "Parsed index.html");
-	  my $title = $dom->at('*[itemprop="name"]');
-	  $title = $title ? $title->text : ucfirst($dir);
-	  say "# $title";
-	  my $description = $dom->at('*[itemprop="description"]');
-	  say $description->text if $description;
-	  say "## Images";
-	} else {
-	  say "# " . ucfirst($dir);
-	}
-	for my $image (@{$data->{data}}) {
-	  say join("\n", @{$image->{caption}}) if $image->{caption};
-	  $self->print_link("Thumbnail", "do/gallery/$dir/" . $image->{thumb}->[0]);
-	  $self->print_link("Image", "do/gallery/$dir/" . $image->{img}->[0]);
-	}
-	return 1;
-      } elsif (my ($file, $extension) = $url =~ m!/do/gallery/([^/?]*/(?:thumbs|imgs)/[^/?]*\.(jpe?g|png))$!i) {
-	if (not -r "$parent/$file") {
-	  say "40 Cannot read $file";
-	} else {
-	  $self->success($extension =~ /^png$/i ? "image/png" : "image/jpg");
-	  $self->log(3, "Serving image $file");
-	  print(read_binary("$parent/$file"));
-	}
+      my $host = $self->host();
+      my $port = $self->port();
+      if ($url =~ m!^gemini://$host(:$port)?/do/test$!) {
+	say "20 text/plain\r";
+	say "Test";
 	return 1;
       }
       return;
     }
+    1;
 
 =cut
 
@@ -409,7 +313,7 @@ use File::ReadBackwards;
 use base qw(Net::Server::Fork); # any personality will do
 
 # Gemini server variables you can set in the config file
-our (@extensions, @main_menu_links);
+our (@extensions, @main_menu);
 
 # Help
 if ($ARGV[0] and $ARGV[0] eq '--help') {
@@ -596,8 +500,8 @@ sub serve_main_menu {
   for my $id (@{$self->{server}->{wiki_pages}}) {
     $self->print_link($id);
   }
-  for my $link (@main_menu_links) {
-    say $link;
+  for my $line (@main_menu) {
+    say $line;
   }
   $self->print_link("Recent Changes", "do/changes");
   $self->print_link("Search matching page names", "do/match");
@@ -1009,8 +913,11 @@ sub text {
   my $self = shift;
   my $id = shift;
   my $revision = shift;
-  return read_text $self->{server}->{wiki_dir} . "/keep/$id/$revision.gmi" if $revision;
-  return read_text $self->{server}->{wiki_dir} . "/page/$id.gmi";
+  my $dir = $self->{server}->{wiki_dir};
+  return read_text "$dir/keep/$id/$revision.gmi" if $revision and -f "$dir/keep/$id/$revision.gmi";
+  return read_text "$dir/page/$id.gmi" if -f "$dir/page/$id.gmi";
+  return "This this revision is no longer available." if $revision;
+  return "This page does not yet exist.";
 }
 
 sub newest_first {

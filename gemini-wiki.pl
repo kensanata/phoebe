@@ -1054,6 +1054,7 @@ sub print_html {
   my $self = shift;
   my $id = shift;
   my $revision = shift;
+  say "<h1>" . $self->quote_html($id) . "</h1>";
   my $text = $self->quote_html($self->text($id, $revision));
   my $list;
   my $code;

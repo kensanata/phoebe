@@ -215,8 +215,9 @@ I have no idea. Help me out?
 
 The server uses "access tokens" to check whether people are allowed to edit
 files. You could also call them "passwords", if you want. They aren't associated
-with a username. By default, the only password is "hello". That's why the Titan
-command above contained "token=hello". 😊
+with a username. You set them using the `--wiki_token` option. By default, the
+only password is "hello". That's why the Titan command above contained
+"token=hello". 😊
 
 If you're going to check up on your wiki often, looking at Recent Changes on a
 daily basis, you could just tell people about the token on a page of your wiki.

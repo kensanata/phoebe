@@ -578,6 +578,7 @@ sub serve_main_menu_via_http {
     say "<li>" . $self->link_html($id);
   }
   say "<li><a href=\"/do/index\">Index of all pages</a>";
+  say "<li><a href=\"/do/atom\">Atom feed</a>";
   say "<li><a href=\"/do/rss\">RSS feed</a>";
   # a requirement of the GNU Affero General Public License
   say "<li><a href=\"/do/source\">Source</a>";
@@ -733,6 +734,7 @@ sub serve_changes {
   $self->log(3, "Serving recent changes");
   $self->success();
   say "# Recent Changes";
+  $self->print_link("Show Atom", "do/atom");
   $self->print_link("Show RSS", "do/rss");
   my $dir = $self->{server}->{wiki_dir};
   my $log = "$dir/changes.log";
@@ -829,6 +831,65 @@ sub rss {
   }
   say "</channel>";
   say "</rss>";
+}
+
+sub serve_atom {
+  my $self = shift;
+  $self->log(3, "Serving Gemini Atom");
+  $self->success("application/atom+xml");
+  $self->atom('gemini');
+}
+
+sub serve_atom_via_http {
+  my $self = shift;
+  $self->log(3, "Serving Atom via HTTP");
+  say "HTTP/1.1 200 OK\r";
+  say "Content-Type: application/xml\r";
+  say "\r";
+  $self->atom('https');
+}
+
+sub atom {
+  my $self = shift;
+  my $schema = shift;
+  my $name = $self->{server}->{wiki_main_page} || "Gemini Wiki";
+  my $host = $self->host();
+  my $port = $self->port();
+  say "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
+  say "<feed xmlns=\"http://www.w3.org/2005/Atom\">";
+  say "<title>" . $self->quote_html($name) . "</title>";
+  say "<link href=\"$schema://$host:$port/\"/>";
+  say "<link rel=\"self\" type=\"application/atom+xml\" href=\"$schema://$host:$port/do/atom\"/>";
+  say "<id>$schema://$host:$port/do/atom</id>";
+  my $dir = $self->{server}->{wiki_dir};
+  my $log = "$dir/changes.log";
+  my ($sec, $min, $hour, $mday, $mon, $year) = gmtime($self->modified($log)); # 2003-12-13T18:30:02Z
+  say "<updated>"
+      . sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", $year + 1900, $mon, $mday, $hour, $min, $sec)
+      . "</updated>";
+  say "<generator uri=\"https://alexschroeder.ch/cgit/gemini-wiki/about/\" version=\"1.0\">Gemini Wiki</generator>";
+  if (-e $log and my $fh = File::ReadBackwards->new($log)) {
+    my %seen;
+    for (1 .. 100) {
+      last unless $_ = $fh->readline;
+      my ($ts, $id, $revision, $code) = split(/\x1f/);
+      next if $seen{$id};
+      $seen{$id} = 1;
+      say "<entry>";
+      say "<title>" . $self->quote_html($id) . "</title>";
+      my $link = $self->link($id, $schema);
+      say "<link href=\"$link\"/>";
+      say "<id>$link</id>";
+      say "<summary>" . $self->quote_html($self->text($id)) . "</summary>";
+      ($sec, $min, $hour, $mday, $mon, $year) = gmtime($ts); # 2003-12-13T18:30:02Z
+      say "<updated>"
+	  . sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", $year + 1900, $mon, $mday, $hour, $min, $sec)
+	  . "</updated>";
+      say "<author><name>$code</name></author>";
+      say "</entry>";
+    }
+  }
+  say "</feed>";
 }
 
 sub serve_raw {
@@ -1345,6 +1406,8 @@ sub process_request {
       $self->serve_changes();
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/rss$!) {
       $self->serve_rss();
+    } elsif ($url =~ m!^gemini://$host(?::$port)?/do/atom$!) {
+      $self->serve_atom();
     } elsif ($url =~ m!^gemini://$host(?::$port)?([^/]*\.txt)$!) {
       $self->serve_raw(decode_utf8(uri_unescape($1)));
     } elsif ($url =~ m!^gemini://$host(?::$port)?/history/([^/]*)$!) {
@@ -1371,6 +1434,9 @@ sub process_request {
     } elsif (($id, $n) = $url =~ m!^GET /do/rss HTTP/1.[01]$!
 	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_rss_via_http();
+    } elsif (($id, $n) = $url =~ m!^GET /do/atom HTTP/1.[01]$!
+	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+      $self->serve_atom_via_http();
     } elsif (($id, $n) = $url =~ m!^GET /do/source HTTP/1.[01]$!
 	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
       say "HTTP/1.1 200 OK\r";

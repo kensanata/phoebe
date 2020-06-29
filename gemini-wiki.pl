@@ -411,9 +411,9 @@ sub success {
   my $type = shift || 'text/gemini; charset=UTF-8';
   my $lang = shift;
   if ($lang) {
-    print "20 $type; lang=$lang\r\n";
+    say "20 $type; lang=$lang\r";
   } else {
-    print "20 $type\r\n";
+    say "20 $type\r";
   }
 }
 
@@ -575,6 +575,7 @@ sub serve_main_menu_via_http {
     say "<li>" . $self->link_html($id);
   }
   say "<li><a href=\"/do/index\">Index of all pages</a>";
+  say "<li><a href=\"/do/rss\">RSS feed</a>";
   # a requirement of the GNU Affero General Public License
   say "<li><a href=\"/do/source\">Source</a>";
   say "</ul>";
@@ -636,7 +637,7 @@ sub serve_match {
   my $self = shift;
   my $match = shift;
   if (not $match) {
-    print("59 Search term is missing");
+    say("59 Search term is missing\r");
     return;
   }
   $self->success();
@@ -654,7 +655,7 @@ sub serve_search {
   my $self = shift;
   my $str = shift;
   if (not $str) {
-    print("59 Search term is missing");
+    say("59 Search term is missing\r");
     return;
   }
   $self->success();
@@ -1035,14 +1036,14 @@ sub write_file {
     my $old = read_binary($file);
     if ($old eq $data) {
       $self->log(3, "$id is unchanged");
-      print "30 " . $self->link("page/$id") . "\r\n";
+      say "30 " . $self->link("page/$id") . "\r";
       return;
     }
   }
   my $log = "$dir/changes.log";
   if (not open(my $fh, ">>:encoding(UTF-8)", $log)) {
     $self->log(1, "Cannot write log $log");
-    print "59 Unable to write log: $!\r\n";
+    say "59 Unable to write log: $!\r";
     return;
   } else {
     my $peeraddr = $self->{server}->{'peeraddr'};
@@ -1052,17 +1053,17 @@ sub write_file {
   mkdir "$dir/file" unless -d "$dir/file";
   eval { write_binary($file, $data) };
   if ($@) {
-    print "59 Unable to save $id: $@\r\n";
+    say "59 Unable to save $id: $@\r";
     return;
   }
   mkdir "$dir/meta" unless -d "$dir/meta";
   eval { write_text($meta, "content-type: $type\n") };
   if ($@) {
-    print "59 Unable to save metadata for $id: $@\r\n";
+    say "59 Unable to save metadata for $id: $@\r";
     return;
   }
   $self->log(3, "Wrote $id");
-  print "30 " . $self->link("file/$id") . "\r\n";
+  say "30 " . $self->link("file/$id") . "\r";
 }
 
 sub write {
@@ -1078,7 +1079,7 @@ sub write {
     my $old = read_text($file);
     if ($old eq $text) {
       $self->log(3, "$id is unchanged");
-      print "30 " . $self->link("page/$id") . "\r\n";
+      say "30 " . $self->link("page/$id") . "\r";
       return;
     }
     mkdir "$dir/keep" unless -d "$dir/keep";
@@ -1096,7 +1097,7 @@ sub write {
     my $index = "$dir/index";
     if (not open(my $fh, ">>:encoding(UTF-8)", $index)) {
       $self->log(1, "Cannot write index $index");
-      print "59 Unable to write index: $!\r\n";
+      say "59 Unable to write index: $!\r";
       return;
     } else {
       say $fh "$id";
@@ -1106,7 +1107,7 @@ sub write {
   my $log = "$dir/changes.log";
   if (not open(my $fh, ">>:encoding(UTF-8)", $log)) {
     $self->log(1, "Cannot write log $log");
-    print "59 Unable to write log: $!\r\n";
+    say "59 Unable to write log: $!\r";
     return;
   } else {
     my $peeraddr = $self->{server}->{'peeraddr'};
@@ -1117,10 +1118,10 @@ sub write {
   mkdir "$dir/page" unless -d "$dir/page";
   eval { write_text($file, $text) };
   if ($@) {
-    print "59 Unable to save $id: $@\r\n";
+    say "59 Unable to save $id: $@\r";
   } else {
     $self->log(3, "Wrote $id");
-    print "30 " . $self->link("page/$id") . "\r\n";
+    say "30 " . $self->link("page/$id") . "\r";
   }
 }
 
@@ -1129,44 +1130,44 @@ sub write_page {
   my $id = shift;
   my $params = shift;
   if (not $id) {
-    print "59 The URL lacks a page name\r\n";
+    say "59 The URL lacks a page name\r";
     return;
   }
   if (my $error = $self->valid($id)) {
-    print "59 $id is not a valid page name: $error\r\n";
+    say "59 $id is not a valid page name: $error\r";
     return;
   }
   my $token = $params->{token};
   if (not $token and @{$self->{server}->{wiki_token}}) {
-    print "59 Uploads require a token\r\n";
+    say "59 Uploads require a token\r";
     return;
   } elsif (not grep(/^$token$/, @{$self->{server}->{wiki_token}})) {
-    print "59 Your token is the wrong token\r\n";
+    say "59 Your token is the wrong token\r";
     return;
   }
   my $type = $params->{mime};
   my ($main_type) = split(/\//, $type, 1);
   my @types = @{$self->{server}->{wiki_mime_type}};
   if (not $type) {
-    print "59 Uploads require a MIME type\r\n";
+    say "59 Uploads require a MIME type\r";
     return;
   } elsif ($type ne "text/plain" and not grep(/^$type$/, @types) and not grep(/^$main_type$/, @types)) {
-    print "59 This wiki does not allow $type\r\n";
+    say "59 This wiki does not allow $type\r";
     return;
   }
   my $length = $params->{size};
   if ($length > $self->{server}->{wiki_page_size_limit}) {
-    print "59 This wiki does not allow more than $self->{server}->{wiki_page_size_limit} bytes per page\r\n";
+    say "59 This wiki does not allow more than $self->{server}->{wiki_page_size_limit} bytes per page\r";
     return;
   } elsif ($length !~ /^\d+$/) {
-    print "59 You need to send along the number of bytes, not $length\r\n";
+    say "59 You need to send along the number of bytes, not $length\r";
     return;
   }
   local $/ = undef;
   my $data;
   my $actual = read STDIN, $data, $length;
   if ($actual != $length) {
-    print "59 Got $actual bytes instead of $length\r\n";
+    say "59 Got $actual bytes instead of $length\r";
     return;
   }
   if ($type ne "text/plain") {
@@ -1178,7 +1179,7 @@ sub write_page {
     $self->write($id, $data);
     return;
   } else {
-    print "59 The text is invalid UTF-8\r\n";
+    say "59 The text is invalid UTF-8\r";
     return;
   }
 }
@@ -1251,7 +1252,7 @@ sub process_request {
       # config file goes first
     } elsif ($url =~ m!^titan://$host(?::$port)?!) {
       if ($path !~ m!^(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!) {
-	print "59 The path $path is malformed.\r\n";
+	say "59 The path $path is malformed.\r";
       } else {
 	my ($id, %params) = split(/[;=&]/, $1);
 	$self->write_page(decode_utf8(uri_unescape($id)), \%params);
@@ -1268,17 +1269,17 @@ sub process_request {
       local $/ = undef; # slurp
       print <DATA>;
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/match$!) {
-      print "10 Find page by name (Perl regexp)\r\n";
+      say "10 Find page by name (Perl regexp)\r";
     } elsif ($query and $url =~ m!^gemini://$host(?::$port)?/do/match\?!) {
       $self->serve_match(decode_utf8(uri_unescape($query)));
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/search$!) {
-      print "10 Find page by content (Perl regexp)\r\n";
+      say "10 Find page by content (Perl regexp)\r";
     } elsif ($query and $url =~ m!^gemini://$host(?::$port)?/do/search\?!) {
       $self->serve_search(decode_utf8(uri_unescape($query))); # search terms include spaces
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/new$!) {
-      print "10 New page\r\n";
+      say "10 New page\r";
     } elsif ($query and $url =~ m!^gemini://$host(?::$port)?/do/new\?!) {
-      print "30 gemini://$host:$port/raw/$query\r\n";
+      say "30 gemini://$host:$port/raw/$query\r";
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/changes$!) {
       $self->serve_changes();
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/rss$!) {
@@ -1306,6 +1307,9 @@ sub process_request {
     } elsif (($id, $n) = $url =~ m!^GET /do/index HTTP/1.[01]$!
 	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_index_via_http();
+    } elsif (($id, $n) = $url =~ m!^GET /do/rss HTTP/1.[01]$!
+	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+      $self->serve_rss_via_http();
     } elsif (($id, $n) = $url =~ m!^GET /do/source HTTP/1.[01]$!
 	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
       say "HTTP/1.1 200 OK\r";
@@ -1316,7 +1320,7 @@ sub process_request {
       print <DATA>;
     } else {
       $self->log(3, "Unknown $url");
-      print "40 Don't know how to handle $url\r\n";
+      say "40 Don't know how to handle $url\r";
     }
     $self->log(4, "Done");
   };

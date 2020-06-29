@@ -1072,7 +1072,7 @@ sub print_html {
       say "<ul>" unless $list;
       say "<li>$_";
       $list = 1;
-    } elsif (my ($url, $text) = /^=>\s*(\S+)\s*(\S*)/) {
+    } elsif (my ($url, $text) = /^=&gt;\s*(\S+)\s+(.*)/) { # quoted HTML!
       say "<ul>" unless $list;
       $text ||= $url;
       say "<li><a href=\"$url\">$text</a>";

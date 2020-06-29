@@ -2,7 +2,7 @@
 
 This server serves a wiki as a Gemini site.
 
-It does two things:
+It does two and a half things:
 
 - It's a program that you run on a computer and other people connect to it
       using their [client](https://gemini.circumlunar.space/clients.html) in
@@ -11,6 +11,8 @@ It does two things:
       account. All they need is a client that speaks both
       [Gemini](https://gemini.circumlunar.space/) and Titan, and the password.
       The default password is "hello". 😃
+- People can also access it using a regular web browser. They'll get a very
+      simple, read-only version of the site.
 
 ## How do you edit a Gemini Wiki?
 
@@ -27,11 +29,12 @@ Known clients:
 ## What is Titan?
 
 Titan is a companion protocol to Gemini: it allows clients to upload files to
-Gemini sites, if servers allow this. Gemini Wiki, you can edit the "raw" pages.
-That is, at the bottom of a page you'll see a link to the "raw" page. If you
-follow it, you'll see the page content as plain text. You can submit a changed
-version of this text to the same URL using Titan. There is more information for
-developers available [on Community Wiki](https://communitywiki.org/wiki/Titan).
+Gemini sites, if servers allow this. On the Gemini Wiki, you can edit "raw"
+pages. That is, at the bottom of a page you'll see a link to the "raw" page. If
+you follow it, you'll see the page content as plain text. You can submit a
+changed version of this text to the same URL using Titan. There is more
+information for developers available
+[on Community Wiki](https://communitywiki.org/wiki/Titan).
 
 ## Dependencies
 
@@ -133,7 +136,8 @@ it, you'll find a few more files:
       care about the older revisions, you can delete them
 - `file` is the directory with all the uploaded files in it – if you
       haven't uploaded any files, then it won't exist, yet; you must explicitly
-      allow MIME types for upload using the `--wiki_mime_type` option
+      allow MIME types for upload using the `--wiki_mime_type` option (see
+      _Options_ below)
 - `meta` is the directory with all the meta data for uploaded files in it –
       there should be a file here for every file in the `file` directory; if
       you create new files in the `file` directory, you should create a
@@ -144,12 +148,7 @@ it, you'll find a few more files:
       changes you made – your call (but in all fairness, if you're collaborating
       with others you probably shouldn't do this)
 - `config` probably doesn't exist, yet; it is an optional file containing
-      Perl code where you can mess with the code (see _Configuration_ below)
-
-The server uses "access tokens" to check whether people are allowed to edit
-files. You could also call them passwords, if you want. They aren't associated
-with a username. By default, the only password is "hello". That's why the Titan
-command above contained "token=hello". 😊
+      Perl code where you can mess with the code (see ["Configuration"](#configuration) below)
 
 ## Options
 
@@ -168,16 +167,18 @@ Here's an example:
 And here's some documentation:
 
 - `--wiki_token` is for the token that users editing pages have to provide;
-      the default is "hello"; you use this option multiple times and give
+      the default is "hello"; you can use this option multiple times and give
       different users different passwords, if you want
 - `--wiki_main_page` is the page containing your header for the main page;
       that's were you would put your ASCII art header, your welcome message, and
-      so on
+      so on, see ["Main Page and Title"](#main-page-and-title) below
 - `--wiki_pages` is an extra page to show in the main menu; you can use
       this option multiple times
 - `--wiki_mime_type` is a MIME type to allow for uploads; text/plain is
       always allowed and doesn't need to be listed; you can also just list the
-      type without a subtype, eg. `text` will allow all sorts of texts
+      type without a subtype, eg. `image` will allow all sorts of images (make
+      sure random people can't use your server to exchange images – set a
+      password using `--wiki_token`)
 - `--host` is the hostname to serve; the default is `localhost` – you
       probably want to pick the name of your machine, if it is reachable from
       the Internet
@@ -192,6 +193,8 @@ And here's some documentation:
 - `--log_level` is the log level to use, 0 is quiet, 1 is errors, 2 is
       warnings, 3 is info, and 4 is debug; the default is 2
 
+## Running the Gemini Wiki as a Daemon
+
 If you want to start the Gemini Wiki as a daemon, the following options come in
 handy:
 
@@ -204,13 +207,72 @@ handy:
 - `--user` and `--group` might come in handy if you start the Gemini Wiki
       using a different user
 
+## Using systemd
+
+I have no idea. Help me out?
+
+## Security
+
+The server uses "access tokens" to check whether people are allowed to edit
+files. You could also call them "passwords", if you want. They aren't associated
+with a username. By default, the only password is "hello". That's why the Titan
+command above contained "token=hello". 😊
+
+If you're going to check up on your wiki often, looking at Recent Changes on a
+daily basis, you could just tell people about the token on a page of your wiki.
+Spammers would at least have to read the instructions and in my experience the
+hardly ever do.
+
+You could also create a separate password for every contributor and when they
+leave the project, you just remove the token from the options and restart Gemini
+Wiki. They will no longer be able to edit the site.
+
+## Privacy
+
+The server only actively logs changes to pages. It calculates a "code" for every
+contribution: its a four digit octal code. The idea is that you could colour
+every digit using one of the eight standard terminal colours and thus get little
+four-coloured flags.
+
+This allows you to make a pretty good guess about edits made by the same person,
+without telling you their IP numbers.
+
+The code is computed as follows: the IP numbers is turned into a 32bit number
+using a hash function, converted to octal, and the first four digits are the
+code. Thus all possible IP numbers are mapped into 8⁴=4096 codes.
+
+If you increase the log level, the server will produce more output, including
+information about the connections happening, like `2020/06/29-15:35:59 CONNECT
+SSL Peer: "[::1]:52730" Local: "[::1]:1965"` and the like (in this case `::1`
+is my local address so that isn't too useful but it could also be your visitor's
+IP numbers, in which case you will need to tell them about it using in order to
+comply with the
+[GDPR](https://en.wikipedia.org/wiki/General_Data_Protection_Regulation).
+
+## Files
+
+If you allow uploads of binary files, these are stored separately from the
+regular pages; the wiki also doesn't keep old revisions of files around. That
+also means that if somebody overwrites a file, the old revision is gone.
+
+You definitely don't want random people uploading all sorts of images, videos
+and binaries files to your server. Make sure you set up those
+["Security" in tokens](https://metacpan.org/pod/tokens#Security) using `--wiki_token`!
+
+### Main Page and Title
+
+The main page will include ("transclude") a page of your choosing if you use the
+`--wiki_main_page` option. This also sets the title of your wiki in various
+places like the RSS and Atom feeds.
+
 ## Limited, read-only HTTP support
 
 You can actually look at your wiki pages using a browser! But beware: these days
 browser will refuse to connect to sites that have self-signed certificates.
 You'll have to click buttons and make exceptions and all of that, or get your
-certificate from Let's Encrypt or the like. Anyway, it works in theory:
-`https://localhost:1965/` should work, now!
+certificate from Let's Encrypt or the like. Anyway, it works in theory. If you
+went through the ["Quickstart"](#quickstart), visiting `https://localhost:1965/` should
+work!
 
 ## Configuration
 

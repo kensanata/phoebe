@@ -747,6 +747,7 @@ sub serve_changes {
     my %seen;
     for (1 .. 100) {
       last unless $_ = $fh->readline;
+      chomp;
       my ($ts, $id, $revision, $code) = split(/\x1f/);
       my $day = $self->day($ts);
       if ($day ne $last_day) {
@@ -812,6 +813,7 @@ sub rss {
     my %seen;
     for (1 .. 100) {
       last unless $_ = $fh->readline;
+      chomp;
       my ($ts, $id, $revision, $code) = split(/\x1f/);
       next if $seen{$id};
       $seen{$id} = 1;
@@ -872,6 +874,7 @@ sub atom {
     my %seen;
     for (1 .. 100) {
       last unless $_ = $fh->readline;
+      chomp;
       my ($ts, $id, $revision, $code) = split(/\x1f/);
       next if $seen{$id};
       $seen{$id} = 1;

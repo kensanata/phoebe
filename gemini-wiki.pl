@@ -524,9 +524,9 @@ sub gemini_link {
   if (not $id) {
     $id = "page/$title";
   }
-  return "=> $id $title\r" if $id =~ /^$self->{server}->{full_url_regexp}$/;
+  return "=> $id $title" if $id =~ /^$self->{server}->{full_url_regexp}$/;
   my $url = $self->link($id);
-  return "=> $url $title\r";
+  return "=> $url $title";
 }
 
 sub print_link {

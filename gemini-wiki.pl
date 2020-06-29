@@ -116,7 +116,8 @@ things right here.
       https://alexschroeder.ch/cgit/gemini-wiki/plain/gemini-wiki.pl?h=main
 
 Since Gemini traffic is encrypted, we need to generate a certificate and a key.
-These are both stored in PEM files. To create these files, use the following:
+These are both stored in PEM files. To create your own copies of these files
+(and you should!), use the following:
 
     openssl req -new -x509 -nodes -out cert.pem -keyout key.pem
 
@@ -343,6 +344,23 @@ certificate from Let's Encrypt or the like. Anyway, it works in theory. If you
 went through the L</Quickstart>, visiting C<https://localhost:1965/> should
 work!
 
+Notice that Gemini Wiki doesn't have to live behind another web server like
+Apache or nginx. It's a (simple) web server, too!
+
+Here's how you could serve the wiki both on Gemini, and the standard HTTPS port,
+443:
+
+    sudo ./gemini-wiki.pl --port=443 --port=1965 \
+      --user=$(id -un) --group=$(id -gn)
+
+We need to use C<sudo> because all the ports below 1024 are priviledge ports and
+that includes the standard HTTPS port. Since we don't want the server itself to
+run with all those priviledges, however, I'm using the C<--user> and C<--group>
+options to change effective and user and group ID. The C<id> command is used to
+get your user and your group IDs instead. If you've followed the L</Quickstart>
+and created a separate C<gemini> user, you could simply use C<--user=gemini> and
+C<--group=gemini> instead. 👍
+
 =head2 Configuration
 
 This section describes some hooks you can use to customize your wiki using the
@@ -489,8 +507,7 @@ sub host {
 
 sub port {
   my $self = shift;
-  return $self->{server}->{port}->[0]
-      || $self->{server}->{sockport};
+  return $self->{server}->{sockport};
 }
 
 sub link {
@@ -1419,6 +1436,7 @@ sub headers {
       last;
     }
   }
+  $result{host} .= ":" . $self->port() unless $result{host} =~ /:\d+$/;
   $self->log(4, "HTTP headers: " . join(", ", map { "$_ => '$result{$_}'" } keys %result));
   return \%result;
 }

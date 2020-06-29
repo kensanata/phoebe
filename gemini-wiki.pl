@@ -807,7 +807,6 @@ sub serve_changes {
     return;
   } elsif (my $fh = File::ReadBackwards->new($log)) {
     my $last_day = '';
-    my $last_time = '';
     my %seen;
     for (1 .. 100) {
       last unless $_ = $fh->readline;
@@ -817,28 +816,33 @@ sub serve_changes {
       if ($day ne $last_day) {
 	say "## $day";
 	$last_day = $day;
-	$last_time = '';
       }
-      my $time = $self->time_of_day($ts);
-      say $time if $time ne $last_time;
+      say $self->time_of_day($ts) . " by " . $self->colourize($code);
       if ($seen{$id}) {
 	if ($revision) {
-	  $self->print_link("$id ($revision) by $code", "page/$id/$revision");
+	  $self->print_link("$id ($revision)", "page/$id/$revision");
 	} else {
-	  say "$id (file) by $code";
+	  say "$id (file)";
 	}
       } else {
 	$seen{$id} = 1;
 	if ($revision) {
-	  $self->print_link("$id (current) by $code", "page/$id");
+	  $self->print_link("$id (current)", "page/$id");
 	} else {
-	  $self->print_link("$id (file) by $code", "file/$id");
+	  $self->print_link("$id (file)", "file/$id");
 	}
       }
     }
   } else {
     say "Error: $!";
   }
+}
+
+sub colourize {
+  my $self = shift;
+  my $code = shift;
+  $code = join("", map { "\033[3${_};4${_}m${_}" } split //, $code) . "\033[0m ";
+  return $code;
 }
 
 sub serve_rss {

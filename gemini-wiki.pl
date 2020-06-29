@@ -328,7 +328,7 @@ You definitely don't want random people uploading all sorts of images, videos
 and binaries files to your server. Make sure you set up those
 L<tokens/Security> using C<--wiki_token>!
 
-=head3 Main Page and Title
+=head2 Main Page and Title
 
 The main page will include ("transclude") a page of your choosing if you use the
 C<--wiki_main_page> option. This also sets the title of your wiki in various

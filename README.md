@@ -260,7 +260,7 @@ You definitely don't want random people uploading all sorts of images, videos
 and binaries files to your server. Make sure you set up those
 ["Security" in tokens](https://metacpan.org/pod/tokens#Security) using `--wiki_token`!
 
-### Main Page and Title
+## Main Page and Title
 
 The main page will include ("transclude") a page of your choosing if you use the
 `--wiki_main_page` option. This also sets the title of your wiki in various

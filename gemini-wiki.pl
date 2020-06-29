@@ -432,10 +432,11 @@ sub port {
 sub link {
   my $self = shift;
   my $id = shift;
+  my $schema = shift || "gemini";
   my $host = $self->host();
   my $port = $self->port();
   # don't encode the slash
-  return "gemini://$host:$port/"
+  return "$schema://$host:$port/"
       . join("/", map { uri_escape_utf8($_) } split (/\//, $id));
 }
 
@@ -446,8 +447,10 @@ sub link_html {
   my $port = $self->port();
   # don't encode the slash
   return "<a href=\"https://$host:$port/html/"
-	. join("/", map { uri_escape_utf8($_) } split (/\//, $id))
-	. "\">$id</a>";
+      . join("/", map { uri_escape_utf8($_) } split (/\//, $id))
+      . "\">"
+      . $self->quote_html($id)
+      . "</a>";
 }
 
 sub gemini_link {
@@ -556,7 +559,7 @@ sub serve_main_menu_via_http {
   say "<head>";
   say "<meta charset=\"utf-8\">";
   if ($page) {
-    say "<title>$page</title>";
+    say "<title>" . $self->quote_html($page) . "</title>";
   } else {
     say "<title>Gemini Wiki</title>";
   }
@@ -581,6 +584,16 @@ sub serve_main_menu_via_http {
   say "</ul>";
   say "</body>";
   say "</html>";
+}
+
+sub quote_html {
+  my $self = shift;
+  my $html = shift;
+  $html =~ s/&/&amp;/g;
+  $html =~ s/</&lt;/g;
+  $html =~ s/>/&gt;/g;
+  $html =~ s/[\x00-\x08\x0b\x0c\x0e-\x1f]/ /g; # legal xml: #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+  return $html;
 }
 
 sub serve_blog {
@@ -764,14 +777,58 @@ sub serve_changes {
 sub serve_rss {
   my $self = shift;
   $self->log(3, "Serving Gemini RSS");
-  say "59 Not implemented, yet."
-  # $self->success("application/rss+xml");
-  # my $rss = GetRcRss();
-  # $rss =~ s!$ScriptName\?action=rss!${gemini}1do/rss!g;
-  # $rss =~ s!$ScriptName\?action=history;id=([^[:space:]<]*)!${gemini}1$1/history!g;
-  # $rss =~ s!$ScriptName/([^[:space:]<]*)!${gemini}0$1!g;
-  # $rss =~ s!<wiki:diff>.*</wiki:diff>\n!!g;
-  # print $rss;
+  $self->success("application/rss+xml");
+  $self->rss('gemini');
+}
+
+sub serve_rss_via_http {
+  my $self = shift;
+  $self->log(3, "Serving RSS via HTTP");
+  say "HTTP/1.1 200 OK\r";
+  say "Content-Type: application/xml\r";
+  say "\r";
+  $self->rss('https');
+}
+
+sub rss {
+  my $self = shift;
+  my $schema = shift;
+  my $name = $self->{server}->{wiki_main_page} || "Gemini Wiki";
+  my $host = $self->host();
+  my $port = $self->port();
+  say "<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">";
+  say "<channel>";
+  say "<title>" . $self->quote_html($name) . "</title>";
+  say "<description>Recent changes on this wiki.</description>";
+  say "<link>$schema://$host:$port/</link>";
+  say "<atom:link rel=\"self\" type=\"application/rss+xml\" href=\"$schema://$host:$port/do/rss\" />";
+  say "<generator>Gemini Wiki</generator>";
+  say "<docs>http://blogs.law.harvard.edu/tech/rss</docs>";
+  my $dir = $self->{server}->{wiki_dir};
+  my $log = "$dir/changes.log";
+  if (-e $log and my $fh = File::ReadBackwards->new($log)) {
+    my %seen;
+    for (1 .. 100) {
+      last unless $_ = $fh->readline;
+      my ($ts, $id, $revision, $code) = split(/\x1f/);
+      next if $seen{$id};
+      $seen{$id} = 1;
+      say "<item>";
+      say "<title>" . $self->quote_html($id) . "</title>";
+      my $link = $self->link($id, $schema);
+      say "<link>$link</link>";
+      say "<guid>$link</guid>";
+      say "<description>" . $self->quote_html($self->text($id)) . "</description>";
+      my ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($ts); # Sat, 07 Sep 2002 00:00:01 GMT
+      say "<pubDate>"
+	  . sprintf("%s, %02d %s %04d %02d:%02d:%02d GMT", qw(Sun Mon Tue Wed Thu Fri Sat)[$wday], $mday,
+		    qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[$mon], $year + 1900, $hour, $min, $sec)
+	  . "</pubDate>";
+      say "</item>";
+    }
+  }
+  say "</channel>";
+  say "</rss>";
 }
 
 sub serve_raw {
@@ -853,7 +910,7 @@ sub html_page {
   say "<html>";
   say "<head>";
   say "<meta charset=\"utf-8\">";
-  say "<title>$id</title>";
+  say "<title>" . $self->quote_html($id) . "</title>";
   say "</head>";
   say "<body>";
   $self->print_html($id, $revision);
@@ -865,7 +922,7 @@ sub print_html {
   my $self = shift;
   my $id = shift;
   my $revision = shift;
-  my $text = $self->text($id, $revision);
+  my $text = $self->quote_html($self->text($id, $revision));
   my $list;
   my $code;
   for (split /\n/, $text) {
@@ -893,6 +950,10 @@ sub print_html {
       $list = 0;
       my $level = length($1);
       say "<h$level>$2</h$level>";
+    } elsif (/^&gt;\s*(.*)/) { # quoted HTML!
+      say "</ul>" if $list;
+      $list = 0;
+      say "<blockquote>$1</blockquote>";
     } else {
       say "</ul>" if $list;
       $list = 0;

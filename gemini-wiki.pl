@@ -1129,8 +1129,8 @@ sub print_html {
 	$code = 0;
       } else {
 	say "</ul>" if $list;
-	say "<pre>";
 	$list = 0;
+	say "<pre>";
 	$code = 1;
       }
     } elsif (/^\* /) {
@@ -1157,6 +1157,8 @@ sub print_html {
       say "<p>$_";
     }
   }
+  say "</pre>" if $code;
+  say "</ul>" if $list;
 }
 
 sub day {

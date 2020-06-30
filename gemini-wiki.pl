@@ -162,6 +162,18 @@ You should get back a page that starts as follows:
 
 Yay! 😁🎉 🚀🚀
 
+Let me return to the topic of Titan-enabled clients for a moment. If you install
+L<Gemini & Titan for Bash|https://alexschroeder.ch/cgit/gemini-titan/about/>
+then you can do simple things like this:
+
+    echo "Hello! This is a test!" | titan localhost/test hello
+
+Or this:
+
+    titan localhost/test hello test.txt
+
+That makes it a lot easier to upload new content! 😅
+
 =head2 Wiki Directory
 
 You home directory should now also contain a wiki directory called F<wiki>. In

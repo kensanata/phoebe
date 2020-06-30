@@ -14,6 +14,26 @@ It does two and a half things:
 - People can also access it using a regular web browser. They'll get a very
       simple, read-only version of the site.
 
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [How do you edit a Gemini Wiki?](#how-do-you-edit-a-gemini-wiki)
+- [What is Titan?](#what-is-titan)
+- [Dependencies](#dependencies)
+- [Quickstart](#quickstart)
+- [Wiki Directory](#wiki-directory)
+- [Options](#options)
+- [Running the Gemini Wiki as a Daemon](#running-the-gemini-wiki-as-a-daemon)
+- [Using systemd](#using-systemd)
+- [Security](#security)
+- [Privacy](#privacy)
+- [Files](#files)
+- [Main Page and Title](#main-page-and-title)
+- [Limited, read-only HTTP support](#limited-read-only-http-support)
+- [Configuration](#configuration)
+
+<!-- markdown-toc end -->
+
 ## How do you edit a Gemini Wiki?
 
 You need to use a Titan-enabled client.
@@ -23,7 +43,7 @@ Known clients:
 - [Gemini Write](https://alexschroeder.ch/cgit/gemini-write/) is an
       extension for the Emacs Gopher and Gemini client
       [Elpher](https://thelambdalab.xyz/elpher/)
-- [Gemini & Titan for Bash](https://alexschroeder.ch/cgit/gemini-titan/about/?h=main)
+- [Gemini & Titan for Bash](https://alexschroeder.ch/cgit/gemini-titan/about/)
       are two shell functions that allow you to download and upload files
 
 ## What is Titan?
@@ -123,6 +143,18 @@ You should get back a page that starts as follows:
     Please be kind.
 
 Yay! 😁🎉 🚀🚀
+
+Let me return to the topic of Titan-enabled clients for a moment. If you install
+[Gemini & Titan for Bash](https://alexschroeder.ch/cgit/gemini-titan/about/)
+then you can do simple things like this:
+
+    echo "Hello! This is a test!" | titan localhost/test hello
+
+Or this:
+
+    titan localhost/test hello test.txt
+
+That makes it a lot easier to upload new content! 😅
 
 ## Wiki Directory
 
@@ -268,6 +300,15 @@ using `--wiki_token`!
 The main page will include ("transclude") a page of your choosing if you use the
 `--wiki_main_page` option. This also sets the title of your wiki in various
 places like the RSS and Atom feeds.
+
+In order to be more flexible, the name of the main page does not get printed. If
+you want it, you need to add it yourself using a header. This allows you to keep
+the main page in a page called "Welcome" containing some ASCII art such that the
+word "Welcome" does not show on the main page.
+
+If you have pages with names that start with an ISO date like 2020-06-30, then
+I'm assuming you want some sort of blog. In this case, up to ten of them will be
+shown on your front page.
 
 ## Limited, read-only HTTP support
 

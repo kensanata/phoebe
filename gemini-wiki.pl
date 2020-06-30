@@ -624,7 +624,7 @@ sub blog_html {
 sub serve_main_menu {
   my $self = shift;
   my $space = shift;
-  $self->log(3, "Serving main menu");
+  $self->log(3, "Serving main menu $space");
   $self->success();
   my $page = $self->{server}->{wiki_main_page};
   if ($page) {
@@ -633,7 +633,7 @@ sub serve_main_menu {
     say "# Welcome to the Gemini Wiki!";
     say "";
   }
-  $self->blog();
+  $self->blog($space);
   for my $id (@{$self->{server}->{wiki_pages}}) {
     $self->print_link($space, $id);
   }
@@ -1536,7 +1536,7 @@ sub process_request {
     my($scheme, $authority, $path, $query, $fragment) =
 	$url =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?|;
     $self->log(3, "Looking at $url");
-    my ($space, $id, $n, $answer);
+    my ($space, $id, $n);
     if ($self->run_extensions($url)) {
       # config file goes first
     } elsif ($url =~ m!^titan://$host(?::$port)?!) {
@@ -1570,7 +1570,9 @@ sub process_request {
       $self->serve_search(map {decode_utf8(uri_unescape($_))} $space, $query); # search terms include spaces
     } elsif ($url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/new$!) {
       say "10 New page\r";
-    } elsif ($query and $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/new\?!) {
+    } elsif ($query and ($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/new\?!) {
+      # no URI escaping required
+      say "30 gemini://$host:$port/$space/raw/$query\r" if $space;
       say "30 gemini://$host:$port/raw/$query\r";
     } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/changes$!) {
       $self->serve_changes(decode_utf8(uri_unescape($space)));

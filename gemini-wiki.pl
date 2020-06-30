@@ -1600,7 +1600,7 @@ sub process_request {
       $self->serve_gemini(map {decode_utf8(uri_unescape($_))} $space, $id, $n);
     } elsif (($space, $id) = $url =~ m!gemini://$host(?::$port)?(?:/($spaces))?/file/([^/]+)?$!) {
       $self->serve_file(map {decode_utf8(uri_unescape($_))} $space, $id);
-    } elsif (($space) = $url =~ m!^GET (?:/($spaces))?/ HTTP/1.[01]$!
+    } elsif (($space) = $url =~ m!^GET (?:(?:/($spaces)/?)?|/) HTTP/1.[01]$!
 	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_main_menu_via_http(decode_utf8(uri_unescape($space)));
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/html/([^/]*)(?:/(\d+))? HTTP/1.[01]$!

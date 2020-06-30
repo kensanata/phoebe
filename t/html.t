@@ -39,8 +39,13 @@ write_text("$dir/meta/alex.jpg", "content-type: image/jpeg");
 my $page = query_gemini("GET / HTTP/1.0\nhost: $host:$port\n");
 like($page, qr!<a href="https://$host:$port/html/Alex">Alex</a>!, "main menu contains Alex");
 
-my $page = query_gemini("GET /html/Alex HTTP/1.0\nhost: $host:$port\n");
+$page = query_gemini("GET /html/Alex HTTP/1.0\nhost: $host:$port\n");
 like($page, qr!<p>Alex Schroeder!, "Alex content");
 like($page, qr!<a href="/html/Berta">Berta</a>!, "Alex contains Berta link");
+
+$page = query_gemini("GET /alex HTTP/1.0\nhost: $host:$port\n");
+like($page, qr!<a href="https://$host:$port/alex/html/Alex">Alex</a>!, "main menu of alex space contains Alex");
+$page = query_gemini("GET /alex/ HTTP/1.0\nhost: $host:$port\n");
+like($page, qr!<a href="https://$host:$port/alex/html/Alex">Alex</a>!, "main menu of alex space contains Alex");
 
 done_testing();

@@ -1118,6 +1118,8 @@ sub print_html {
   my $space = shift;
   my $id = shift;
   my $revision = shift;
+  my $host = $self->host();
+  my $port = $self->port();
   say "<h1>" . $self->quote_html($id) . "</h1>";
   my $text = $self->quote_html($self->text($space, $id, $revision));
   my $list;
@@ -1140,6 +1142,8 @@ sub print_html {
     } elsif (my ($url, $text) = /^=&gt;\s*(\S+)\s+(.*)/) { # quoted HTML!
       say "<ul>" unless $list;
       $text ||= $url;
+      $url =~ s!^gemini://$host(?::$port)?/?!/!;
+      $url =~ s!^/page/!/html/!;
       say "<li><a href=\"$url\">$text</a>";
       $list = 1;
     } elsif (/^(#{1,6})\s*(.*)/) {
@@ -1504,16 +1508,16 @@ sub headers {
   my %result;
   my ($key, $value);
   while (<STDIN>) {
-    if (/^(\S+?): (.*?)\r$/) {
+    if (/^(\S+?): (.+?)\r?$/) {
       ($key, $value) = (lc($1), $2);
       $result{$key} = $value;
-    } elsif (/^\s+(.*)\r$/) {
-      $result{$key} .= " $2";
+    } elsif (/^\s+(.+?)\r?$/) {
+      $result{$key} .= " $1";
     } else {
       last;
     }
   }
-  $result{host} .= ":" . $self->port() unless $result{host} =~ /:\d+$/;
+  $result{host} .= ":" . $self->port() if $result{host} and $result{host} !~ /:\d+$/;
   $self->log(4, "HTTP headers: " . join(", ", map { "$_ => '$result{$_}'" } keys %result));
   return \%result;
 }

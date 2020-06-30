@@ -361,6 +361,47 @@ If you have pages with names that start with an ISO date like 2020-06-30, then
 I'm assuming you want some sort of blog. In this case, up to ten of them will be
 shown on your front page.
 
+=head2 GUS and robots.txt
+
+There are search machines out there that will index your site. Ideally, these
+wouldn't index the history pages and all that: they would only get the list of
+all pages, and all the pages. I'm not even sure that we need them to look at all
+the files. The L<robots exclusion
+standard|https://en.wikipedia.org/wiki/Robots_exclusion_standard> lets you
+control what the bots ought to index and what they ought to skip. It doesn't
+always work.
+
+Here's my suggestion:
+
+    User-agent: *
+    Disallow: raw/*
+    Disallow: html/*
+    Disallow: diff/*
+    Disallow: history/*
+    Disallow: do/changes
+    Disallow: do/rss
+    Disallow: do/atom
+    Disallow: do/new
+    Disallow: do/more
+    Disallow: do/match
+    Disallow: do/search
+    # allowing do/index!
+    Crawl-delay: 10
+
+In fact, as long as you don't create a page called C<robots> then this is what
+gets served. I think it's a good enough way to start. If you're using spaces,
+the C<robots> pages of all the spaces are concatenated.
+
+If you want to be more paranoid, create a page called C<robots> and put this on
+it:
+
+    User-agent: *
+    Disallow: /
+
+Note that if you've created your own C<robots> page, and you haven't decided to
+disallow them all, then you also have to do the right thing for all your spaces,
+if you use them at all.
+
 =head2 Limited, read-only HTTP support
 
 You can actually look at your wiki pages using a browser! But beware: these days
@@ -1057,6 +1098,18 @@ sub serve_raw {
   print $self->text($space, $id, $revision);
 }
 
+sub serve_raw_via_http {
+  my $self = shift;
+  my $space = shift;
+  my $id = shift;
+  my $revision = shift;
+  $self->log(3, "Serving raw $id via HTTP");
+  say "HTTP/1.1 200 OK\r";
+  say "Content-Type: text/plain; charset=UTF-8\r";
+  say "\r";
+  print $self->text($space, $id, $revision);
+}
+
 sub serve_diff {
   my $self = shift;
   my $space = shift;
@@ -1274,8 +1327,36 @@ sub text {
   $dir .= "/$space" if $space;
   return read_text "$dir/keep/$id/$revision.gmi" if $revision and -f "$dir/keep/$id/$revision.gmi";
   return read_text "$dir/page/$id.gmi" if -f "$dir/page/$id.gmi";
+  return $self->robots() if $id eq "robots" and not $space;
   return "This this revision is no longer available." if $revision;
   return "This page does not yet exist.";
+}
+
+sub robots () {
+  my $self = shift;
+  my $ban = << 'EOT';
+User-agent: *
+Disallow: raw/*
+Disallow: html/*
+Disallow: diff/*
+Disallow: history/*
+Disallow: do/changes
+Disallow: do/rss
+Disallow: do/atom
+Disallow: do/new
+Disallow: do/more
+Disallow: do/match
+Disallow: do/search
+# allowing do/index!
+Crawl-delay: 10
+EOT
+  my @disallows = $ban =~ /Disallow: (.*)/g;
+  return $ban
+      . join("\n",
+	     map {
+	       my $space = $_;
+	       join("\n", "# $space", map { "Disallow: $space/$_" } @disallows)
+	     } @{$self->{server}->{wiki_space}}) . "\n";
 }
 
 sub serve_file {
@@ -1615,8 +1696,8 @@ sub process_request {
       $self->serve_rss(decode_utf8(uri_unescape($space)));
     } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/atom$!) {
       $self->serve_atom(decode_utf8(uri_unescape($space)));
-    } elsif (($space, $id) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?([^/]*\.txt)$!) {
-      $self->serve_raw(map {decode_utf8(uri_unescape($_))} $space, $id);
+    } elsif (($space, $id) = $url =~ m!^gemini://$host(?::$port)?/robots.txt$!) {
+      $self->serve_raw(undef, "robots");
     } elsif (($space, $id) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/history/([^/]*)$!) {
       $self->serve_history(map {decode_utf8(uri_unescape($_))} $space, $id);
     } elsif (($space, $id, $n) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?$!) {
@@ -1635,6 +1716,12 @@ sub process_request {
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/html/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
 	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_html_via_http(map {decode_utf8(uri_unescape($_))} $space, $id, $n);
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/raw/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
+	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+      $self->serve_raw_via_http(map {decode_utf8(uri_unescape($_))} $space, $id, $n);
+    } elsif (($space, $id) = $url =~ m!^GET /robots.txt HTTP/1.[01]$!
+	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+      $self->serve_raw_via_http(undef, 'robots');
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/index HTTP/1.[01]$!
 	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_index_via_http(decode_utf8(uri_unescape($space)));

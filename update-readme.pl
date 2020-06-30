@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 use Modern::Perl;
 use Pod::Markdown;
 use Text::Slugify qw(slugify);

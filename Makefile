@@ -5,7 +5,7 @@ web:
 	sudo ./gemini-wiki.pl --port=443 --port=1965 --user=$(shell id -un) --group=$(shell id -gn)
 
 README.md: gemini-wiki.pl
-	update-readme.pl
+	./update-readme.pl
 
 test:
 	prove --jobs 2 t

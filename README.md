@@ -28,6 +28,7 @@ It does two and a half things:
 - [Privacy](#privacy)
 - [Files](#files)
 - [Main Page and Title](#main-page-and-title)
+- [GUS and robots.txt](#gus-and-robots-txt)
 - [Limited, read-only HTTP support](#limited-read-only-http-support)
 - [Configuration](#configuration)
 
@@ -77,6 +78,9 @@ On Debian:
       libnet-server-perl \
       liburi-escape-xs-perl \
       curl openssl
+
+The `update-readme.pl` script I use to generate `README.md` also requires
+[Pod::Markdown](https://metacpan.org/pod/Pod%3A%3AMarkdown) and [Text::Slugify](https://metacpan.org/pod/Text%3A%3ASlugify).
 
 ## Quickstart
 
@@ -306,6 +310,47 @@ word "Welcome" does not show on the main page.
 If you have pages with names that start with an ISO date like 2020-06-30, then
 I'm assuming you want some sort of blog. In this case, up to ten of them will be
 shown on your front page.
+
+## GUS and robots.txt
+
+There are search machines out there that will index your site. Ideally, these
+wouldn't index the history pages and all that: they would only get the list of
+all pages, and all the pages. I'm not even sure that we need them to look at all
+the files. The [robots exclusion
+standard](https://en.wikipedia.org/wiki/Robots_exclusion_standard) lets you
+control what the bots ought to index and what they ought to skip. It doesn't
+always work.
+
+Here's my suggestion:
+
+    User-agent: *
+    Disallow: raw/*
+    Disallow: html/*
+    Disallow: diff/*
+    Disallow: history/*
+    Disallow: do/changes
+    Disallow: do/rss
+    Disallow: do/atom
+    Disallow: do/new
+    Disallow: do/more
+    Disallow: do/match
+    Disallow: do/search
+    # allowing do/index!
+    Crawl-delay: 10
+
+In fact, as long as you don't create a page called `robots` then this is what
+gets served. I think it's a good enough way to start. If you're using spaces,
+the `robots` pages of all the spaces are concatenated.
+
+If you want to be more paranoid, create a page called `robots` and put this on
+it:
+
+    User-agent: *
+    Disallow: /
+
+Note that if you've created your own `robots` page, and you haven't decided to
+disallow them all, then you also have to do the right thing for all your spaces,
+if you use them at all.
 
 ## Limited, read-only HTTP support
 

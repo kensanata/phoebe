@@ -50,7 +50,7 @@ Known clients:
       extension for the Emacs Gopher and Gemini client
       L<Elpher|https://thelambdalab.xyz/elpher/>
 
-=item L<Gemini & Titan for Bash|https://alexschroeder.ch/cgit/gemini-titan/about/?h=main>
+=item L<Gemini & Titan for Bash|https://alexschroeder.ch/cgit/gemini-titan/about/>
       are two shell functions that allow you to download and upload files
 
 =back
@@ -341,6 +341,10 @@ In order to be more flexible, the name of the main page does not get printed. If
 you want it, you need to add it yourself using a header. This allows you to keep
 the main page in a page called "Welcome" containing some ASCII art such that the
 word "Welcome" does not show on the main page.
+
+If you have pages with names that start with an ISO date like 2020-06-30, then
+I'm assuming you want some sort of blog. In this case, up to ten of them will be
+shown on your front page.
 
 =head2 Limited, read-only HTTP support
 
@@ -873,18 +877,20 @@ sub serve_changes {
 	$last_day = $day;
       }
       say $self->time_of_day($ts) . " by " . $self->colourize($code);
-      if ($seen{$id}) {
-	if ($revision) {
+      if ($revision) {
+	if ($seen{$id}) {
 	  $self->print_link($space, "$id ($revision)", "page/$id/$revision");
 	} else {
-	  say "$id (file)";
+	  $self->print_link($space, "$id (current)", "page/$id");
+	  $seen{$id} = 1;
 	}
       } else {
-	$seen{$id} = 1;
-	if ($revision) {
-	  $self->print_link($space, "$id (current)", "page/$id");
+	# there can be pages and files sharing the same name
+	if ($seen{$id . "\x1c"}) {
+	  say "$id (file)";
 	} else {
 	  $self->print_link($space, "$id (file)", "file/$id");
+	  $seen{$id . "\x1c"} = 1;
 	}
       }
     }

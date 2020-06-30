@@ -99,6 +99,9 @@ On Debian:
       liburi-escape-xs-perl \
       curl openssl
 
+The F<update-readme.pl> script I use to generate F<README.md> also requires
+L<Pod::Markdown> and L<Text::Slugify>.
+
 =head2 Quickstart
 
 Right now there aren't any releases. You just get the latest version from the
@@ -314,7 +317,7 @@ Wiki. They will no longer be able to edit the site.
 =head2 Privacy
 
 The server only actively logs changes to pages. It calculates a "code" for every
-contribution: its a four digit octal code. The idea is that you could colour
+contribution: it is a four digit octal code. The idea is that you could colour
 every digit using one of the eight standard terminal colours and thus get little
 four-coloured flags.
 

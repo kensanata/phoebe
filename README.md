@@ -14,7 +14,6 @@ It does two and a half things:
 - People can also access it using a regular web browser. They'll get a very
       simple, read-only version of the site.
 
-<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
 - [How do you edit a Gemini Wiki?](#how-do-you-edit-a-gemini-wiki)
@@ -31,8 +30,6 @@ It does two and a half things:
 - [Main Page and Title](#main-page-and-title)
 - [Limited, read-only HTTP support](#limited-read-only-http-support)
 - [Configuration](#configuration)
-
-<!-- markdown-toc end -->
 
 ## How do you edit a Gemini Wiki?
 
@@ -60,12 +57,12 @@ information for developers available
 
 Perl libraries you need to install if you want to run Gemini Wiki:
 
-- [Algorithm::Diff](https://metacpan.org/pod/Algorithm::Diff)
-- [File::ReadBackwards](https://metacpan.org/pod/File::ReadBackwards)
-- [File::Slurper](https://metacpan.org/pod/File::Slurper)
-- [Modern::Perl](https://metacpan.org/pod/Modern::Perl)
-- [Net::Server](https://metacpan.org/pod/Net::Server)
-- [URI::Escape](https://metacpan.org/pod/URI::Escape)
+- [Algorithm::Diff](https://metacpan.org/pod/Algorithm%3A%3ADiff)
+- [File::ReadBackwards](https://metacpan.org/pod/File%3A%3AReadBackwards)
+- [File::Slurper](https://metacpan.org/pod/File%3A%3ASlurper)
+- [Modern::Perl](https://metacpan.org/pod/Modern%3A%3APerl)
+- [Net::Server](https://metacpan.org/pod/Net%3A%3AServer)
+- [URI::Escape](https://metacpan.org/pod/URI%3A%3AEscape)
 
 I'm going to be using `curl` and `openssl` in the ["Quickstart"](#quickstart) instructions,
 so you'll need those tools as well.
@@ -187,7 +184,7 @@ it, you'll find a few more files:
 
 ## Options
 
-The Gemini Wiki has a bunch of options, and it uses [Net::Server](https://metacpan.org/pod/Net::Server) in the
+The Gemini Wiki has a bunch of options, and it uses [Net::Server](https://metacpan.org/pod/Net%3A%3AServer) in the
 background, which has even more options. Let's try to focus on the options you
 might want to use right away.
 
@@ -266,7 +263,7 @@ Wiki. They will no longer be able to edit the site.
 ## Privacy
 
 The server only actively logs changes to pages. It calculates a "code" for every
-contribution: its a four digit octal code. The idea is that you could colour
+contribution: it is a four digit octal code. The idea is that you could colour
 every digit using one of the eight standard terminal colours and thus get little
 four-coloured flags.
 

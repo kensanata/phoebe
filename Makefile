@@ -5,7 +5,7 @@ web:
 	sudo ./gemini-wiki.pl --port=443 --port=1965 --user=$(shell id -un) --group=$(shell id -gn)
 
 README.md: gemini-wiki.pl
-	rm -f README.md && pod2readme --format markdown $<
+	update-readme.pl
 
 test:
 	prove --jobs 2 t

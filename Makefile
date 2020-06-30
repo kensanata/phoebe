@@ -8,7 +8,7 @@ README.md: gemini-wiki.pl
 	rm -f README.md && pod2readme --format markdown $<
 
 test:
-	prove t
+	prove --jobs 2 t
 
 clean:
 	rm -rf test-[0-9][0-9][0-9][0-9]

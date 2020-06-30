@@ -1140,6 +1140,8 @@ sub print_html {
 	say "<pre>";
 	$code = 1;
       }
+    } elsif ($code) {
+      say $_;
     } elsif (/^\* +(.*)/) {
       say "<ul>" unless $list;
       say "<li>$1";

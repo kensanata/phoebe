@@ -29,6 +29,7 @@ require './t/test.pl';
 
 mkdir("$dir/page");
 write_text("$dir/page/Alex.gmi", "Alex Schroeder\n=> /page/Berta Berta");
+write_text("$dir/page/Berta.gmi", "```\nHello!\nYo!\n```\n");
 mkdir("$dir/file");
 write_binary("$dir/file/alex.jpg", read_binary("t/alex.jpg"));
 mkdir("$dir/meta");
@@ -48,5 +49,8 @@ like($page, qr!<a href="https://$host:$port/alex/html/Alex">Alex</a>!, "main men
 $page = query_gemini("GET /alex/ HTTP/1.0\nhost: $host:$port\n");
 like($page, qr!<a href="https://$host:$port/alex/html/Alex">Alex</a>!, "main menu of alex space contains Alex");
 like($page, qr!<a href="https://$host:$port/do/source">Source</a>!, "HTML links to source code");
+
+$page = query_gemini("GET /html/Berta HTTP/1.0\nhost: $host:$port\n");
+like($page, qr!<pre>\nHello\!\nYo\!\n</pre>!, "main menu of alex space contains Alex");
 
 done_testing();

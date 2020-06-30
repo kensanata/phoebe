@@ -202,7 +202,7 @@ like($page, qr/^< Quiet disk ratling\n-+\n> Muffled honking cars\n$/m, "Diff 1 c
 # match
 $page = query_gemini("$base/do/match?2017");
 for my $item(qw(2017-12-25 2017-12-26 2017-12-27)) {
-  like($page, qr/^=> $base\/page\/$item $item\r$/m, "match menu contains $item");
+  like($page, qr/^=> $base\/page\/$item $item$/m, "match menu contains $item");
 }
 like($page, qr/2017-12-27.*2017-12-26.*2017-12-25/s,
      "match menu sorted newest first");
@@ -210,15 +210,15 @@ like($page, qr/2017-12-27.*2017-12-26.*2017-12-25/s,
 # search
 $page = query_gemini("$base/do/search?yo");
 for my $item(qw(2017-12-25 2017-12-26 2017-12-27)) {
-  like($page, qr/^=> $base\/page\/$item $item\r/m, "search menu contains $item");
+  like($page, qr/^=> $base\/page\/$item $item/m, "search menu contains $item");
 }
 like($page, qr/2017-12-27.*2017-12-26.*2017-12-25/s,
      "search menu sorted newest first");
 
 # rc
 $page = query_gemini("$base/do/changes");
-like($page, qr/^=> $base\/page\/Haiku Haiku \(current\) by /m, "Current revision of Haiku in recent chanegs");
-like($page, qr/^=> $base\/page\/Haiku\/1 Haiku \(1\) by /m, "Older revision of Haiku in recent chanegs");
+like($page, qr/^=> $base\/page\/Haiku Haiku \(current\)/m, "Current revision of Haiku in recent chanegs");
+like($page, qr/^=> $base\/page\/Haiku\/1 Haiku \(1\)/m, "Older revision of Haiku in recent chanegs");
 
 # extension
 

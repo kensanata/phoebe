@@ -686,7 +686,7 @@ sub serve_main_menu_via_http {
   say "<li>" . $self->link_html($space, "Atom feed", "do/atom");
   say "<li>" . $self->link_html($space, "RSS feed", "do/rss");
   # a requirement of the GNU Affero General Public License
-  say "<li>" . $self->link_html("Source", "do/source");
+  say "<li>" . $self->link_html(undef, "Source", "do/source");
   say "</ul>";
   say "</body>";
   say "</html>";

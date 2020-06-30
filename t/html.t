@@ -47,5 +47,6 @@ $page = query_gemini("GET /alex HTTP/1.0\nhost: $host:$port\n");
 like($page, qr!<a href="https://$host:$port/alex/html/Alex">Alex</a>!, "main menu of alex space contains Alex");
 $page = query_gemini("GET /alex/ HTTP/1.0\nhost: $host:$port\n");
 like($page, qr!<a href="https://$host:$port/alex/html/Alex">Alex</a>!, "main menu of alex space contains Alex");
+like($page, qr!<a href="https://$host:$port/do/source">Source</a>!, "HTML links to source code");
 
 done_testing();

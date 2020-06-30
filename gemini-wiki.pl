@@ -337,6 +337,11 @@ The main page will include ("transclude") a page of your choosing if you use the
 C<--wiki_main_page> option. This also sets the title of your wiki in various
 places like the RSS and Atom feeds.
 
+In order to be more flexible, the name of the main page does not get printed. If
+you want it, you need to add it yourself using a header. This allows you to keep
+the main page in a page called "Welcome" containing some ASCII art such that the
+word "Welcome" does not show on the main page.
+
 =head2 Limited, read-only HTTP support
 
 You can actually look at your wiki pages using a browser! But beware: these days
@@ -1108,6 +1113,7 @@ sub html_page {
   say "<title>" . $self->quote_html($id) . "</title>";
   say "</head>";
   say "<body>";
+  say "<h1>" . $self->quote_html($id) . "</h1>";
   $self->print_html($space, $id, $revision);
   say "</body>";
   say "</html>";
@@ -1120,7 +1126,6 @@ sub print_html {
   my $revision = shift;
   my $host = $self->host();
   my $port = $self->port();
-  say "<h1>" . $self->quote_html($id) . "</h1>";
   my $text = $self->quote_html($self->text($space, $id, $revision));
   my $list;
   my $code;
@@ -1232,6 +1237,7 @@ sub serve_gemini {
   my $revision = shift;
   $self->log(3, "Serve Gemini page $id");
   $self->success();
+  say "# $id";
   print $self->text($space, $id, $revision);
   print $self->footer($space, $id, $revision);
 }

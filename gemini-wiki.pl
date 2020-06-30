@@ -67,7 +67,7 @@ L<on Community Wiki|https://communitywiki.org/wiki/Titan>.
 
 =head2 Dependencies
 
-Perl libraries you need to install if you want to run Gemini wiki:
+Perl libraries you need to install if you want to run Gemini Wiki:
 
 =over
 
@@ -85,8 +85,8 @@ Perl libraries you need to install if you want to run Gemini wiki:
 
 =back
 
-We are also going to be using C<curl> and C<openssl> in these installation
-instructions.
+I'm going to be using F<curl> and F<openssl> in the L</Quickstart> instructions,
+so you'll need those tools as well.
 
 On Debian:
 
@@ -102,15 +102,15 @@ On Debian:
 =head2 Quickstart
 
 Right now there aren't any releases. You just get the latest version from the
-repository and that's it. These instructions assume that you're going to create
-a new user in order to be safe.
+repository and that's it. I'm going to assume that you're going to create a new
+user just to be safe.
 
     sudo adduser --disabled-login --disabled-password gemini
     sudo su gemini
     cd
 
-Now you're in your home directory, C</home/gemini>. We're going to install
-things right here.
+Now you're in your home directory, F</home/gemini>. We're going to install
+things right here. First, get the source code:
 
     curl --output gemini-wiki.pl \
       https://alexschroeder.ch/cgit/gemini-wiki/plain/gemini-wiki.pl?h=main
@@ -121,8 +121,8 @@ These are both stored in PEM files. To create your own copies of these files
 
     openssl req -new -x509 -nodes -out cert.pem -keyout key.pem
 
-You should have three files, now: C<gemini-wiki.pl>, C<cert.pem>, and
-C<key.pem>. That's enough to get started! Start the server:
+You should have three files, now: F<gemini-wiki.pl>, F<cert.pem>, and
+F<key.pem>. That's enough to get started! Start the server:
 
     perl gemini-wiki.pl
 
@@ -160,41 +160,43 @@ You should get back a page that starts as follows:
     Welcome to the wiki!
     Please be kind.
 
+Yay! 😁🎉 🚀🚀
+
 =head2 Wiki Directory
 
-You home directory should now also contain a wiki directory called C<wiki>. In
+You home directory should now also contain a wiki directory called F<wiki>. In
 it, you'll find a few more files:
 
 =over
 
-=item C<page> is the directory with all the page files in it
+=item F<page> is the directory with all the page files in it
 
-=item C<index> is a file containing all the files in your C<page> directory for
-      quick access; if you create new files in the C<page> directory, you should
-      delete the C<index> file – dont' worry, it will get regenerated when
+=item F<index> is a file containing all the files in your F<page> directory for
+      quick access; if you create new files in the F<page> directory, you should
+      delete the F<index> file – dont' worry, it will get regenerated when
       needed
 
-=item C<keep> is the directory with all the old revisions of pages in it – if
+=item F<keep> is the directory with all the old revisions of pages in it – if
       you've only made one change, then it won't exist, yet; and if you don't
       care about the older revisions, you can delete them
 
-=item C<file> is the directory with all the uploaded files in it – if you
+=item F<file> is the directory with all the uploaded files in it – if you
       haven't uploaded any files, then it won't exist, yet; you must explicitly
       allow MIME types for upload using the C<--wiki_mime_type> option (see
       I<Options> below)
 
-=item C<meta> is the directory with all the meta data for uploaded files in it –
-      there should be a file here for every file in the C<file> directory; if
-      you create new files in the C<file> directory, you should create a
+=item F<meta> is the directory with all the meta data for uploaded files in it –
+      there should be a file here for every file in the F<file> directory; if
+      you create new files in the F<file> directory, you should create a
       matching file here
 
-=item C<changes.log> is a file listing all the pages made to the wiki; if you
-      make changes to the files in the C<page> or C<file> directory, they aren't
+=item F<changes.log> is a file listing all the pages made to the wiki; if you
+      make changes to the files in the F<page> or F<file> directory, they aren't
       going to be listed in this file and thus people will be confused by the
       changes you made – your call (but in all fairness, if you're collaborating
       with others you probably shouldn't do this)
 
-=item C<config> probably doesn't exist, yet; it is an optional file containing
+=item F<config> probably doesn't exist, yet; it is an optional file containing
       Perl code where you can mess with the code (see L</Configuration> below)
 
 =back
@@ -245,10 +247,10 @@ And here's some documentation:
       subdirectory
 
 =item C<--cert_file> is the certificate PEM file to use; the default is
-      "cert.pem"
+      F<cert.pem>
 
 =item C<--key_file> is the private key PEM file to use; the default is
-      "key.pem"
+      F<key.pem>
 
 =item C<--log_level> is the log level to use, 0 is quiet, 1 is errors, 2 is
       warnings, 3 is info, and 4 is debug; the default is 2
@@ -326,8 +328,8 @@ regular pages; the wiki also doesn't keep old revisions of files around. That
 also means that if somebody overwrites a file, the old revision is gone.
 
 You definitely don't want random people uploading all sorts of images, videos
-and binaries files to your server. Make sure you set up those
-L<tokens/Security> using C<--wiki_token>!
+and binaries files to your server. Make sure you set up those L<tokens|/Security>
+using C<--wiki_token>!
 
 =head2 Main Page and Title
 
@@ -353,10 +355,10 @@ Here's how you could serve the wiki both on Gemini, and the standard HTTPS port,
     sudo ./gemini-wiki.pl --port=443 --port=1965 \
       --user=$(id -un) --group=$(id -gn)
 
-We need to use C<sudo> because all the ports below 1024 are priviledge ports and
+We need to use F<sudo> because all the ports below 1024 are priviledge ports and
 that includes the standard HTTPS port. Since we don't want the server itself to
 run with all those priviledges, however, I'm using the C<--user> and C<--group>
-options to change effective and user and group ID. The C<id> command is used to
+options to change effective and user and group ID. The F<id> command is used to
 get your user and your group IDs instead. If you've followed the L</Quickstart>
 and created a separate C<gemini> user, you could simply use C<--user=gemini> and
 C<--group=gemini> instead. 👍
@@ -364,7 +366,7 @@ C<--group=gemini> instead. 👍
 =head2 Configuration
 
 This section describes some hooks you can use to customize your wiki using the
-C<config> file.
+F<config> file.
 
 =over
 

@@ -1133,9 +1133,9 @@ sub print_html {
 	say "<pre>";
 	$code = 1;
       }
-    } elsif (/^\* /) {
+    } elsif (/^\* +(.*)/) {
       say "<ul>" unless $list;
-      say "<li>$_";
+      say "<li>$1";
       $list = 1;
     } elsif (my ($url, $text) = /^=&gt;\s*(\S+)\s+(.*)/) { # quoted HTML!
       say "<ul>" unless $list;

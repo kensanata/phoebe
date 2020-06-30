@@ -92,7 +92,9 @@ if (!defined $pid) {
        "--wiki_mime_type=image/jpeg",
        "--wiki_pages=Alex",
        "--wiki_pages=Berta",
-       "--wiki_pages=Chris")
+       "--wiki_pages=Chris",
+       "--wiki_space=alex",
+       "--wiki_space=berta",)
       or die "Cannot exec: $!";
 }
 

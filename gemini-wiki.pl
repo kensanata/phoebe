@@ -353,7 +353,7 @@ Here's how you could serve the wiki both on Gemini, and the standard HTTPS port,
 443:
 
     sudo ./gemini-wiki.pl --port=443 --port=1965 \
-      --user=$(id -un) --group=$(id -gn)
+      --user=$(id --user --name) --group=$(id --group  --name)
 
 We need to use F<sudo> because all the ports below 1024 are priviledge ports and
 that includes the standard HTTPS port. Since we don't want the server itself to

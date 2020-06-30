@@ -38,7 +38,7 @@ information for developers available
 
 ## Dependencies
 
-Perl libraries you need to install if you want to run Gemini wiki:
+Perl libraries you need to install if you want to run Gemini Wiki:
 
 - [Algorithm::Diff](https://metacpan.org/pod/Algorithm::Diff)
 - [File::ReadBackwards](https://metacpan.org/pod/File::ReadBackwards)
@@ -47,8 +47,8 @@ Perl libraries you need to install if you want to run Gemini wiki:
 - [Net::Server](https://metacpan.org/pod/Net::Server)
 - [URI::Escape](https://metacpan.org/pod/URI::Escape)
 
-We are also going to be using `curl` and `openssl` in these installation
-instructions.
+I'm going to be using `curl` and `openssl` in the ["Quickstart"](#quickstart) instructions,
+so you'll need those tools as well.
 
 On Debian:
 
@@ -64,15 +64,15 @@ On Debian:
 ## Quickstart
 
 Right now there aren't any releases. You just get the latest version from the
-repository and that's it. These instructions assume that you're going to create
-a new user in order to be safe.
+repository and that's it. I'm going to assume that you're going to create a new
+user just to be safe.
 
     sudo adduser --disabled-login --disabled-password gemini
     sudo su gemini
     cd
 
 Now you're in your home directory, `/home/gemini`. We're going to install
-things right here.
+things right here. First, get the source code:
 
     curl --output gemini-wiki.pl \
       https://alexschroeder.ch/cgit/gemini-wiki/plain/gemini-wiki.pl?h=main
@@ -121,6 +121,8 @@ You should get back a page that starts as follows:
     20 text/gemini; charset=UTF-8
     Welcome to the wiki!
     Please be kind.
+
+Yay! 😁🎉 🚀🚀
 
 ## Wiki Directory
 
@@ -188,9 +190,9 @@ And here's some documentation:
       value of the `GEMINI_WIKI_DATA_DIR` environment variable, or the "./wiki"
       subdirectory
 - `--cert_file` is the certificate PEM file to use; the default is
-      "cert.pem"
+      `cert.pem`
 - `--key_file` is the private key PEM file to use; the default is
-      "key.pem"
+      `key.pem`
 - `--log_level` is the log level to use, 0 is quiet, 1 is errors, 2 is
       warnings, 3 is info, and 4 is debug; the default is 2
 
@@ -258,8 +260,8 @@ regular pages; the wiki also doesn't keep old revisions of files around. That
 also means that if somebody overwrites a file, the old revision is gone.
 
 You definitely don't want random people uploading all sorts of images, videos
-and binaries files to your server. Make sure you set up those
-["Security" in tokens](https://metacpan.org/pod/tokens#Security) using `--wiki_token`!
+and binaries files to your server. Make sure you set up those [tokens](#security)
+using `--wiki_token`!
 
 ## Main Page and Title
 
@@ -283,7 +285,7 @@ Here's how you could serve the wiki both on Gemini, and the standard HTTPS port,
 443:
 
     sudo ./gemini-wiki.pl --port=443 --port=1965 \
-      --user=$(id -un) --group=$(id -gn)
+      --user=$(id --user --name) --group=$(id --group  --name)
 
 We need to use `sudo` because all the ports below 1024 are priviledge ports and
 that includes the standard HTTPS port. Since we don't want the server itself to

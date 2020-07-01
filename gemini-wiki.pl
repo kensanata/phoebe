@@ -338,8 +338,8 @@ with a username. You set them using the C<--wiki_token> option. By default, the
 only password is "hello". That's why the Titan command above contained
 "token=hello". 😊
 
-If you're going to check up on your wiki often, looking at Recent Changes on a
-daily basis, you could just tell people about the token on a page of your wiki.
+If you're going to check up on your wiki often, looking at Changes on a daily
+basis, you could just tell people about the token on a page of your wiki.
 Spammers would at least have to read the instructions and in my experience the
 hardly ever do.
 
@@ -736,7 +736,7 @@ sub serve_main_menu {
   for my $line (@main_menu) {
     say $line;
   }
-  $self->print_link($space, "Recent Changes", "do/changes");
+  $self->print_link($space, "Changes", "do/changes");
   $self->print_link($space, "Search matching page names", "do/match");
   $self->print_link($space, "Search matching page content", "do/search");
   $self->print_link($space, "New page", "do/new");
@@ -980,8 +980,10 @@ sub serve_changes {
   $self->log(3, "Serving changes");
   $self->success();
   say "# Changes";
-  $self->print_link($space, "Show Atom", "do/atom");
-  $self->print_link($space, "Show RSS", "do/rss");
+  $self->print_link($space, "Changes for all spaces", "do/all/changes")
+      if @{$self->{server}->{wiki_space}};
+  $self->print_link($space, "Atom Feed", "do/atom");
+  $self->print_link($space, "RSS Feed", "do/rss");
   my $dir = $self->{server}->{wiki_dir};
   $dir .= "/$space" if $space;
   my $log = "$dir/changes.log";
@@ -998,10 +1000,9 @@ sub serve_changes {
 
 sub serve_all_changes {
   my $self = shift;
-  my $space = shift;
   $self->log(3, "Serving all changes");
   $self->success();
-  say "# All Changes";
+  say "# Changes for all spaces";
   # merge all logs
   my @log;
   for my $space ("", @{$self->{server}->{wiki_space}}) {
@@ -1019,22 +1020,24 @@ sub serve_all_changes {
   # sort them all
   @log = sort { $b->[0] <=> $a->[0] } @log;
   # taking the head of the @log to get new log entries
-  $self->changes(sub { @{shift(@log)}, $space });
+  $self->changes(sub { @{shift(@log)}, 1 });
 }
 
 # $next is a code reference that returns the list of attributes for the next
-# change, these attributes being the timestamp (as returned by time), the page
-# or file name, the page revision or zero if a file, and the code to represent
-# the person that made the change, represented as a string of octal digits that
-# will be fed to the colourize sub.
+# change, these attributes being: the timestamp (as returned by time); the page
+# or file name; the page revision or zero if a file; the code to represent the
+# person that made the change, represented as a string of octal digits that will
+# be fed to the colourize sub; the name of the space, if any; and a boolean if
+# space and page or file name should both be shown.
 sub changes {
   my $self = shift;
   my $next = shift;
   my $last_day = '';
   my %seen;
   for (1 .. 100) {
-    my ($ts, $id, $revision, $code, $space) = $next->();
+    my ($ts, $id, $revision, $code, $space, $show_space) = $next->();
     last unless $ts and $id;
+    my $name = $space && $show_space ? "[$space] $id" : $id;
     my $day = $self->day($ts);
     if ($day ne $last_day) {
       say "## $day";
@@ -1043,17 +1046,17 @@ sub changes {
     say $self->time_of_day($ts) . " by " . $self->colourize($code);
     if ($revision) {
       if ($seen{$id}) {
-	$self->print_link($space, "$id ($revision)", "page/$id/$revision");
+	$self->print_link($space, "$name ($revision)", "page/$id/$revision");
       } else {
-	$self->print_link($space, "$id (current)", "page/$id");
+	$self->print_link($space, "$name (current)", "page/$id");
 	$seen{$id} = 1;
       }
     } else {
       # there can be pages and files sharing the same name
       if ($seen{$id . "\x1c"}) {
-	say "$id (file)";
+	say "$name (file)";
       } else {
-	$self->print_link($space, "$id (file)", "file/$id");
+	$self->print_link($space, "$name (file)", "file/$id");
 	$seen{$id . "\x1c"} = 1;
       }
     }
@@ -1095,7 +1098,7 @@ sub rss {
   say "<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">";
   say "<channel>";
   say "<title>" . $self->quote_html($name) . "</title>";
-  say "<description>Recent changes on this wiki.</description>";
+  say "<description>Changes on this wiki.</description>";
   say "<link>$schema://$host:$port/</link>";
   say "<atom:link rel=\"self\" type=\"application/rss+xml\" href=\"$schema://$host:$port/do/rss\" />";
   say "<generator>Gemini Wiki</generator>";

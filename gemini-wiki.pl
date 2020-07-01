@@ -295,7 +295,36 @@ handy:
 
 =head2 Using systemd
 
-I have no idea. Help me out?
+In this case, we don't want to daemonize the process. Systemd is going to handle
+that for us. There's more documentation L<available
+online|https://www.freedesktop.org/software/systemd/man/systemd.service.html>.
+
+Basically, this is the template for our service:
+
+    [Unit]
+    Description=Gemini Wiki
+    After=network.target
+    [Service]
+    Type=simple
+    WorkingDirectory=/home/gemini
+    ExecStart=/home/gemini/gemini-wiki.pl
+    Restart=always
+    User=gemini
+    Group=gemini
+    [Install]
+    WantedBy=multi-user.target
+
+Save this as F<gemini-wiki.service>, and then link it:
+
+    sudo ln -s /home/gemini/gemini-wiki.service /etc/systemd/system/
+
+Start it:
+
+    sudo systemctl start gemini-wiki
+
+Check the log output:
+
+    sudo journalctl --unit gemini-wiki
 
 =head2 Security
 

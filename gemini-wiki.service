@@ -1,0 +1,12 @@
+[Unit]
+Description=Gemini Wiki
+After=network.target
+[Service]
+Type=simple
+WorkingDirectory=/home/gemini
+ExecStart=/home/gemini/gemini-wiki.pl
+Restart=always
+User=gemini
+Group=gemini
+[Install]
+WantedBy=multi-user.target

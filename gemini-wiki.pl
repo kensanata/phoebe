@@ -988,39 +988,12 @@ sub serve_changes {
   if (not -e $log) {
     say "No changes.";
     return;
-  } elsif (my $fh = File::ReadBackwards->new($log)) {
-    my $last_day = '';
-    my %seen;
-    for (1 .. 100) {
-      last unless $_ = $fh->readline;
-      chomp;
-      my ($ts, $id, $revision, $code) = split(/\x1f/);
-      my $day = $self->day($ts);
-      if ($day ne $last_day) {
-	say "## $day";
-	$last_day = $day;
-      }
-      say $self->time_of_day($ts) . " by " . $self->colourize($code);
-      if ($revision) {
-	if ($seen{$id}) {
-	  $self->print_link($space, "$id ($revision)", "page/$id/$revision");
-	} else {
-	  $self->print_link($space, "$id (current)", "page/$id");
-	  $seen{$id} = 1;
-	}
-      } else {
-	# there can be pages and files sharing the same name
-	if ($seen{$id . "\x1c"}) {
-	  say "$id (file)";
-	} else {
-	  $self->print_link($space, "$id (file)", "file/$id");
-	  $seen{$id . "\x1c"} = 1;
-	}
-      }
-    }
-  } else {
-    say "Error: $!";
   }
+  my $fh = File::ReadBackwards->new($log);
+  $self->changes( sub {
+    return unless $_ = $fh->readline;
+    chomp;
+    split(/\x1f/), $space });
 }
 
 sub serve_all_changes {
@@ -1043,14 +1016,25 @@ sub serve_all_changes {
       push(@log, [split(/\x1f/), $space]);
     }
   }
-  # sort them all and keep the 100 latest ones
+  # sort them all
   @log = sort { $b->[0] <=> $a->[0] } @log;
-  @log = @log[0 .. 99] if @log > 100;
-  my %seen;
+  # taking the head of the @log to get new log entries
+  $self->changes(sub { @{shift(@log)}, $space });
+}
+
+# $next is a code reference that returns the list of attributes for the next
+# change, these attributes being the timestamp (as returned by time), the page
+# or file name, the page revision or zero if a file, and the code to represent
+# the person that made the change, represented as a string of octal digits that
+# will be fed to the colourize sub.
+sub changes {
+  my $self = shift;
+  my $next = shift;
   my $last_day = '';
-  # now we print them, taking care of $space
-  for (@log) {
-    my ($ts, $id, $revision, $code, $space) = @$_;
+  my %seen;
+  for (1 .. 100) {
+    my ($ts, $id, $revision, $code, $space) = $next->();
+    last unless $ts and $id;
     my $day = $self->day($ts);
     if ($day ne $last_day) {
       say "## $day";

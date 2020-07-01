@@ -13,6 +13,9 @@ README.md: gemini-wiki.pl
 test:
 	prove --jobs 2 t
 
+debug:
+	for t in t/*.t; do DEBUG=4 perl "$$t"; done
+
 clean:
 	rm -rf test-[0-9][0-9][0-9][0-9]
 

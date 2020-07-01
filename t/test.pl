@@ -87,7 +87,7 @@ if (!defined $pid) {
        "./gemini-wiki.pl",
        "--host=$host",
        "--port=$port",
-       "--log_level=0", # set to 4 for verbose logging
+       "--log_level=" . ($ENV{DEBUG}||0), # set to 4 for verbose logging
        "--wiki_dir=$dir",
        "--wiki_mime_type=image/jpeg",
        "--wiki_pages=Alex",

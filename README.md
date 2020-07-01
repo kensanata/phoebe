@@ -14,6 +14,10 @@ It does two and a half things:
 - People can also access it using a regular web browser. They'll get a very
       simple, read-only version of the site.
 
+    To take a look for yourself, check out the Gemini Test Wiki via the
+    <HTTP|https://alexschroeder.ch:1968/> or via
+    [gemini](gemini://alexschroeder.ch:1968/).
+
 **Table of Contents**
 
 - [How do you edit a Gemini Wiki?](#how-do-you-edit-a-gemini-wiki)

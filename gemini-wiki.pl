@@ -36,6 +36,10 @@ It does two and a half things:
 =item People can also access it using a regular web browser. They'll get a very
       simple, read-only version of the site.
 
+To take a look for yourself, check out the Gemini Test Wiki via the
+<HTTP|https://alexschroeder.ch:1968/> or via
+L<gemini|gemini://alexschroeder.ch:1968/>.
+
 =back
 
 =head2 How do you edit a Gemini Wiki?

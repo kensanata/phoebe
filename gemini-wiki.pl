@@ -37,7 +37,7 @@ It does two and a half things:
       simple, read-only version of the site.
 
 To take a look for yourself, check out the Gemini Test Wiki via the
-<HTTP|https://alexschroeder.ch:1968/> or via
+L<HTTP|https://alexschroeder.ch:1968/> or via
 L<gemini|gemini://alexschroeder.ch:1968/>.
 
 =back

@@ -49,7 +49,7 @@ $page = query_gemini("$titan/raw/Haiku;size=76;mime=text/plain;token=hello", $ha
 like($page, qr/^30 $base\/page\/Haiku\r$/, "Titan Haiku");
 
 $page = query_gemini("$base/page/Haiku");
-like($page, qr/^20 text\/gemini; charset=UTF-8\r\n$haiku/, "Haiku saved");
+like($page, qr/^20 text\/gemini; charset=UTF-8\r\n# Haiku\n$haiku/, "Haiku saved");
 
 # plain text
 

@@ -590,8 +590,6 @@ sub post_configure_hook {
   $self->log(3, "Wiki data directory is $self->{server}->{wiki_dir}");
 }
 
-run();
-
 sub success {
   my $self = shift;
   my $type = shift || 'text/gemini; charset=UTF-8';
@@ -722,7 +720,7 @@ sub blog_html {
 sub serve_main_menu {
   my $self = shift;
   my $space = shift;
-  $self->log(3, "Serving main menu $space");
+  $self->log(3, "Serving main menu");
   $self->success();
   my $page = $self->{server}->{wiki_main_page};
   if ($page) {
@@ -744,6 +742,8 @@ sub serve_main_menu {
   $self->print_link($space, "New page", "do/new");
   say "";
   $self->print_link($space, "Index of all pages", "do/index");
+  $self->print_link(undef, "Index of all spaces", "do/spaces")
+      if @{$self->{server}->{wiki_space}};
   # a requirement of the GNU Affero General Public License
   $self->print_link(undef, "Source code", "do/source");
   say "";
@@ -781,6 +781,8 @@ sub serve_main_menu_via_http {
     say "<li>" . $self->link_html($space, $id);
   }
   say "<li>" . $self->link_html($space, "Index of all pages", "do/index");
+  say "<li>" . $self->link_html(undef, "Index of all spaces", "do/spaces")
+      if @{$self->{server}->{wiki_space}};
   say "<li>" . $self->link_html($space, "Atom feed", "do/atom");
   say "<li>" . $self->link_html($space, "RSS feed", "do/rss");
   # a requirement of the GNU Affero General Public License
@@ -851,6 +853,39 @@ sub serve_index_via_http {
   } else {
     say "<p>The are no pages."
   }
+}
+
+sub serve_spaces {
+  my $self = shift;
+  $self->success();
+  $self->log(3, "Serving all spaces");
+  say "# Spaces";
+  $self->print_link(undef, "Main space", "/");
+  for my $space (sort @{$self->{server}->{wiki_space}}) {
+    $self->print_link($space, $space, "/");
+  }
+}
+
+sub serve_spaces_via_http {
+  my $self = shift;
+  $self->log(3, "Serving all spaces via HTTP");
+  say "HTTP/1.1 200 OK\r";
+  say "Content-Type: text/html\r";
+  say "\r";
+  say "<!DOCTYPE html>";
+  say "<html>";
+  say "<head>";
+  say "<meta charset=\"utf-8\">";
+  say "<title>All Spaces</title>";
+  say "</head>";
+  say "<body>";
+  say "<h1>All Spaces</h1>";
+  say "<ul>";
+  say "<li>" . $self->link_html(undef, "Main space", "/");
+  for my $space (sort @{$self->{server}->{wiki_space}}) {
+    say "<li>" . $self->link_html($space, $space, "/");
+  }
+  say "</ul>";
 }
 
 sub serve_match {
@@ -942,9 +977,9 @@ sub highlight {
 sub serve_changes {
   my $self = shift;
   my $space = shift;
-  $self->log(3, "Serving recent changes");
+  $self->log(3, "Serving changes");
   $self->success();
-  say "# Recent Changes";
+  say "# Changes";
   $self->print_link($space, "Show Atom", "do/atom");
   $self->print_link($space, "Show RSS", "do/rss");
   my $dir = $self->{server}->{wiki_dir};
@@ -985,6 +1020,59 @@ sub serve_changes {
     }
   } else {
     say "Error: $!";
+  }
+}
+
+sub serve_all_changes {
+  my $self = shift;
+  my $space = shift;
+  $self->log(3, "Serving all changes");
+  $self->success();
+  say "# All Changes";
+  # merge all logs
+  my @log;
+  for my $space ("", @{$self->{server}->{wiki_space}}) {
+    my $dir = $self->{server}->{wiki_dir};
+    $dir .= "/$space" if $space;
+    my $log = "$dir/changes.log";
+    next if not -e $log;
+    next unless my $fh = File::ReadBackwards->new($log);
+    for (1 .. 100) {
+      last unless $_ = $fh->readline;
+      chomp;
+      push(@log, [split(/\x1f/), $space]);
+    }
+  }
+  # sort them all and keep the 100 latest ones
+  @log = sort { $b->[0] <=> $a->[0] } @log;
+  @log = @log[0 .. 99] if @log > 100;
+  my %seen;
+  my $last_day = '';
+  # now we print them, taking care of $space
+  for (@log) {
+    my ($ts, $id, $revision, $code, $space) = @$_;
+    my $day = $self->day($ts);
+    if ($day ne $last_day) {
+      say "## $day";
+      $last_day = $day;
+    }
+    say $self->time_of_day($ts) . " by " . $self->colourize($code);
+    if ($revision) {
+      if ($seen{$id}) {
+	$self->print_link($space, "$id ($revision)", "page/$id/$revision");
+      } else {
+	$self->print_link($space, "$id (current)", "page/$id");
+	$seen{$id} = 1;
+      }
+    } else {
+      # there can be pages and files sharing the same name
+      if ($seen{$id . "\x1c"}) {
+	say "$id (file)";
+      } else {
+	$self->print_link($space, "$id (file)", "file/$id");
+	$seen{$id . "\x1c"} = 1;
+      }
+    }
   }
 }
 
@@ -1704,6 +1792,8 @@ sub process_request {
       $self->serve_blog(decode_utf8(uri_unescape($space)));
     } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/index$!) {
       $self->serve_index(decode_utf8(uri_unescape($space)));
+    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/spaces$!) {
+      $self->serve_spaces();
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/source$!) {
       $self->success('text/plain; charset=UTF-8');
       seek DATA, 0, 0;
@@ -1725,6 +1815,8 @@ sub process_request {
       say "30 gemini://$host:$port/raw/$query\r";
     } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/changes$!) {
       $self->serve_changes(decode_utf8(uri_unescape($space)));
+    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?/do/all/changes$!) {
+      $self->serve_all_changes();
     } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/rss$!) {
       $self->serve_rss(decode_utf8(uri_unescape($space)));
     } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/atom$!) {
@@ -1758,6 +1850,9 @@ sub process_request {
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/index HTTP/1.[01]$!
 	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_index_via_http(decode_utf8(uri_unescape($space)));
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/spaces HTTP/1.[01]$!
+	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+      $self->serve_spaces_via_http();
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/rss HTTP/1.[01]$!
 	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_rss_via_http(decode_utf8(uri_unescape($space)));

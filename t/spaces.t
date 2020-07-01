@@ -32,6 +32,13 @@ mkdir("$dir/file");
 write_binary("$dir/file/alex.jpg", read_binary("t/alex.jpg"));
 mkdir("$dir/meta");
 write_text("$dir/meta/alex.jpg", "content-type: image/jpeg");
+write_text("$dir/index", join("\n", "Haiku", "Alex", ""));
+write_text("$dir/changes.log",
+	   join("\n",
+		join("\x1f", 1593600755, "Alex", 1, 1441),
+		join("\x1f", 1593610755, "alex.jpg", 0, 1441),
+		join("\x1f", 1593620755, "Haiku", 1, 1441),
+		""));
 
 # test the main space
 
@@ -63,7 +70,7 @@ $page = query_gemini("$titan/alex/raw/Haiku;size=63;mime=text/plain;token=hello"
 like($page, qr/^30 $base\/alex\/page\/Haiku\r$/, "Titan Haiku");
 
 $page = query_gemini("$base/alex/page/Haiku");
-like($page, qr/^20 text\/gemini; charset=UTF-8\r\n$haiku/, "Haiku saved");
+like($page, qr/^20 text\/gemini; charset=UTF-8\r\n# Haiku\n$haiku/, "Haiku saved");
 
 $page = query_gemini("$base/page/Haiku");
 like($page, qr/^This page does not yet exist/m, "Haiku page is empty in the main space");
@@ -90,9 +97,16 @@ $page = query_gemini("$base/alex/do/changes");
 like($page, qr/^=> $base\/alex\/page\/Haiku Haiku/m, "Haiku found in the alex space changes");
 
 $page = query_gemini("$base/alex/do/rss");
-like($page, qr/$base\/alex\/page\/Haiku/m, "Haiku found in the alex space RSS feed");
+like($page, qr/<link>$base\/alex\/page\/Haiku<\/link>/, "Haiku found in the alex space RSS feed");
 
 $page = query_gemini("$base/alex/do/atom");
-like($page, qr/$base\/alex\/page\/Haiku/m, "Haiku found in the alex space Atom feed");
+like($page, qr/<link href="$base\/alex\/page\/Haiku"\/>/, "Haiku found in the alex space Atom feed");
+
+$page = query_gemini("$base/do/all/changes");
+like($page, qr/^=> $base\/page\/Alex Alex/m, "Alex found in unified changes");
+like($page, qr/^=> $base\/alex\/page\/Haiku/m, "Haiku found in unified changes");
+
+$page = query_gemini("$base/do/spaces");
+like($page, qr/^=> $base\/alex\/ alex/m, "Space alex found");
 
 done_testing();

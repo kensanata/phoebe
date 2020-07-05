@@ -742,6 +742,7 @@ sub serve_main_menu {
   $self->print_link($space, "New page", "do/new");
   say "";
   $self->print_link($space, "Index of all pages", "do/index");
+  $self->print_link($space, "Index of all files", "do/files");
   $self->print_link(undef, "Index of all spaces", "do/spaces")
       if @{$self->{server}->{wiki_space}};
   # a requirement of the GNU Affero General Public License
@@ -781,6 +782,8 @@ sub serve_main_menu_via_http {
     say "<li>" . $self->link_html($space, $id);
   }
   say "<li>" . $self->link_html($space, "Index of all pages", "do/index");
+  say "<li>" . $self->link_html($space, "Index of all files", "do/files")
+      if @{$self->{server}->{wiki_mime_type}};
   say "<li>" . $self->link_html(undef, "Index of all spaces", "do/spaces")
       if @{$self->{server}->{wiki_space}};
   say "<li>" . $self->link_html($space, "Atom feed", "do/atom");
@@ -825,6 +828,32 @@ sub serve_index {
   say "The are no pages." unless @pages;
   for my $id (sort { $self->newest_first($a, $b) } @pages) {
     $self->print_link($space, $id);
+  }
+}
+
+sub files {
+  my $self = shift;
+  my $space = shift;
+  my $re = shift;
+  my $dir = $self->{server}->{wiki_dir};
+  $dir .= "/$space" if $space;
+  $dir = "$dir/file";
+  return if not -d $dir;
+  my @files = read_dir($dir);
+  return grep /$re/i, @files if $re;
+  return @files;
+}
+
+sub serve_files {
+  my $self = shift;
+  my $space = shift;
+  $self->success();
+  $self->log(3, "Serving index of all files");
+  say "# All Files";
+  my @files = $self->files($space);
+  say "The are no files." unless @files;
+  for my $id (sort @files) {
+    $self->print_link($space, $id, "file/$id");
   }
 }
 
@@ -1779,6 +1808,8 @@ sub process_request {
       $self->serve_blog(decode_utf8(uri_unescape($space)));
     } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/index$!) {
       $self->serve_index(decode_utf8(uri_unescape($space)));
+    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/files$!) {
+      $self->serve_files(decode_utf8(uri_unescape($space)));
     } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/spaces$!) {
       $self->serve_spaces();
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/source$!) {

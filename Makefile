@@ -5,7 +5,7 @@ web:
 	sudo ./gemini-wiki.pl --port=443 --port=1965 --user=$(shell id -un) --group=$(shell id -gn)
 
 dev:
-	morbo -- ./gemini-wiki.pl --port=2020 --log_level=4 --wiki_space=alex --wiki_space=berta
+	morbo -- ./gemini-wiki.pl --port=2020 --log_level=4 --wiki_space=alex --wiki_space=berta --wiki_mime_type=image/jpeg
 
 README.md: gemini-wiki.pl
 	./update-readme.pl

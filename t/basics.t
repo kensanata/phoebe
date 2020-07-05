@@ -104,6 +104,18 @@ like($page, qr/Quiet disk ratling/m, "Revision 1 content");
 $page = query_gemini("$base/diff/Haiku/1");
 like($page, qr/^< Quiet disk ratling\n-+\n> Muffled honking cars\n$/m, "Diff 1 content");
 
+# index
+$page = query_gemini("$base/do/index");
+for my $item(qw(2017-12-25 2017-12-26 2017-12-27 Haiku)) {
+  like($page, qr/^=> $base\/page\/$item $item$/m, "index contains $item");
+}
+
+# files
+$page = query_gemini("$base/do/files");
+for my $item(qw(Alex)) {
+  like($page, qr/^=> $base\/file\/$item $item$/m, "files contains $item");
+}
+
 # match
 $page = query_gemini("$base/do/match?2017");
 for my $item(qw(2017-12-25 2017-12-26 2017-12-27)) {

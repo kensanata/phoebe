@@ -95,7 +95,7 @@ like($page, qr/^30 $base\/page\/Haiku\r$/, "Titan Haiku 2");
 
 $page = query_gemini("$base/history/Haiku");
 like($page, qr/^=> $base\/page\/Haiku\/1 Haiku \(1\)/m, "Revision 1 is listed");
-like($page, qr/^=> $base\/diff\/Haiku\/1 Diff between revision 1 and the current one/m, "Diff 1 link");
+like($page, qr/^=> $base\/diff\/Haiku\/1 Diff/m, "Diff 1 link");
 like($page, qr/^=> $base\/page\/Haiku Haiku \(current\)/m, "Current revision is listed");
 $page = query_gemini("$base/page/Haiku/1");
 like($page, qr/Quiet disk ratling/m, "Revision 1 content");

@@ -1082,9 +1082,11 @@ sub changes {
     if ($revision) {
       if ($seen{$id}) {
 	$self->print_link($space, "$name ($revision)", "page/$id/$revision");
+	$self->print_link($space, "Differences", "diff/$id/$revision");
       } else {
 	$self->print_link($space, "$name (current)", "page/$id");
 	$seen{$id} = 1;
+	$self->print_link($space, "History", "history/$id");
       }
     } else {
       # there can be pages and files sharing the same name
@@ -1432,7 +1434,7 @@ sub serve_history {
     say $time if $time ne $last_time;
     $last_time = $time;
     $self->print_link($space, "$id ($revision)", "page/$id/$revision");
-    $self->print_link($space, "Diff between revision $revision and the current one", "diff/$id/$revision");
+    $self->print_link($space, "Differences", "diff/$id/$revision");
   }
 }
 

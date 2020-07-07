@@ -755,6 +755,7 @@ sub serve_main_menu {
   $self->print_link($space, "Index of all files", "do/files");
   $self->print_link(undef, "Index of all spaces", "do/spaces")
       if @{$self->{server}->{wiki_space}};
+  $self->print_link($space, "Download data", "do/data");
   # a requirement of the GNU Affero General Public License
   $self->print_link(undef, "Source code", "do/source");
   say "";
@@ -925,6 +926,34 @@ sub serve_spaces_via_http {
     say "<li>" . $self->link_html($space, $space, "/");
   }
   say "</ul>";
+}
+
+sub serve_data {
+  my $self = shift;
+  my $space = shift;
+  # use /bin/tar instead of Archive::Tar to save memory
+  my $dir = $self->{server}->{wiki_dir};
+  $dir .= "/$space" if $space;
+  my $file = "$dir/data.tar.gz";
+  if (-e $file and time() - $self->modified($file) <= 300) { # data is valid for 5 minutes
+    $self->log(3, "Serving cached data archive");
+    $self->success("application/tar");
+    print read_binary($file);
+  } else {
+    write_binary($file, ""); # truncate in order to avoid "file changed as we read it" warning
+    if (system('/bin/tar', '--create', '--gzip',
+	       '--file', $file,
+	       '--exclude', $file,
+	       '--directory', "$dir/..",
+	       $dir) == 0) {
+      $self->log(3, "Serving new data archive");
+      $self->success("application/tar");
+      print read_binary($file);
+    } else {
+      $self->log(1, "Creation of data archive failed");
+      say("59 Archive creation failed\r");
+    }
+  }
 }
 
 sub serve_match {
@@ -1822,7 +1851,9 @@ sub process_request {
     } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/files$!) {
       $self->serve_files(decode_utf8(uri_unescape($space)));
     } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/spaces$!) {
-      $self->serve_spaces();
+      $self->serve_spaces(); # ignore space
+    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/data$!) {
+      $self->serve_data(decode_utf8(uri_unescape($space)));
     } elsif ($url =~ m!^gemini://$host(?::$port)?/do/source$!) {
       $self->success('text/plain; charset=UTF-8');
       seek DATA, 0, 0;

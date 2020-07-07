@@ -62,4 +62,82 @@ for my $file (qw(changes.log index config
   ok(grep(/$file/, @files), "found $file in the archive");
 }
 
+# create a space
+
+my $sdir = "$dir/berta";
+mkdir($sdir);
+mkdir("$sdir/page");
+write_text("$sdir/page/Berta.gmi", "Berta Basler");
+write_text("$sdir/page/Tanka.gmi", "What a poet!");
+mkdir("$sdir/file");
+write_binary("$sdir/file/berta.jpg", read_binary("t/alex.jpg"));
+mkdir("$sdir/meta");
+write_text("$sdir/meta/berta.jpg", "content-type: image/jpeg");
+write_text("$sdir/index", join("\n", "Tanka", "Berta", ""));
+write_text("$sdir/changes.log",
+	   join("\n",
+		join("\x1f", 1593600755, "Berta", 1, 1441),
+		join("\x1f", 1593610755, "berta.jpg", 0, 1441),
+		join("\x1f", 1593620755, "Tanka", 1, 1441),
+		""));
+
+# test the berta space
+
+$page = query_gemini("$base/berta/");
+like($page, qr/^=> $base\/berta\/do\/data Download data/m, "main menu contains download link");
+
+$page = query_gemini("$base/berta/do/data");
+like($page, qr/^20 application\/tar\r\n/m, "download tar file");
+
+$page =~ s/^20 application\/tar\r\n//;
+$tar = read_binary("$sdir/data.tar.gz");
+ok($tar eq $page, "tar bytes are correct");
+
+open($fh, "tar --list --gzip --file $sdir/data.tar.gz |");
+@files = <$fh>;
+close($fh);
+# no config file in the space
+for my $file (qw(changes.log index
+	      meta/berta.jpg file/berta.jpg
+	      page/Berta.gmi page/Tanka.gmi)) {
+  ok(grep(/$file/, @files), "found $file in the archive");
+}
+
+# redo the main space
+
+$page = query_gemini("$base/do/data");
+like($page, qr/^20 application\/tar\r\n/m, "download tar file");
+open($fh, "tar --list --gzip --file $dir/data.tar.gz |");
+@files = <$fh>;
+close($fh);
+for my $file (qw(changes.log index config
+	      meta/alex.jpg file/alex.jpg
+	      page/Alex.gmi page/Haiku.gmi)) {
+  ok(grep(/$file/, @files), "found $file in the archive");
+}
+for my $file (qw(changes.log index
+	      meta/berta.jpg file/berta.jpg
+	      page/Berta.gmi page/Tanka.gmi)) {
+  ok(!grep(/berta\/$file/, @files), "$file not found in the archive");
+}
+
+# remove cached file
+
+unlink("$dir/data.tar.gz");
+
+# redo the main space
+
+$page = query_gemini("$base/do/data");
+like($page, qr/^20 application\/tar\r\n/m, "download tar file");
+open($fh, "tar --list --gzip --file $dir/data.tar.gz |");
+@files = <$fh>;
+close($fh);
+for my $file (qw(meta/alex.jpg file/alex.jpg
+	      page/Alex.gmi page/Haiku.gmi
+	      berta/changes.log berta/index
+	      berta/meta/berta.jpg berta/file/berta.jpg
+	      berta/page/Berta.gmi berta/page/Tanka.gmi)) {
+  ok(grep(/$file/, @files), "found $file in the archive");
+}
+
 done_testing();

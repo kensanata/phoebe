@@ -941,11 +941,13 @@ sub serve_data {
     print read_binary($file);
   } else {
     write_binary($file, ""); # truncate in order to avoid "file changed as we read it" warning
-    if (system('/bin/tar', '--create', '--gzip',
-	       '--file', $file,
-	       '--exclude', $file,
-	       '--directory', "$dir/..",
-	       $dir) == 0) {
+    my @command = ('/bin/tar', '--create', '--gzip',
+		   '--file', $file,
+		   '--exclude', $file,
+		   '--directory', "$dir/..",
+		   ((split(/\//,$dir))[-1]));
+    $self->log(4, "@command");
+    if (system(@command) == 0) {
       $self->log(3, "Serving new data archive");
       $self->success("application/tar");
       print read_binary($file);

@@ -104,9 +104,15 @@ things right here. First, get the source code:
 
 Since Gemini traffic is encrypted, we need to generate a certificate and a key.
 These are both stored in PEM files. To create your own copies of these files
-(and you should!), use the following:
+(and you should!), use "make cert" if you have a copy of the Makefile. If you
+don't, use this:
 
-    openssl req -new -x509 -nodes -out cert.pem -keyout key.pem
+    openssl req -new -x509 -newkey ec \
+    -pkeyopt ec_paramgen_curve:prime256v1 \
+    -days 1825 -nodes -out cert.pem -keyout key.pem
+
+This creates a certificate and a private key, both of them unencrypted, using
+eliptic curves of a particular kind, valid for five years.
 
 You should have three files, now: `gemini-wiki.pl`, `cert.pem`, and
 `key.pem`. That's enough to get started! Start the server:
@@ -288,8 +294,8 @@ with a username. You set them using the `--wiki_token` option. By default, the
 only password is "hello". That's why the Titan command above contained
 "token=hello". 😊
 
-If you're going to check up on your wiki often, looking at Recent Changes on a
-daily basis, you could just tell people about the token on a page of your wiki.
+If you're going to check up on your wiki often, looking at Changes on a daily
+basis, you could just tell people about the token on a page of your wiki.
 Spammers would at least have to read the instructions and in my experience the
 hardly ever do.
 
@@ -416,8 +422,11 @@ and created a separate `gemini` user, you could simply use `--user=gemini` and
 This section describes some hooks you can use to customize your wiki using the
 `config` file.
 
-- `@extensions` is a list of additional URLs you want the wiki to handle;
-      return 1 if you handle a URL
+- `@extensions` is a list of code references allowing you to handle
+      additional URLs; return 1 if you handle a URL; each code reference gets
+      called with the first line of the request (a Gemini URL, a Gopher
+      selector, a finger user, a HTTP request line), and a hash reference for
+      the headers (in the case of HTTP requests)
 - `@main_menu` adds more lines to the main menu, possibly links that aren't
       simply links to existing pages
 
@@ -431,6 +440,7 @@ The following example illustrates this:
     sub serve_test {
       my $self = shift;
       my $url = shift;
+      my $headers = shift;
       my $host = $self->host();
       my $port = $self->port();
       if ($url =~ m!^gemini://$host(:$port)?/do/test$!) {

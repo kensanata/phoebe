@@ -474,8 +474,11 @@ F<config> file.
 
 =over
 
-=item C<@extensions> is a list of additional URLs you want the wiki to handle;
-      return 1 if you handle a URL
+=item C<@extensions> is a list of code references allowing you to handle
+      additional URLs; return 1 if you handle a URL; each code reference gets
+      called with the first line of the request (a Gemini URL, a Gopher
+      selector, a finger user, a HTTP request line), and a hash reference for
+      the headers (in the case of HTTP requests)
 
 =item C<@main_menu> adds more lines to the main menu, possibly links that aren't
       simply links to existing pages
@@ -492,6 +495,7 @@ The following example illustrates this:
     sub serve_test {
       my $self = shift;
       my $url = shift;
+      my $headers = shift;
       my $host = $self->host();
       my $port = $self->port();
       if ($url =~ m!^gemini://$host(:$port)?/do/test$!) {
@@ -1742,8 +1746,9 @@ sub allow_deny_hook {
 sub run_extensions {
   my $self = shift;
   my $url = shift;
+  my $headers = shift;
   foreach my $sub (@extensions) {
-    return 1 if $sub->($self, $url);
+    return 1 if $sub->($self, $url, $headers);
   }
   return;
 }
@@ -1755,11 +1760,8 @@ sub valid {
   return 0;
 }
 
-my %headers;
-
 sub headers {
   my $self = shift;
-  return \%headers if %headers;
   my %result;
   my ($key, $value);
   while (<STDIN>) {
@@ -1791,14 +1793,15 @@ sub process_request {
     $self->log(4, "Serving $host:$port");
     my $url = <STDIN>; # no loop
     $url =~ s/\s+$//g; # no trailing whitespace
-    %headers = ();     # first call to $self->headers() sets them again
     # $url =~ s!^([^/:]+://[^/:]+)(/.*|)$!$1:$port$2!; # add port
     # $url .= '/' if $url =~ m!^[^/]+://[^/]+$!; # add missing trailing slash
     my($scheme, $authority, $path, $query, $fragment) =
 	$url =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?|;
+    my $headers;
+    $headers = $self->headers() if $url =~ m!^[a-z]+ .* HTTP/1.[01]$!i;
     $self->log(3, "Looking at $url");
     my ($space, $id, $n);
-    if ($self->run_extensions($url)) {
+    if ($self->run_extensions($url, $headers)) {
       # config file goes first
     } elsif ($url =~ m!^titan://$host(?::$port)?!) {
       if ($path !~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!) {
@@ -1862,31 +1865,31 @@ sub process_request {
     } elsif (($space, $id) = $url =~ m!gemini://$host(?::$port)?(?:/($spaces))?/file/([^/]+)?$!) {
       $self->serve_file(map {decode_utf8(uri_unescape($_))} $space, $id);
     } elsif (($space) = $url =~ m!^GET (?:(?:/($spaces)/?)?|/) HTTP/1.[01]$!
-	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+	     and $headers->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_main_menu_via_http(decode_utf8(uri_unescape($space)));
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/html/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
-	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+	     and $headers->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_html_via_http(map {decode_utf8(uri_unescape($_))} $space, $id, $n);
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/raw/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
-	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+	     and $headers->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_raw_via_http(map {decode_utf8(uri_unescape($_))} $space, $id, $n);
     } elsif (($space, $id) = $url =~ m!^GET /robots.txt HTTP/1.[01]$!
-	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+	     and $headers->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_raw_via_http(undef, 'robots');
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/index HTTP/1.[01]$!
-	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+	     and $headers->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_index_via_http(decode_utf8(uri_unescape($space)));
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/spaces HTTP/1.[01]$!
-	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+	     and $headers->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_spaces_via_http();
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/rss HTTP/1.[01]$!
-	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+	     and $headers->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_rss_via_http(decode_utf8(uri_unescape($space)));
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/atom HTTP/1.[01]$!
-	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+	     and $headers->{host} =~ m!^$host(?::$port)$!) {
       $self->serve_atom_via_http(decode_utf8(uri_unescape($space)));
     } elsif ($url =~ m!^GET (?:/($spaces))?/do/source HTTP/1.[01]$!
-	     and $self->headers()->{host} =~ m!^$host(?::$port)$!) {
+	     and $headers->{host} =~ m!^$host(?::$port)$!) {
       say "HTTP/1.1 200 OK\r";
       say "Content-Type: text/plain; charset=UTF-8\r";
       say "\r";

@@ -194,16 +194,22 @@ it, you'll find a few more files:
 
 =over
 
-=item F<page> is the directory with all the page files in it
+=item F<page> is the directory with all the page files in it; each file has the
+      C<gmi> extension and should be written in Gemtext format
 
 =item F<index> is a file containing all the files in your F<page> directory for
       quick access; if you create new files in the F<page> directory, you should
-      delete the F<index> file – dont' worry, it will get regenerated when
-      needed
+      delete the F<index> file – it will get regenerated when needed; the format
+      is one page name (without the C<.gmi> extension) per line, with lines
+      separated from each other by a single C<\n>
 
 =item F<keep> is the directory with all the old revisions of pages in it – if
       you've only made one change, then it won't exist, yet; and if you don't
-      care about the older revisions, you can delete them
+      care about the older revisions, you can delete them; assuming you have a
+      page called C<Welcome> and edit it once, you have the current revision as
+      F<page/Welcome.gmi>, and the old revision in F<keep/Welcome/1.gmi> (the
+      page name turns into a subdirectory and each revision gets an apropriate
+      number)
 
 =item F<file> is the directory with all the uploaded files in it – if you
       haven't uploaded any files, then it won't exist, yet; you must explicitly
@@ -213,13 +219,18 @@ it, you'll find a few more files:
 =item F<meta> is the directory with all the meta data for uploaded files in it –
       there should be a file here for every file in the F<file> directory; if
       you create new files in the F<file> directory, you should create a
-      matching file here
+      matching file here; if you have a file F<file/alex.jpg> you want to create
+      a file F<meta/alex.jpg> containing the line C<content-type: image/jpeg>
 
 =item F<changes.log> is a file listing all the pages made to the wiki; if you
       make changes to the files in the F<page> or F<file> directory, they aren't
       going to be listed in this file and thus people will be confused by the
       changes you made – your call (but in all fairness, if you're collaborating
-      with others you probably shouldn't do this)
+      with others you probably shouldn't do this); the format is one change per
+      line, with lines separated from each other by a single C<\n>, and each
+      line consisting of time stamp, pagename or filename, revision number if a
+      page or 0 if a file, and the numeric code of the user making the edit (see
+      L</Privacy> below)
 
 =item F<config> probably doesn't exist, yet; it is an optional file containing
       Perl code where you can mess with the code (see L</Configuration> below)

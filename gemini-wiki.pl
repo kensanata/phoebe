@@ -622,6 +622,39 @@ sub success {
   }
 }
 
+# We can't use C<flock> because this defaults to C<fcntl> which means they are
+# I<per process> and we don't know whether this code is going to be threaded or
+# not.
+sub with_lock {
+  my $self = shift;
+  my $space = shift;
+  my $code = shift;
+  my $retry = shift;
+  my $dir = $self->{server}->{wiki_dir};
+  $dir .= "/$space" if $space;
+  my $lock = "$dir/locked";
+  # remove stale locks
+  rmdir $lock if -e $lock and time() - $self->modified($lock) > 5;
+  for (1 .. 25) { # try up to 25×0.2s=5s
+    if (mkdir($lock)) {
+      eval { $code->() }; # protect against exceptions
+      $self->log(1, "Unable to run code with locked $lock: $@") if $@;
+      rmdir($lock);
+      return;
+    } else {
+      $self->log(4, "Waiting for $lock");
+      select(undef, undef, undef, 0.19 + rand(0.02)); # sleep ca. 0.2s
+    }
+  }
+  if ($retry) { # retry only once
+    $self->log(1, "Unable to unlock $lock");
+  } else {
+    $self->log(2, "Forced unlocking of $lock");
+    $self->unlock($lock);
+    $self->with_lock($lock, $code, 1);
+  }
+}
+
 sub host {
   my $self = shift;
   return $self->{server}->{host}->[0]
@@ -1761,11 +1794,11 @@ sub write_page {
   }
   if ($type ne "text/plain") {
     $self->log(3, "Writing $type to $id, $actual bytes");
-    $self->write_file($space, $id, $data, $type);
+    $self->with_lock($space, sub { $self->write_file($space, $id, $data, $type) } );
     return;
   } elsif (utf8::decode($data)) {
     $self->log(3, "Writing $type to $id, $actual bytes");
-    $self->write($space, $id, $data);
+    $self->with_lock($space, sub { $self->write($space, $id, $data) } );
     return;
   } else {
     $self->log(4, "The text is invalid UTF-8");

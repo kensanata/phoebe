@@ -485,6 +485,10 @@ F<config> file.
 
 =over
 
+=item C<@init> is a list of code references allowing you to change the
+      configuration of the server; it gets executed as the server starts, after
+      regular configuration
+
 =item C<@extensions> is a list of code references allowing you to handle
       additional URLs; return 1 if you handle a URL; each code reference gets
       called with the first line of the request (a Gemini URL, a Gopher
@@ -518,6 +522,44 @@ The following example illustrates this:
     }
     1;
 
+=head2 Tokens per Wiki Space
+
+Per default, there is simply one set of tokens which allows the editing of the
+wiki, and all the wiki spaces you defined. If you want to give users a token
+just for their space, you can do that, too. Doing this is starting to strain the
+command line interface, however, and therefore the following illustrates how to
+do more advanced configuration using C<@init> in the config file:
+
+    package Gemini::Wiki;
+    use Modern::Perl;
+    our (@init);
+    push(@init, \&init_tokens);
+    sub init_tokens {
+      my $self = shift;
+      $self->{server}->{wiki_space_token}->{alex} = ["*secret*"];
+    };
+
+The code above sets up the C<wiki_space_token> property. It's a hash reference
+where keys are existing wiki spaces and values are array references listing the
+valid tokens for that space (in addition to the global tokens that you can set
+up using C<--wiki_token> which defaults to the token "hello"). Thus, the above
+code sets up the token C<*secret*> for the C<alex> wiki space.
+
+You can use the config file to change the values of other properties as well,
+even if these properties are set via the command line. The config file allows
+you to overwrite those, and the config file is read for every request!
+
+    package Gemini::Wiki;
+    use Modern::Perl;
+    our (@init);
+    push(@init, \&init_tokens);
+    sub init_tokens {
+      my $self = shift;
+      $self->{server}->{wiki_token} = [];
+    };
+
+This code simply deactivates the token list. No more tokens!
+
 =cut
 
 package Gemini::Wiki;
@@ -533,7 +575,7 @@ use B;
 use base qw(Net::Server::Fork); # any personality will do
 
 # Gemini server variables you can set in the config file
-our (@extensions, @main_menu);
+our (@init, @extensions, @main_menu);
 
 # Help
 if ($ARGV[0] and $ARGV[0] eq '--help') {
@@ -587,6 +629,8 @@ sub options {
   $template->{wiki_pages} = $prop->{wiki_pages};
   $prop->{wiki_space} ||= [];
   $template->{wiki_space} = $prop->{wiki_space};
+  $prop->{wiki_space_token} ||= {};
+  # no way to set it from the command line
   $prop->{wiki_mime_type} ||= [];
   $template->{wiki_mime_type} = $prop->{wiki_mime_type};
   $prop->{wiki_page_size_limit} ||= undef;
@@ -632,6 +676,7 @@ sub with_lock {
   my $retry = shift;
   my $dir = $self->{server}->{wiki_dir};
   $dir .= "/$space" if $space;
+  mkdir($dir) unless -d $dir;
   my $lock = "$dir/locked";
   # remove stale locks
   rmdir $lock if -e $lock and time() - $self->modified($lock) > 5;
@@ -1752,12 +1797,17 @@ sub write_page {
     say "59 $id is not a valid page name: $error\r";
     return;
   }
-  my $token = $params->{token};
-  if (not $token and @{$self->{server}->{wiki_token}}) {
+  my $token = quotemeta $params->{token};
+  my @tokens = @{$self->{server}->{wiki_token}};
+  push(@tokens, @{$self->{server}->{wiki_space_token}->{$space}})
+      if $space and keys %{$self->{server}->{wiki_space_token}};
+  $self->log(4, "Valid tokens: @tokens");
+  $self->log(4, "Spaces: " . join(", ", keys %{$self->{server}->{wiki_space_token}}));
+  if (not $token and @tokens) {
     $self->log(4, "Uploads require a token");
     say "59 Uploads require a token\r";
     return;
-  } elsif (not grep(/^$token$/, @{$self->{server}->{wiki_token}})) {
+  } elsif (not grep(/^$token$/, @tokens)) {
     $self->log(4, "Your token is the wrong token");
     say "59 Your token is the wrong token\r";
     return;
@@ -1828,6 +1878,14 @@ sub run_extensions {
   return;
 }
 
+sub run_init {
+  my $self = shift;
+  $self->log(4, "Running init code: @init");
+  for my $sub (@init) {
+    $sub->($self);
+  }
+}
+
 sub valid {
   my $self = shift;
   my $id = shift;
@@ -1862,6 +1920,7 @@ sub process_request {
       die "Timed Out!\n";
     };
     alarm(10); # timeout
+    $self->run_init();
     my $host = $self->host();
     my $port = $self->port();
     my $spaces = join("|", map {quotemeta} @{$self->{server}->{wiki_space}});

@@ -21,6 +21,7 @@ our $host;
 our $port;
 our $base;
 our $dir;
+our $pid;
 
 require './t/test.pl';
 
@@ -108,5 +109,28 @@ like($page, qr/^=> $base\/alex\/page\/Haiku/m, "Haiku found in unified changes")
 
 $page = query_gemini("$base/do/spaces");
 like($page, qr/^=> $base\/alex\/ alex/m, "Space alex found");
+
+# add a special token to the alex space via config file
+
+open(my $config, ">>", "$dir/config");
+say $config 'push(@init, sub{ my $self = shift; $self->{server}->{wiki_token} = []; $self->{server}->{wiki_space_token}->{alex} = ["*secret*"]});';
+close($config);
+is(kill('HUP', $pid), 1, "Restarted server");
+sleep 1;
+
+$haiku = <<EOT;
+Rattling keys and quiet
+Fingers hover in the air
+Outside, a full moon
+EOT
+
+$page = query_gemini("$titan/alex/raw/Haiku;size=70;mime=text/plain;token=hello", $haiku);
+# in this situation the client simply returns undef!?
+# like($page, /^59 Your token is the wrong token\r$/, "Can no longer save");
+$page = query_gemini("$base/alex/page/Haiku");
+like($page, qr/Outside children shout/, "Save with old token failed");
+
+$page = query_gemini("$titan/alex/raw/Haiku;size=70;mime=text/plain;token=*secret*", $haiku);
+like($page, qr/^30 $base\/alex\/page\/Haiku\r$/, "Titan Haiku");
 
 done_testing();

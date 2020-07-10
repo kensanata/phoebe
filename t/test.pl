@@ -46,13 +46,13 @@ sub random_port {
   die "Tried 3 random ports and failed.\n"
 }
 
-my $pid = fork();
+our $pid = fork();
 
 mkdir($dir);
 write_text("$dir/config", <<'EOT');
 package Gemini::Wiki;
 use Modern::Perl;
-our (@extensions, @main_menu);
+our (@init, @extensions, @main_menu);
 push(@main_menu, "=> gemini://localhost:1965/do/test Test");
 push(@extensions, \&serve_test);
 sub serve_test {

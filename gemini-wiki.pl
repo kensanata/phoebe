@@ -283,6 +283,11 @@ And here's some documentation:
       value of the C<GEMINI_WIKI_DATA_DIR> environment variable, or the "./wiki"
       subdirectory
 
+=item C<--wiki_space> adds an extra space that acts as its own wiki; a
+      subdirectory with the same name gets created in your wiki data directory
+      and thus you shouldn't name spaces like any of the files and directories
+      already there (see L</Wiki Directory>)
+
 =item C<--cert_file> is the certificate PEM file to use; the default is
       F<cert.pem>
 
@@ -522,6 +527,26 @@ The following example illustrates this:
       return;
     }
     1;
+
+=head2 Wiki Spaces
+
+Wiki spaces are separate wikis managed by the same Gemini Wiki server, on the
+same machine, but with data stored in a different directory. If you used
+C<--wiki_space=alex> and C<--wiki_space=berta>, for example, then you'd have
+three wikis in total:
+
+=over
+
+=item C<gemini://localhost/> is the main space that continues to be available
+
+=item C<gemini://localhost/alex/> is the wiki space for Alex
+
+=item C<gemini://localhost/berta/> is the wiki space for Berta
+
+=back
+
+Note that all three spaces are still editable by anybody who knows any of the
+L<tokens|/Security>.
 
 =head2 Tokens per Wiki Space
 

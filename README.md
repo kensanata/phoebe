@@ -35,6 +35,7 @@ It does two and a half things:
 - [GUS and robots.txt](#gus-and-robots-txt)
 - [Limited, read-only HTTP support](#limited-read-only-http-support)
 - [Configuration](#configuration)
+- [Wiki Spaces](#wiki-spaces)
 - [Tokens per Wiki Space](#tokens-per-wiki-space)
 - [Virtual Hosting](#virtual-hosting)
 
@@ -246,6 +247,10 @@ And here's some documentation:
 - `--wiki_dir` is the wiki data directory to use; the default is either the
       value of the `GEMINI_WIKI_DATA_DIR` environment variable, or the "./wiki"
       subdirectory
+- `--wiki_space` adds an extra space that acts as its own wiki; a
+      subdirectory with the same name gets created in your wiki data directory
+      and thus you shouldn't name spaces like any of the files and directories
+      already there (see ["Wiki Directory"](#wiki-directory))
 - `--cert_file` is the certificate PEM file to use; the default is
       `cert.pem`
 - `--key_file` is the private key PEM file to use; the default is
@@ -468,6 +473,20 @@ The following example illustrates this:
       return;
     }
     1;
+
+## Wiki Spaces
+
+Wiki spaces are separate wikis managed by the same Gemini Wiki server, on the
+same machine, but with data stored in a different directory. If you used
+`--wiki_space=alex` and `--wiki_space=berta`, for example, then you'd have
+three wikis in total:
+
+- `gemini://localhost/` is the main space that continues to be available
+- `gemini://localhost/alex/` is the wiki space for Alex
+- `gemini://localhost/berta/` is the wiki space for Berta
+
+Note that all three spaces are still editable by anybody who knows any of the
+[tokens](#security).
 
 ## Tokens per Wiki Space
 

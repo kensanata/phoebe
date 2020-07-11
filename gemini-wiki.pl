@@ -90,7 +90,8 @@ Perl libraries you need to install if you want to run Gemini Wiki:
 =back
 
 I'm going to be using F<curl> and F<openssl> in the L</Quickstart> instructions,
-so you'll need those tools as well.
+so you'll need those tools as well. And finally, when people download their
+data, the code calls C<tar>.
 
 On Debian:
 
@@ -101,7 +102,7 @@ On Debian:
       libmodern-perl-perl \
       libnet-server-perl \
       liburi-escape-xs-perl \
-      curl openssl
+      curl openssl tar
 
 The F<update-readme.pl> script I use to generate F<README.md> also requires
 L<Pod::Markdown> and L<Text::Slugify>.

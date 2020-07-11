@@ -30,7 +30,7 @@ my $page = query_gemini("$base/");
 
 unlike($page, qr/^=> .*\/$/m, "No empty links in the menu");
 
-# --wiki_pages
+# --wiki_page
 for my $item(qw(Alex Berta Chris)) {
   like($page, qr/^=> $base\/page\/$item $item/m, "main menu contains $item");
 }

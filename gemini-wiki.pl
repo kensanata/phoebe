@@ -249,8 +249,8 @@ Here's an example:
     perl gemini-wiki.pl \
       --wiki_token=Elrond \
       --wiki_token=Thranduil \
-      --wiki_pages=Welcome \
-      --wiki_pages=About
+      --wiki_page=Welcome \
+      --wiki_page=About
 
 And here's some documentation:
 
@@ -260,12 +260,12 @@ And here's some documentation:
       the default is "hello"; you can use this option multiple times and give
       different users different passwords, if you want
 
+=item C<--wiki_page> is an extra page to show in the main menu; you can use
+      this option multiple times
+
 =item C<--wiki_main_page> is the page containing your header for the main page;
       that's were you would put your ASCII art header, your welcome message, and
       so on, see L</Main Page and Title> below
-
-=item C<--wiki_pages> is an extra page to show in the main menu; you can use
-      this option multiple times
 
 =item C<--wiki_mime_type> is a MIME type to allow for uploads; text/plain is
       always allowed and doesn't need to be listed; you can also just list the
@@ -626,8 +626,8 @@ sub options {
   $template->{wiki_main_page} = \$prop->{wiki_main_page};
   $prop->{wiki_token} ||= [];
   $template->{wiki_token} = $prop->{wiki_token};
-  $prop->{wiki_pages} ||= [];
-  $template->{wiki_pages} = $prop->{wiki_pages};
+  $prop->{wiki_page} ||= [];
+  $template->{wiki_page} = $prop->{wiki_page};
   $prop->{wiki_space} ||= [];
   $template->{wiki_space} = $prop->{wiki_space};
   $prop->{wiki_space_token} ||= {};
@@ -646,7 +646,7 @@ sub post_configure_hook {
   $self->log(3, "Port @{$self->{server}->{port}}");
   $self->log(3, "Token @{$self->{server}->{wiki_token}}");
   $self->log(3, "Main $self->{server}->{wiki_main_page}");
-  $self->log(3, "Pages @{$self->{server}->{wiki_pages}}");
+  $self->log(3, "Pages @{$self->{server}->{wiki_page}}");
   $self->log(3, "Space @{$self->{server}->{wiki_space}}");
   $self->log(3, "MIME types @{$self->{server}->{wiki_mime_type}}");
 
@@ -722,7 +722,7 @@ sub link {
   my $port = $self->port();
   # don't encode the slash
   return "$schema://$host:$port/"
-      . ($space ? uri_escape_utf8($space) . "/" : "")
+      . ($space && $space ne $host ? uri_escape_utf8($space) . "/" : "")
       . join("/", map { uri_escape_utf8($_) } split (/\//, $id));
 }
 
@@ -830,7 +830,7 @@ sub serve_main_menu {
     say "";
   }
   $self->blog($space);
-  for my $id (@{$self->{server}->{wiki_pages}}) {
+  for my $id (@{$self->{server}->{wiki_page}}) {
     $self->print_link($space, $id);
   }
   for my $line (@main_menu) {
@@ -878,7 +878,7 @@ sub serve_main_menu_via_http {
   $self->blog_html($space);
   say "<p>Important links:";
   say "<ul>";
-  my @pages = @{$self->{server}->{wiki_pages}};
+  my @pages = @{$self->{server}->{wiki_page}};
   for my $id (@pages) {
     say "<li>" . $self->link_html($space, $id);
   }

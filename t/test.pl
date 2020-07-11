@@ -90,9 +90,9 @@ if (!defined $pid) {
        "--log_level=" . ($ENV{DEBUG}||0), # set to 4 for verbose logging
        "--wiki_dir=$dir",
        "--wiki_mime_type=image/jpeg",
-       "--wiki_pages=Alex",
-       "--wiki_pages=Berta",
-       "--wiki_pages=Chris",
+       "--wiki_page=Alex",
+       "--wiki_page=Berta",
+       "--wiki_page=Chris",
        "--wiki_space=alex",
        "--wiki_space=berta",)
       or die "Cannot exec: $!";

@@ -512,9 +512,9 @@ The following example illustrates this:
       my $self = shift;
       my $url = shift;
       my $headers = shift;
-      my $host = $self->host();
+      my $host = $self->host_regex();
       my $port = $self->port();
-      if ($url =~ m!^gemini://$host(:$port)?/do/test$!) {
+      if ($url =~ m!^gemini://($host)(?::$port)?/do/test$!) {
 	say "20 text/plain\r";
 	say "Test";
 	return 1;
@@ -561,6 +561,37 @@ you to overwrite those, and the config file is read for every request!
 
 This code simply deactivates the token list. No more tokens!
 
+=head2 Virtual Hosting
+
+Sometimes you want have a machine reachable under different domain names and you
+want each domain name to have their own wiki space, automatically. You can do
+this by using C<--wiki_space=*> and the appropriate C<--host=example.org>
+arguments.
+
+Here's a simple, stand-alone setup that will work on your local machine. These
+are usually reachable using the IPv4 C<127.0.0.1> or the name C<localhost>. The
+following command tells Gemini Wiki to serve both C<localhost> and C<127.0.0.1>
+(the default is to just use C<localhost>), and to use a wiki space of the same
+name.
+
+    perl gemini-wiki.pl --host=localhost --host=127.0.0.1 --wiki_space=*
+
+Visit both L<gemini://localhost/> and L<gemini://127.0.0.1/> and create a new
+page, then examine the data directory F<wiki>. You'll see both F<wiki/localhost>
+and F<wiki/127.0.0.1>.
+
+Beware, however: if you specify more spaces in addition to C<--wiki_space=*>,
+then those spaces can be seen from both hostnames. Here's an example:
+
+    perl gemini-wiki.pl --host=localhost --host=127.0.0.1 --wiki_space=* --wiki_space=oops
+
+In this situation, you can visit both L<gemini://localhost/oops/> and
+L<gemini://127.0.0.1/oops/> and the content will be the same. This may or may
+not be what you intended. A search index would index both, for example. My guess
+is that you should should either specify the wiki spaces explicity, or you
+should use virtual hosting by specifying C<--wiki_space=*>, but not both. Not
+using spaces is fine, too. 😀
+
 =cut
 
 package Gemini::Wiki;
@@ -597,7 +628,7 @@ die "I must have both --key_file and --cert_file\n"
 my $env = {};
 my $protocols = 'https?|ftp|afs|news|nntp|mid|cid|mailto|wais|prospero|telnet|gophers?|irc|feed';
 my $chars = '[-a-zA-Z0-9/@=+$_~*.,;:?!\'"()&#%]'; # see RFC 2396
-$env->{full_url_regexp} ="((?:$protocols):$chars+)"; # when used in square brackets
+$env->{full_url_regex} ="((?:$protocols):$chars+)"; # when used in square brackets
 
 my $server = Gemini::Wiki->new($env);
 $server->run(%args);
@@ -672,6 +703,7 @@ sub success {
 # not.
 sub with_lock {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $code = shift;
   my $retry = shift;
@@ -701,10 +733,11 @@ sub with_lock {
   }
 }
 
-sub host {
+# The hostnames we know we want to serve because they were specified via --host
+# options.
+sub host_regex {
   my $self = shift;
-  return $self->{server}->{host}->[0]
-      || $self->{server}->{sockaddr};
+  return join("|", map { quotemeta } @{$self->{server}->{host}});
 }
 
 sub port {
@@ -715,10 +748,10 @@ sub port {
 # if you call this yourself, $id must look like "page/foo"
 sub link {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $schema = shift || "gemini";
-  my $host = $self->host();
   my $port = $self->port();
   # don't encode the slash
   return "$schema://$host:$port/"
@@ -728,17 +761,17 @@ sub link {
 
 sub link_html {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $title = shift;
   my $id = shift;
   if (not $id) {
     $id = "html/$title";
   }
-  my $host = $self->host();
   my $port = $self->port();
   # don't encode the slash
   return "<a href=\"https://$host:$port/"
-      . ($space ? "$space/" : "")
+      . ($space && $space ne $host ? uri_escape_utf8($space) . "/" : "")
       . join("/", map { uri_escape_utf8($_) } split (/\//, $id))
       . "\">"
       . $self->quote_html($title)
@@ -747,27 +780,30 @@ sub link_html {
 
 sub gemini_link {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $title = shift;
   my $id = shift;
   if (not $id) {
     $id = "page/$title";
   }
-  return "=> $id $title" if $id =~ /^$self->{server}->{full_url_regexp}$/;
-  my $url = $self->link($space, $id);
+  return "=> $id $title" if $id =~ /^$self->{server}->{full_url_regex}$/;
+  my $url = $self->link($host, $space, $id);
   return "=> $url $title";
 }
 
 sub print_link {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $title = shift;
   my $id = shift;
-  say $self->gemini_link($space, $title, $id);
+  say $self->gemini_link($host, $space, $title, $id);
 }
 
 sub pages {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $re = shift;
   my $dir = $self->{server}->{wiki_dir};
@@ -785,74 +821,79 @@ sub pages {
 
 sub blog_pages {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
-  return sort { $b cmp $a } $self->pages($space, '^\d\d\d\d-\d\d-\d\d');
+  return sort { $b cmp $a } $self->pages($host, $space, '^\d\d\d\d-\d\d-\d\d');
 }
 
 sub blog {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
-  my @blog = $self->blog_pages($space);
+  my @blog = $self->blog_pages($host, $space);
   return unless @blog;
   say "Blog:";
   # we should check for pages marked for deletion!
   for my $id (@blog[0..min($#blog, 9)]) {
-    $self->print_link($space, $id);
+    $self->print_link($host, $space, $id);
   }
-  $self->print_link($space, "More...", "do/more") if @blog > 10;
+  $self->print_link($host, $space, "More...", "do/more") if @blog > 10;
   say "";
 }
 
 sub blog_html {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
-  my @blog = $self->blog_pages($space);
+  my @blog = $self->blog_pages($host, $space);
   return unless @blog;
   say "<p>Blog:";
   say "<ul>";
   # we should check for pages marked for deletion!
   for my $id (@blog[0..min($#blog, 9)]) {
-    say "<li>" . $self->link_html($space, $id);
+    say "<li>" . $self->link_html($host, $space, $id);
   }
   say "</ul>";
 }
 
 sub serve_main_menu {
   my $self = shift;
-  my $space = shift;
-  $self->log(3, "Serving main menu");
+  my $host = shift||"";
+  my $space = shift||"";
+  $self->log(3, "Serving main menu of $host/$space");
   $self->success();
   my $page = $self->{server}->{wiki_main_page};
   if ($page) {
-    say $self->text($space, $page);
+    say $self->text($host, $space, $page);
   } else {
     say "# Welcome to the Gemini Wiki!";
     say "";
   }
-  $self->blog($space);
+  $self->blog($host, $space);
   for my $id (@{$self->{server}->{wiki_page}}) {
-    $self->print_link($space, $id);
+    $self->print_link($host, $space, $id);
   }
   for my $line (@main_menu) {
     say $line;
   }
-  $self->print_link($space, "Changes", "do/changes");
-  $self->print_link($space, "Search matching page names", "do/match");
-  $self->print_link($space, "Search matching page content", "do/search");
-  $self->print_link($space, "New page", "do/new");
+  $self->print_link($host, $space, "Changes", "do/changes");
+  $self->print_link($host, $space, "Search matching page names", "do/match");
+  $self->print_link($host, $space, "Search matching page content", "do/search");
+  $self->print_link($host, $space, "New page", "do/new");
   say "";
-  $self->print_link($space, "Index of all pages", "do/index");
-  $self->print_link($space, "Index of all files", "do/files");
-  $self->print_link(undef, "Index of all spaces", "do/spaces")
+  $self->print_link($host, $space, "Index of all pages", "do/index");
+  $self->print_link($host, $space, "Index of all files", "do/files");
+  $self->print_link($host, undef, "Index of all spaces", "do/spaces")
       if @{$self->{server}->{wiki_space}};
-  $self->print_link($space, "Download data", "do/data");
+  $self->print_link($host, $space, "Download data", "do/data");
   # a requirement of the GNU Affero General Public License
-  $self->print_link(undef, "Source code", "do/source");
+  $self->print_link($host, undef, "Source code", "do/source");
   say "";
 }
 
 sub serve_main_menu_via_http {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   $self->log(3, "Serving main menu via HTTP");
   my $page = $self->{server}->{wiki_main_page};
@@ -871,26 +912,26 @@ sub serve_main_menu_via_http {
   say "</head>";
   say "<body>";
   if ($page) {
-    $self->print_html($space, $page);
+    $self->print_html($host, $space, $page);
   } else {
     say "<h1>Welcome to the Gemini Wiki!</h1>";
   }
-  $self->blog_html($space);
+  $self->blog_html($host, $space);
   say "<p>Important links:";
   say "<ul>";
   my @pages = @{$self->{server}->{wiki_page}};
   for my $id (@pages) {
-    say "<li>" . $self->link_html($space, $id);
+    say "<li>" . $self->link_html($host, $space, $id);
   }
-  say "<li>" . $self->link_html($space, "Index of all pages", "do/index");
-  say "<li>" . $self->link_html($space, "Index of all files", "do/files")
+  say "<li>" . $self->link_html($host, $space, "Index of all pages", "do/index");
+  say "<li>" . $self->link_html($host, $space, "Index of all files", "do/files")
       if @{$self->{server}->{wiki_mime_type}};
-  say "<li>" . $self->link_html(undef, "Index of all spaces", "do/spaces")
+  say "<li>" . $self->link_html($host, undef, "Index of all spaces", "do/spaces")
       if @{$self->{server}->{wiki_space}};
-  say "<li>" . $self->link_html($space, "Atom feed", "do/atom");
-  say "<li>" . $self->link_html($space, "RSS feed", "do/rss");
+  say "<li>" . $self->link_html($host, $space, "Atom feed", "do/atom");
+  say "<li>" . $self->link_html($host, $space, "RSS feed", "do/rss");
   # a requirement of the GNU Affero General Public License
-  say "<li>" . $self->link_html(undef, "Source", "do/source");
+  say "<li>" . $self->link_html($host, undef, "Source", "do/source");
   say "</ul>";
   say "</body>";
   say "</html>";
@@ -908,32 +949,35 @@ sub quote_html {
 
 sub serve_blog {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   $self->success();
   $self->log(3, "Serving blog");
   say "# Blog";
-  my @blog = $self->blog($space);
+  my @blog = $self->blog($host, $space);
   say "The are no blog pages." unless @blog;
   for my $id (@blog) {
-    $self->print_link($space, $id);
+    $self->print_link($host, $space, $id);
   }
 }
 
 sub serve_index {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   $self->success();
   $self->log(3, "Serving index of all pages");
   say "# All Pages";
-  my @pages = $self->pages($space);
+  my @pages = $self->pages($host, $space);
   say "The are no pages." unless @pages;
   for my $id (sort { $self->newest_first($a, $b) } @pages) {
-    $self->print_link($space, $id);
+    $self->print_link($host, $space, $id);
   }
 }
 
 sub files {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $re = shift;
   my $dir = $self->{server}->{wiki_dir};
@@ -947,19 +991,21 @@ sub files {
 
 sub serve_files {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   $self->success();
   $self->log(3, "Serving index of all files");
   say "# All Files";
-  my @files = $self->files($space);
+  my @files = $self->files($host, $space);
   say "The are no files." unless @files;
   for my $id (sort @files) {
-    $self->print_link($space, $id, "file/$id");
+    $self->print_link($host, $space, $id, "file/$id");
   }
 }
 
 sub serve_index_via_http {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   $self->log(3, "Serving index of all pages via HTTP");
   say "HTTP/1.1 200 OK\r";
@@ -973,11 +1019,11 @@ sub serve_index_via_http {
   say "</head>";
   say "<body>";
   say "<h1>All Pages</h1>";
-  my @pages = $self->pages($space);
+  my @pages = $self->pages($host, $space);
   if (@pages) {
     say "<ul>";
     for my $id (sort { $self->newest_first($a, $b) } @pages) {
-      say "<li>" . $self->link_html($space, $id);
+      say "<li>" . $self->link_html($host, $space, $id);
     }
     say "</ul>";
   } else {
@@ -987,17 +1033,27 @@ sub serve_index_via_http {
 
 sub serve_spaces {
   my $self = shift;
+  my $host = shift;
   $self->success();
   $self->log(3, "Serving all spaces");
   say "# Spaces";
-  $self->print_link(undef, "Main space", "/");
-  for my $space (sort @{$self->{server}->{wiki_space}}) {
-    $self->print_link($space, $space, "/");
+  $self->print_link($host, undef, "Main space", "/");
+  for my $space (sort $self->spaces()) {
+    if (grep { $_ eq $space } @{$self->{server}->{wiki_space}}) {
+      # this is a space that was specified via the --wiki_space option
+      $self->print_link($host, $space, $space, "/");
+    } else {
+      # this is a space that wasn't added manually via the --wiki_space option,
+      # i.e. it is a space that maps to a hostname due to --wiki_space=* and
+      # therefore we should use it as a hostname
+      $self->print_link($space, $space, $space, "/");
+    }
   }
 }
 
 sub serve_spaces_via_http {
   my $self = shift;
+  my $host = shift;
   $self->log(3, "Serving all spaces via HTTP");
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: text/html\r";
@@ -1011,15 +1067,24 @@ sub serve_spaces_via_http {
   say "<body>";
   say "<h1>All Spaces</h1>";
   say "<ul>";
-  say "<li>" . $self->link_html(undef, "Main space", "/");
-  for my $space (sort @{$self->{server}->{wiki_space}}) {
-    say "<li>" . $self->link_html($space, $space, "/");
+  say "<li>" . $self->link_html($host, undef, "Main space", "/");
+  for my $space (sort $self->spaces()) {
+    if (grep { $_ eq $space } @{$self->{server}->{wiki_space}}) {
+      # this is a space that was specified via the --wiki_space option
+      say "<li>" . $self->link_html($host, $space, $space, "/");
+    } else {
+      # this is a space that wasn't added manually via the --wiki_space option,
+      # i.e. it is a space that maps to a hostname due to --wiki_space=* and
+      # therefore we should use it as a hostname
+      say "<li>" . $self->link_html($space, $space, $space, "/");
+    }
   }
   say "</ul>";
 }
 
 sub serve_data {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   # use /bin/tar instead of Archive::Tar to save memory
   my $dir = $self->{server}->{wiki_dir};
@@ -1050,6 +1115,7 @@ sub serve_data {
 
 sub serve_match {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $match = shift;
   if (not $match) {
@@ -1060,15 +1126,16 @@ sub serve_match {
   $self->log(3, "Serving pages matching $match");
   say "# Search page titles for $match";
   say "Use a Perl regular expression to match page titles.";
-  my @pages = $self->pages($space, $match);
+  my @pages = $self->pages($host, $space, $match);
   say "No matching page names found." unless @pages;
   for my $id (sort { $self->newest_first($a, $b) } @pages) {
-    $self->print_link($space, $id);
+    $self->print_link($host, $space, $id);
   }
 }
 
 sub serve_search {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $str = shift;
   if (not $str) {
@@ -1079,23 +1146,24 @@ sub serve_search {
   $self->log(3, "Serving search result for $str");
   say "# Search page content for $str";
   say "Use a Perl regular expression to match page titles and page content.";
-  if (not $self->search($space, $str, sub { $self->highlight(@_) })) {
+  if (not $self->search($host, $space, $str, sub { $self->highlight(@_) })) {
     say "Search term not found."
   }
 }
 
 sub search {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $str = shift;
   my $func = shift;
-  my @pages = sort { $self->newest_first($a, $b) } $self->pages($space);
+  my @pages = sort { $self->newest_first($a, $b) } $self->pages($host, $space);
   return unless @pages;
   my $found = 0;
   for my $id (@pages) {
-    my $text = $self->text($space, $id);
+    my $text = $self->text($host, $space, $id);
     if ($id =~ /$str/ or $text =~ /$str/) {
-      $func->($space, $id, $text, $str);
+      $func->($host, $space, $id, $text, $str);
       $found++;
     }
   }
@@ -1104,6 +1172,7 @@ sub search {
 
 sub highlight {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   $self->log(4, "highlight: @_");
   my $id = shift;
@@ -1131,19 +1200,20 @@ sub highlight {
     }
   }
   say $result;
-  $self->print_link($space, $id);
+  $self->print_link($host, $space, $id);
 }
 
 sub serve_changes {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   $self->log(3, "Serving changes");
   $self->success();
   say "# Changes";
-  $self->print_link($space, "Changes for all spaces", "do/all/changes")
+  $self->print_link($host, $space, "Changes for all spaces", "do/all/changes")
       if @{$self->{server}->{wiki_space}};
-  $self->print_link($space, "Atom Feed", "do/atom");
-  $self->print_link($space, "RSS Feed", "do/rss");
+  $self->print_link($host, $space, "Atom Feed", "do/atom");
+  $self->print_link($host, $space, "RSS Feed", "do/rss");
   my $dir = $self->{server}->{wiki_dir};
   $dir .= "/$space" if $space;
   my $log = "$dir/changes.log";
@@ -1152,7 +1222,7 @@ sub serve_changes {
     return;
   }
   my $fh = File::ReadBackwards->new($log);
-  $self->changes( sub {
+  $self->changes($host, sub {
     return unless $_ = $fh->readline;
     chomp;
     split(/\x1f/), $space });
@@ -1160,6 +1230,7 @@ sub serve_changes {
 
 sub serve_all_changes {
   my $self = shift;
+  my $host = shift;
   $self->log(3, "Serving all changes");
   $self->success();
   say "# Changes for all spaces";
@@ -1180,7 +1251,7 @@ sub serve_all_changes {
   # sort them all
   @log = sort { $b->[0] <=> $a->[0] } @log;
   # taking the head of the @log to get new log entries
-  $self->changes(sub { @{shift(@log)}, 1 });
+  $self->changes($host, sub { @{shift(@log)}, 1 });
 }
 
 # $next is a code reference that returns the list of attributes for the next
@@ -1191,6 +1262,7 @@ sub serve_all_changes {
 # space and page or file name should both be shown.
 sub changes {
   my $self = shift;
+  my $host = shift;
   my $next = shift;
   my $last_day = '';
   my %seen;
@@ -1206,19 +1278,19 @@ sub changes {
     say $self->time_of_day($ts) . " by " . $self->colourize($code);
     if ($revision) {
       if ($seen{$id}) {
-	$self->print_link($space, "$name ($revision)", "page/$id/$revision");
-	$self->print_link($space, "Differences", "diff/$id/$revision");
+	$self->print_link($host, $space, "$name ($revision)", "page/$id/$revision");
+	$self->print_link($host, $space, "Differences", "diff/$id/$revision");
       } else {
-	$self->print_link($space, "$name (current)", "page/$id");
+	$self->print_link($host, $space, "$name (current)", "page/$id");
 	$seen{$id} = 1;
-	$self->print_link($space, "History", "history/$id");
+	$self->print_link($host, $space, "History", "history/$id");
       }
     } else {
       # there can be pages and files sharing the same name
       if ($seen{$id . "\x1c"}) {
 	say "$name (file)";
       } else {
-	$self->print_link($space, "$name (file)", "file/$id");
+	$self->print_link($host, $space, "$name (file)", "file/$id");
 	$seen{$id . "\x1c"} = 1;
       }
     }
@@ -1234,28 +1306,30 @@ sub colourize {
 
 sub serve_rss {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   $self->log(3, "Serving Gemini RSS");
   $self->success("application/rss+xml");
-  $self->rss($space, 'gemini');
+  $self->rss($host, $space, 'gemini');
 }
 
 sub serve_rss_via_http {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   $self->log(3, "Serving RSS via HTTP");
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: application/xml\r";
   say "\r";
-  $self->rss($space, 'https');
+  $self->rss($host, $space, 'https');
 }
 
 sub rss {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $schema = shift;
   my $name = $self->{server}->{wiki_main_page} || "Gemini Wiki";
-  my $host = $self->host();
   my $port = $self->port();
   say "<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">";
   say "<channel>";
@@ -1278,10 +1352,10 @@ sub rss {
       $seen{$id} = 1;
       say "<item>";
       say "<title>" . $self->quote_html($id) . "</title>";
-      my $link = $self->link($space, "page/$id", $schema);
+      my $link = $self->link($host, $space, "page/$id", $schema);
       say "<link>$link</link>";
       say "<guid>$link</guid>";
-      say "<description>" . $self->quote_html($self->text($space, $id)) . "</description>";
+      say "<description>" . $self->quote_html($self->text($host, $space, $id)) . "</description>";
       my ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($ts); # Sat, 07 Sep 2002 00:00:01 GMT
       say "<pubDate>"
 	  . sprintf("%s, %02d %s %04d %02d:%02d:%02d GMT", qw(Sun Mon Tue Wed Thu Fri Sat)[$wday], $mday,
@@ -1296,28 +1370,30 @@ sub rss {
 
 sub serve_atom {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   $self->log(3, "Serving Gemini Atom");
   $self->success("application/atom+xml");
-  $self->atom($space, 'gemini');
+  $self->atom($host, $space, 'gemini');
 }
 
 sub serve_atom_via_http {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   $self->log(3, "Serving Atom via HTTP");
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: application/xml\r";
   say "\r";
-  $self->atom($space, 'https');
+  $self->atom($host, $space, 'https');
 }
 
 sub atom {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $schema = shift;
   my $name = $self->{server}->{wiki_main_page} || "Gemini Wiki";
-  my $host = $self->host();
   my $port = $self->port();
   say "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
   say "<feed xmlns=\"http://www.w3.org/2005/Atom\">";
@@ -1343,10 +1419,10 @@ sub atom {
       $seen{$id} = 1;
       say "<entry>";
       say "<title>" . $self->quote_html($id) . "</title>";
-      my $link = $self->link($space, "page/$id", $schema);
+      my $link = $self->link($host, $space, "page/$id", $schema);
       say "<link href=\"$link\"/>";
       say "<id>$link</id>";
-      say "<summary>" . $self->quote_html($self->text($space, $id)) . "</summary>";
+      say "<summary>" . $self->quote_html($self->text($host, $space, $id)) . "</summary>";
       ($sec, $min, $hour, $mday, $mon, $year) = gmtime($ts); # 2003-12-13T18:30:02Z
       say "<updated>"
 	  . sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", $year + 1900, $mon, $mday, $hour, $min, $sec)
@@ -1360,16 +1436,18 @@ sub atom {
 
 sub serve_raw {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $revision = shift;
   $self->log(3, "Serving raw $id");
   $self->success('text/plain; charset=UTF-8');
-  print $self->text($space, $id, $revision);
+  print $self->text($host, $space, $id, $revision);
 }
 
 sub serve_raw_via_http {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $revision = shift;
@@ -1377,11 +1455,12 @@ sub serve_raw_via_http {
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: text/plain; charset=UTF-8\r";
   say "\r";
-  print $self->text($space, $id, $revision);
+  print $self->text($host, $space, $id, $revision);
 }
 
 sub serve_diff {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $revision = shift;
@@ -1390,8 +1469,8 @@ sub serve_diff {
   say "# Differences for $id";
   say "Showing the differences between revision $revision and the current revision of $id.";
   # Order is important because $new is a reference to %Page!
-  my $new = $self->text($space, $id);
-  my $old = $self->text($space, $id, $revision);
+  my $new = $self->text($host, $space, $id);
+  my $old = $self->text($host, $space, $id, $revision);
   say "```";
   say $self->diff($old, $new);
   say "```";
@@ -1425,16 +1504,18 @@ sub diff {
 
 sub serve_html {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $revision = shift;
   $self->success('text/html');
   $self->log(3, "Serving $id as HTML");
-  $self->html_page($space, $id, $revision);
+  $self->html_page($host, $space, $id, $revision);
 }
 
 sub serve_html_via_http {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $revision = shift;
@@ -1442,11 +1523,12 @@ sub serve_html_via_http {
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: text/html\r";
   say "\r";
-  $self->html_page($space, $id, $revision);
+  $self->html_page($host, $space, $id, $revision);
 }
 
 sub html_page {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $revision = shift;
@@ -1458,19 +1540,19 @@ sub html_page {
   say "</head>";
   say "<body>";
   say "<h1>" . $self->quote_html($id) . "</h1>";
-  $self->print_html($space, $id, $revision);
+  $self->print_html($host, $space, $id, $revision);
   say "</body>";
   say "</html>";
 }
 
 sub print_html {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $revision = shift;
-  my $host = $self->host();
   my $port = $self->port();
-  my $text = $self->quote_html($self->text($space, $id, $revision));
+  my $text = $self->quote_html($self->text($host, $space, $id, $revision));
   my $list;
   my $code;
   for (split /\n/, $text) {
@@ -1536,12 +1618,13 @@ sub modified {
 
 sub serve_history {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   $self->success();
   $self->log(3, "Serve history for $id");
   say "# Page history for $id";
-  $self->print_link($space, "$id (current)", "page/$id");
+  $self->print_link($host, $space, "$id (current)", "page/$id");
   my $dir = $self->{server}->{wiki_dir};
   $dir .= "/$space" if $space;
   my @revisions = sort { $b cmp $a } map { s/\.gmi$//; $_ } read_dir("$dir/keep/$id");
@@ -1558,38 +1641,41 @@ sub serve_history {
     my $time = $self->time_of_day($ts);
     say $time if $time ne $last_time;
     $last_time = $time;
-    $self->print_link($space, "$id ($revision)", "page/$id/$revision");
-    $self->print_link($space, "Differences", "diff/$id/$revision");
+    $self->print_link($host, $space, "$id ($revision)", "page/$id/$revision");
+    $self->print_link($host, $space, "Differences", "diff/$id/$revision");
   }
 }
 
 sub footer {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $page = shift;
   my $revision = shift||"";
   my @links;
-  push(@links, $self->gemini_link($space, "History", "history/$id"));
-  push(@links, $self->gemini_link($space, "Raw text", "raw/$id/$revision"));
-  push(@links, $self->gemini_link($space, "HTML", "html/$id/$revision"));
+  push(@links, $self->gemini_link($host, $space, "History", "history/$id"));
+  push(@links, $self->gemini_link($host, $space, "Raw text", "raw/$id/$revision"));
+  push(@links, $self->gemini_link($host, $space, "HTML", "html/$id/$revision"));
   return join("\n", "\n\nMore:", @links, ""); # includes a trailing newline
 }
 
 sub serve_gemini {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $revision = shift;
   $self->log(3, "Serve Gemini page $id");
   $self->success();
   say "# $id";
-  print $self->text($space, $id, $revision);
-  print $self->footer($space, $id, $revision);
+  print $self->text($host, $space, $id, $revision);
+  print $self->footer($host, $space, $id, $revision);
 }
 
 sub text {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $revision = shift;
@@ -1631,6 +1717,7 @@ EOT
 
 sub serve_file {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $revision = shift;
@@ -1675,6 +1762,7 @@ sub bogus_hash {
 
 sub write_file {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $data = shift;
@@ -1690,7 +1778,7 @@ sub write_file {
     my $old = read_binary($file);
     if ($old eq $data) {
       $self->log(3, "$id is unchanged");
-      say "30 " . $self->link($space, "page/$id") . "\r";
+      say "30 " . $self->link($host, $space, "page/$id") . "\r";
       return;
     }
   }
@@ -1717,11 +1805,12 @@ sub write_file {
     return;
   }
   $self->log(3, "Wrote $id");
-  say "30 " . $self->link($space, "file/$id") . "\r";
+  say "30 " . $self->link($host, $space, "file/$id") . "\r";
 }
 
 sub write {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $text = shift;
@@ -1736,7 +1825,7 @@ sub write {
     my $old = read_text($file);
     if ($old eq $text) {
       $self->log(3, "$id is unchanged");
-      say "30 " . $self->link($space, "page/$id") . "\r";
+      say "30 " . $self->link($host, $space, "page/$id") . "\r";
       return;
     }
     mkdir "$dir/keep" unless -d "$dir/keep";
@@ -1779,12 +1868,13 @@ sub write {
     say "59 Unable to save $id: $@\r";
   } else {
     $self->log(3, "Wrote $id");
-    say "30 " . $self->link($space, "page/$id") . "\r";
+    say "30 " . $self->link($host, $space, "page/$id") . "\r";
   }
 }
 
 sub write_page {
   my $self = shift;
+  my $host = shift;
   my $space = shift;
   my $id = shift;
   my $params = shift;
@@ -1798,10 +1888,10 @@ sub write_page {
     say "59 $id is not a valid page name: $error\r";
     return;
   }
-  my $token = quotemeta $params->{token};
+  my $token = quotemeta($params->{token}||"");
   my @tokens = @{$self->{server}->{wiki_token}};
   push(@tokens, @{$self->{server}->{wiki_space_token}->{$space}})
-      if $space and keys %{$self->{server}->{wiki_space_token}};
+      if $space and $self->{server}->{wiki_space_token}->{$space};
   $self->log(4, "Valid tokens: @tokens");
   $self->log(4, "Spaces: " . join(", ", keys %{$self->{server}->{wiki_space_token}}));
   if (not $token and @tokens) {
@@ -1845,11 +1935,11 @@ sub write_page {
   }
   if ($type ne "text/plain") {
     $self->log(3, "Writing $type to $id, $actual bytes");
-    $self->with_lock($space, sub { $self->write_file($space, $id, $data, $type) } );
+    $self->with_lock($host, $space, sub { $self->write_file($host, $space, $id, $data, $type) } );
     return;
   } elsif (utf8::decode($data)) {
     $self->log(3, "Writing $type to $id, $actual bytes");
-    $self->with_lock($space, sub { $self->write($space, $id, $data) } );
+    $self->with_lock($host, $space, sub { $self->write($host, $space, $id, $data) } );
     return;
   } else {
     $self->log(4, "The text is invalid UTF-8");
@@ -1881,7 +1971,6 @@ sub run_extensions {
 
 sub run_init {
   my $self = shift;
-  $self->log(4, "Running init code: @init");
   for my $sub (@init) {
     $sub->($self);
   }
@@ -1913,6 +2002,38 @@ sub headers {
   return \%result;
 }
 
+sub space {
+  my $self = shift;
+  my $host = shift;
+  my $space = shift;
+  return decode_utf8(uri_unescape($space)) if $space;
+  # if --wiki_space="*" was given, hostnames are wiki spaces
+  if (grep { $_ eq "*" } @{$self->{server}->{wiki_space}}) {
+    my $spaces = join("|", map {quotemeta} @{$self->{server}->{wiki_space}});
+    return $host;
+  }
+  return undef;
+}
+
+sub spaces {
+  my $self = shift;
+  if (grep { $_ eq "*" } @{$self->{server}->{wiki_space}}) {
+    # the existing wiki-space directories minus the special directories
+    my %spaces;
+    my $dir = $self->{server}->{wiki_dir};
+    for (read_dir($dir)) {
+      next if /^(page|keep|meta|file)$/;
+      $spaces{$_} = 1 if -d "$dir/$_";
+    }
+    for (@{$self->{server}->{wiki_space}}) {
+      $spaces{$_} = 1 unless $_ eq "*";
+    }
+    return keys %spaces;
+  } elsif (@{$self->{server}->{wiki_space}}) {
+    return @{$self->{server}->{wiki_space}};
+  }
+}
+
 sub process_request {
   my $self = shift;
   eval {
@@ -1922,10 +2043,10 @@ sub process_request {
     };
     alarm(10); # timeout
     $self->run_init();
-    my $host = $self->host();
+    my $host_regex = $self->host_regex();
     my $port = $self->port();
-    my $spaces = join("|", map {quotemeta} @{$self->{server}->{wiki_space}});
-    $self->log(4, "Serving $host:$port");
+    my $spaces = join("|", map { quotemeta } $self->spaces());
+    $self->log(4, "Serving $host_regex:$port");
     my $url = <STDIN>; # no loop
     $url =~ s/\s+$//g; # no trailing whitespace
     # $url =~ s!^([^/:]+://[^/:]+)(/.*|)$!$1:$port$2!; # add port
@@ -1935,98 +2056,98 @@ sub process_request {
     my $headers;
     $headers = $self->headers() if $url =~ m!^[a-z]+ .* HTTP/1.[01]$!i;
     $self->log(3, "Looking at $url");
-    my ($space, $id, $n);
+    my ($host, $space, $id, $n);
     if ($self->run_extensions($url, $headers)) {
       # config file goes first
-    } elsif ($url =~ m!^titan://$host(?::$port)?!) {
+    } elsif (($host) = $url =~ m!^titan://($host_regex)(?::$port)?!) {
       if ($path !~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!) {
 	$self->log(4, "The path $path is malformed");
 	say "59 The path $path is malformed\r";
       } else {
 	$space = $1;
 	my ($id, @params) = split(/[;=&]/, $2);
-	$self->write_page((map {decode_utf8(uri_unescape($_))} $space, $id),
+	$self->write_page($host, $self->space($host, $space), decode_utf8(uri_unescape($id)),
 			  {map {decode_utf8(uri_unescape($_))} @params});
       }
-    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/?$!) {
-      $self->serve_main_menu(decode_utf8(uri_unescape($space)));
-    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/more$!) {
-      $self->serve_blog(decode_utf8(uri_unescape($space)));
-    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/index$!) {
-      $self->serve_index(decode_utf8(uri_unescape($space)));
-    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/files$!) {
-      $self->serve_files(decode_utf8(uri_unescape($space)));
-    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/spaces$!) {
-      $self->serve_spaces(); # ignore space
-    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/data$!) {
-      $self->serve_data(decode_utf8(uri_unescape($space)));
-    } elsif ($url =~ m!^gemini://$host(?::$port)?/do/source$!) {
+    } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/?$!) {
+      $self->serve_main_menu($host, $self->space($host, $space));
+    } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/more$!) {
+      $self->serve_blog($host, $self->space($host, $space));
+    } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/index$!) {
+      $self->serve_index($host, $self->space($host, $space));
+    } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/files$!) {
+      $self->serve_files($host, $self->space($host, $space));
+    } elsif (($host) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/spaces$!) {
+      $self->serve_spaces($host);
+    } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/data$!) {
+      $self->serve_data($host, $self->space($host, $space));
+    } elsif ($url =~ m!^gemini://($host_regex)(?::$port)?/do/source$!) {
       $self->success('text/plain; charset=UTF-8');
       seek DATA, 0, 0;
       local $/ = undef; # slurp
       print <DATA>;
-    } elsif ($url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/match$!) {
-      say "10 Find page by name (Perl regexp)\r";
-    } elsif ($query and ($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/match\?!) {
-      $self->serve_match(map {decode_utf8(uri_unescape($_))} $space, $query);
-    } elsif ($url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/search$!) {
-      say "10 Find page by content (Perl regexp)\r";
-    } elsif ($query and ($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/search\?!) {
-      $self->serve_search(map {decode_utf8(uri_unescape($_))} $space, $query); # search terms include spaces
-    } elsif ($url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/new$!) {
+    } elsif ($url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/match$!) {
+      say "10 Find page by name (Perl regex)\r";
+    } elsif ($query and ($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/match\?!) {
+      $self->serve_match($host, map {decode_utf8(uri_unescape($_))} $space, $query);
+    } elsif ($url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/search$!) {
+      say "10 Find page by content (Perl regex)\r";
+    } elsif ($query and ($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/search\?!) {
+      $self->serve_search($host, map {decode_utf8(uri_unescape($_))} $space, $query); # search terms include spaces
+    } elsif ($url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/new$!) {
       say "10 New page\r";
-    } elsif ($query and ($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/new\?!) {
+    } elsif ($query and ($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/new\?!) {
       # no URI escaping required
       say "30 gemini://$host:$port/$space/raw/$query\r" if $space;
       say "30 gemini://$host:$port/raw/$query\r";
-    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/changes$!) {
-      $self->serve_changes(decode_utf8(uri_unescape($space)));
-    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?/do/all/changes$!) {
-      $self->serve_all_changes();
-    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/rss$!) {
-      $self->serve_rss(decode_utf8(uri_unescape($space)));
-    } elsif (($space) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/do/atom$!) {
-      $self->serve_atom(decode_utf8(uri_unescape($space)));
-    } elsif (($space, $id) = $url =~ m!^gemini://$host(?::$port)?/robots.txt$!) {
+    } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/changes$!) {
+      $self->serve_changes($host, $self->space($host, $space));
+    } elsif (($host) = $url =~ m!^gemini://($host_regex)(?::$port)?/do/all/changes$!) {
+      $self->serve_all_changes($host);
+    } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/rss$!) {
+      $self->serve_rss($host, $self->space($host, $space));
+    } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/atom$!) {
+      $self->serve_atom($host, $self->space($host, $space));
+    } elsif ($url =~ m!^gemini://($host_regex)(?::$port)?/robots.txt$!) {
       $self->serve_raw(undef, "robots");
-    } elsif (($space, $id) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/history/([^/]*)$!) {
-      $self->serve_history(map {decode_utf8(uri_unescape($_))} $space, $id);
-    } elsif (($space, $id, $n) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?$!) {
-      $self->serve_diff(map {decode_utf8(uri_unescape($_))} $space, $id, $n);
-    } elsif (($space, $id, $n) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/raw/([^/]*)(?:/(\d+))?$!) {
-      $self->serve_raw(map {decode_utf8(uri_unescape($_))} $space, $id, $n);
-    } elsif (($space, $id, $n) = $url =~ m!^gemini://$host(?::$port)?(?:/($spaces))?/html/([^/]*)(?:/(\d+))?$!) {
-      $self->serve_html(map {decode_utf8(uri_unescape($_))} $space, $id, $n);
-    } elsif (($space, $id, $n) = $url =~ m!gemini://$host(?::$port)?(?:/($spaces))?/page/([^/]+)(?:/(\d+))?$!) {
-      $self->serve_gemini(map {decode_utf8(uri_unescape($_))} $space, $id, $n);
-    } elsif (($space, $id) = $url =~ m!gemini://$host(?::$port)?(?:/($spaces))?/file/([^/]+)?$!) {
-      $self->serve_file(map {decode_utf8(uri_unescape($_))} $space, $id);
+    } elsif (($host, $space, $id) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/history/([^/]*)$!) {
+      $self->serve_history($host, $self->space($host, $space), decode_utf8(uri_unescape($id)));
+    } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?$!) {
+      $self->serve_diff($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
+    } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/raw/([^/]*)(?:/(\d+))?$!) {
+      $self->serve_raw($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
+    } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/html/([^/]*)(?:/(\d+))?$!) {
+      $self->serve_html($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
+    } elsif (($host, $space, $id, $n) = $url =~ m!gemini://($host_regex)(?::$port)?(?:/($spaces))?/page/([^/]+)(?:/(\d+))?$!) {
+      $self->serve_gemini($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
+    } elsif (($host, $space, $id) = $url =~ m!gemini://($host_regex)(?::$port)?(?:/($spaces))?/file/([^/]+)?$!) {
+      $self->serve_file($host, $self->space($host, $space), decode_utf8(uri_unescape($id)));
     } elsif (($space) = $url =~ m!^GET (?:(?:/($spaces)/?)?|/) HTTP/1.[01]$!
-	     and $headers->{host} =~ m!^$host(?::$port)$!) {
-      $self->serve_main_menu_via_http(decode_utf8(uri_unescape($space)));
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_main_menu_via_http($host, $self->space($host, $space));
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/html/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
-	     and $headers->{host} =~ m!^$host(?::$port)$!) {
-      $self->serve_html_via_http(map {decode_utf8(uri_unescape($_))} $space, $id, $n);
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_html_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/raw/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
-	     and $headers->{host} =~ m!^$host(?::$port)$!) {
-      $self->serve_raw_via_http(map {decode_utf8(uri_unescape($_))} $space, $id, $n);
-    } elsif (($space, $id) = $url =~ m!^GET /robots.txt HTTP/1.[01]$!
-	     and $headers->{host} =~ m!^$host(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_raw_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
+    } elsif ($url =~ m!^GET /robots.txt HTTP/1.[01]$!
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_raw_via_http(undef, 'robots');
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/index HTTP/1.[01]$!
-	     and $headers->{host} =~ m!^$host(?::$port)$!) {
-      $self->serve_index_via_http(decode_utf8(uri_unescape($space)));
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_index_via_http($host, $self->space($host, $space));
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/spaces HTTP/1.[01]$!
-	     and $headers->{host} =~ m!^$host(?::$port)$!) {
-      $self->serve_spaces_via_http();
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_spaces_via_http($host);
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/rss HTTP/1.[01]$!
-	     and $headers->{host} =~ m!^$host(?::$port)$!) {
-      $self->serve_rss_via_http(decode_utf8(uri_unescape($space)));
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_rss_via_http($host, $self->space($host, $space));
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/atom HTTP/1.[01]$!
-	     and $headers->{host} =~ m!^$host(?::$port)$!) {
-      $self->serve_atom_via_http(decode_utf8(uri_unescape($space)));
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_atom_via_http($host, $self->space($host, $space));
     } elsif ($url =~ m!^GET (?:/($spaces))?/do/source HTTP/1.[01]$!
-	     and $headers->{host} =~ m!^$host(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       say "HTTP/1.1 200 OK\r";
       say "Content-Type: text/plain; charset=UTF-8\r";
       say "\r";

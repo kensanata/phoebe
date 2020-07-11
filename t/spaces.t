@@ -133,4 +133,31 @@ like($page, qr/Outside children shout/, "Save with old token failed");
 $page = query_gemini("$titan/alex/raw/Haiku;size=70;mime=text/plain;token=*secret*", $haiku);
 like($page, qr/^30 $base\/alex\/page\/Haiku\r$/, "Titan Haiku");
 
+open($config, ">>", "$dir/config");
+say $config 'push(@init, sub{ my $self = shift; $self->{server}->{wiki_token} = ["hello"]; $self->{server}->{wiki_space} = ["*", "alex", "berta"]});';
+close($config);
+is(kill('HUP', $pid), 1, "Restarted server, again");
+sleep 1;
+
+$page = query_gemini("$base/alex/page/Haiku");
+like($page, qr/Rattling keys and quiet/, "alex space still works");
+
+$haiku = <<EOT;
+Children shout and run.
+Then silence. A distant plane.
+And soft summer rain.
+EOT
+
+$page = query_gemini("titan://localhost:$port/raw/Haiku;size=77;mime=text/plain;token=hello", $haiku);
+like($page, qr/^30 gemini:\/\/localhost:$port\/page\/Haiku\r$/, "Haiku saved for localhost");
+
+$page = query_gemini("gemini://localhost:$port/page/Haiku");
+like($page, qr/Children shout and run/, "Haiku for implicit localhost namespace found");
+
+$page = query_gemini("$base/localhost/page/Haiku");
+like($page, qr/Children shout and run/, "Haiku for explicit localhost namespace found");
+
+$page = query_gemini("$base/page/Haiku");
+like($page, qr/This page does not yet exist/, "Haiku for 127.0.0.1 in the main space still does not exist");
+
 done_testing();

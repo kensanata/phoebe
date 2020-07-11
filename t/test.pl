@@ -58,9 +58,9 @@ push(@extensions, \&serve_test);
 sub serve_test {
   my $self = shift;
   my $url = shift;
-  my $host = $self->host();
+  my $host = $self->host_regex();
   my $port = $self->port();
-  if ($url =~ m!^gemini://$host:$port/do/test$!) {
+  if ($url =~ m!^gemini://($host):$port/do/test$!) {
     say "20 text/plain\r";
     say "Test";
     return 1;
@@ -86,6 +86,7 @@ if (!defined $pid) {
   exec($secure_perl_path,
        "./gemini-wiki.pl",
        "--host=$host",
+       "--host=localhost",
        "--port=$port",
        "--log_level=" . ($ENV{DEBUG}||0), # set to 4 for verbose logging
        "--wiki_dir=$dir",

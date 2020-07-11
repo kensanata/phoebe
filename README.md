@@ -35,6 +35,8 @@ It does two and a half things:
 - [GUS and robots.txt](#gus-and-robots-txt)
 - [Limited, read-only HTTP support](#limited-read-only-http-support)
 - [Configuration](#configuration)
+- [Tokens per Wiki Space](#tokens-per-wiki-space)
+- [Virtual Hosting](#virtual-hosting)
 
 ## How do you edit a Gemini Wiki?
 
@@ -70,7 +72,8 @@ Perl libraries you need to install if you want to run Gemini Wiki:
 - [URI::Escape](https://metacpan.org/pod/URI%3A%3AEscape)
 
 I'm going to be using `curl` and `openssl` in the ["Quickstart"](#quickstart) instructions,
-so you'll need those tools as well.
+so you'll need those tools as well. And finally, when people download their
+data, the code calls `tar`.
 
 On Debian:
 
@@ -81,7 +84,7 @@ On Debian:
       libmodern-perl-perl \
       libnet-server-perl \
       liburi-escape-xs-perl \
-      curl openssl
+      curl openssl tar
 
 The `update-readme.pl` script I use to generate `README.md` also requires
 [Pod::Markdown](https://metacpan.org/pod/Pod%3A%3AMarkdown) and [Text::Slugify](https://metacpan.org/pod/Text%3A%3ASlugify).
@@ -218,19 +221,19 @@ Here's an example:
     perl gemini-wiki.pl \
       --wiki_token=Elrond \
       --wiki_token=Thranduil \
-      --wiki_pages=Welcome \
-      --wiki_pages=About
+      --wiki_page=Welcome \
+      --wiki_page=About
 
 And here's some documentation:
 
 - `--wiki_token` is for the token that users editing pages have to provide;
       the default is "hello"; you can use this option multiple times and give
       different users different passwords, if you want
+- `--wiki_page` is an extra page to show in the main menu; you can use
+      this option multiple times
 - `--wiki_main_page` is the page containing your header for the main page;
       that's were you would put your ASCII art header, your welcome message, and
       so on, see ["Main Page and Title"](#main-page-and-title) below
-- `--wiki_pages` is an extra page to show in the main menu; you can use
-      this option multiple times
 - `--wiki_mime_type` is a MIME type to allow for uploads; text/plain is
       always allowed and doesn't need to be listed; you can also just list the
       type without a subtype, eg. `image` will allow all sorts of images (make
@@ -433,6 +436,9 @@ and created a separate `gemini` user, you could simply use `--user=gemini` and
 This section describes some hooks you can use to customize your wiki using the
 `config` file.
 
+- `@init` is a list of code references allowing you to change the
+      configuration of the server; it gets executed as the server starts, after
+      regular configuration
 - `@extensions` is a list of code references allowing you to handle
       additional URLs; return 1 if you handle a URL; each code reference gets
       called with the first line of the request (a Gemini URL, a Gopher
@@ -452,9 +458,9 @@ The following example illustrates this:
       my $self = shift;
       my $url = shift;
       my $headers = shift;
-      my $host = $self->host();
+      my $host = $self->host_regex();
       my $port = $self->port();
-      if ($url =~ m!^gemini://$host(:$port)?/do/test$!) {
+      if ($url =~ m!^gemini://($host)(?::$port)?/do/test$!) {
         say "20 text/plain\r";
         say "Test";
         return 1;
@@ -462,3 +468,72 @@ The following example illustrates this:
       return;
     }
     1;
+
+## Tokens per Wiki Space
+
+Per default, there is simply one set of tokens which allows the editing of the
+wiki, and all the wiki spaces you defined. If you want to give users a token
+just for their space, you can do that, too. Doing this is starting to strain the
+command line interface, however, and therefore the following illustrates how to
+do more advanced configuration using `@init` in the config file:
+
+    package Gemini::Wiki;
+    use Modern::Perl;
+    our (@init);
+    push(@init, \&init_tokens);
+    sub init_tokens {
+      my $self = shift;
+      $self->{server}->{wiki_space_token}->{alex} = ["*secret*"];
+    };
+
+The code above sets up the `wiki_space_token` property. It's a hash reference
+where keys are existing wiki spaces and values are array references listing the
+valid tokens for that space (in addition to the global tokens that you can set
+up using `--wiki_token` which defaults to the token "hello"). Thus, the above
+code sets up the token `*secret*` for the `alex` wiki space.
+
+You can use the config file to change the values of other properties as well,
+even if these properties are set via the command line. The config file allows
+you to overwrite those, and the config file is read for every request!
+
+    package Gemini::Wiki;
+    use Modern::Perl;
+    our (@init);
+    push(@init, \&init_tokens);
+    sub init_tokens {
+      my $self = shift;
+      $self->{server}->{wiki_token} = [];
+    };
+
+This code simply deactivates the token list. No more tokens!
+
+## Virtual Hosting
+
+Sometimes you want have a machine reachable under different domain names and you
+want each domain name to have their own wiki space, automatically. You can do
+this by using `--wiki_space=*` and the appropriate `--host=example.org`
+arguments.
+
+Here's a simple, stand-alone setup that will work on your local machine. These
+are usually reachable using the IPv4 `127.0.0.1` or the name `localhost`. The
+following command tells Gemini Wiki to serve both `localhost` and `127.0.0.1`
+(the default is to just use `localhost`), and to use a wiki space of the same
+name.
+
+    perl gemini-wiki.pl --host=localhost --host=127.0.0.1 --wiki_space=*
+
+Visit both [gemini://localhost/](gemini://localhost/) and [gemini://127.0.0.1/](gemini://127.0.0.1/) and create a new
+page, then examine the data directory `wiki`. You'll see both `wiki/localhost`
+and `wiki/127.0.0.1`.
+
+Beware, however: if you specify more spaces in addition to `--wiki_space=*`,
+then those spaces can be seen from both hostnames. Here's an example:
+
+    perl gemini-wiki.pl --host=localhost --host=127.0.0.1 --wiki_space=* --wiki_space=oops
+
+In this situation, you can visit both [gemini://localhost/oops/](gemini://localhost/oops/) and
+[gemini://127.0.0.1/oops/](gemini://127.0.0.1/oops/) and the content will be the same. This may or may
+not be what you intended. A search index would index both, for example. My guess
+is that you should should either specify the wiki spaces explicity, or you
+should use virtual hosting by specifying `--wiki_space=*`, but not both. Not
+using spaces is fine, too. 😀

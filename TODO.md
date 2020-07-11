@@ -2,17 +2,16 @@
 
 Things I want:
 
-- understanding client certificates so that I can assemble the
-  necessary steps into a Makefile or a Perl script for people who want
-  to limit people to editing their own spaces
-
-- once I have client certificates working, I need to implement the
-  mapping of known client certificates to wiki spaces and limit
-  editing to the appropriate client certificates
+- different tokens for different spaces
 
 - diff with previous version
 
 - HTML output of changes
 
 - paging through changes or simply listing all changes
+
+I'm super annoyed with client certificates and by now I'm pretty sure
+I hate them. I can't figure out how to connect to astrobotany using
+gnutls-cli, and so it doesn't even make sense for me to try and
+connect to my own server using client certificates.
 

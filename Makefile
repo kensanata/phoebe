@@ -1,7 +1,7 @@
 # Start the wiki with the default options (using 'wiki' in the current
 # directory as the data directory).
 start:
-	./gemini-wiki.pl
+	./gemini-wiki
 
 # Start the wiki as a daemon with the default options, but also server
 # port 443 (HTTPS); since this is a port below 1024 itis priviledges
@@ -9,7 +9,7 @@ start:
 # sure that it drops priviledges to the current user as soon as it
 # started.
 web:
-	sudo ./gemini-wiki.pl --port=443 --port=1965 --user=$(shell id -un) --group=$(shell id -gn)
+	sudo ./gemini-wiki --port=443 --port=1965 --user=$(shell id -un) --group=$(shell id -gn)
 
 # Start the wiki on port 2020, with debug log level, two example
 # spaces, allowing the upload of JPEG files, and use 'morbo' (which is
@@ -17,12 +17,13 @@ web:
 # code: when it detects a change, the server is restarted
 # automatically.
 dev:
-	morbo -- ./gemini-wiki.pl --port=2020 --log_level=4 --wiki_space=alex --wiki_space=berta --wiki_mime_type=image/jpeg
+	morbo -- ./gemini-wiki --port=2020 --log_level=4 --wiki_space=alex --wiki_space=berta --wiki_mime_type=image/jpeg
 
 # Update the README file. The Perl script no only converts the POD
 # documentation to Markdown, it also adds a table of contents.
-README.md: gemini-wiki.pl
-	./update-readme.pl
+README.md: gemini-wiki
+	./update-readme
+
 
 # Run the test using two jobs.
 test:

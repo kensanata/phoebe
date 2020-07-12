@@ -84,7 +84,7 @@ if (!defined $pid) {
   use Config;
   my $secure_perl_path = $Config{perlpath};
   exec($secure_perl_path,
-       "./gemini-wiki.pl",
+       "./gemini-wiki",
        "--host=$host",
        "--host=localhost",
        "--port=$port",

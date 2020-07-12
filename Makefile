@@ -19,11 +19,42 @@ web:
 dev:
 	morbo -- ./gemini-wiki --port=2020 --log_level=4 --wiki_space=alex --wiki_space=berta --wiki_mime_type=image/jpeg
 
+# Update all the documentation files
+doc: README.md man
+
 # Update the README file. The Perl script no only converts the POD
 # documentation to Markdown, it also adds a table of contents.
 README.md: gemini-wiki
 	./update-readme
 
+# Create man pages.
+man: gemini-wiki.1 titan.1 gemini.1
+
+%.1: %
+	pod2man $< $@
+
+# Install scripts and man pages in ~/.local
+install: $$HOME/.local/bin/gemini-wiki \
+	$$HOME/.local/bin/gemini \
+	$$HOME/.local/bin/titan \
+	$$HOME/.local/share/man/man1/gemini-wiki.1 \
+	$$HOME/.local/share/man/man1/gemini.1 \
+	$$HOME/.local/share/man/man1/titan.1
+
+$$HOME/.local/bin/%: %
+	cp $< $@
+
+$$HOME/.local/share/man/man1/%: %
+	cp $< $@
+
+uninstall:
+	rm \
+	$$HOME/.local/bin/gemini-wiki \
+	$$HOME/.local/bin/gemini \
+	$$HOME/.local/bin/titan \
+	$$HOME/.local/share/man/man1/gemini-wiki.1 \
+	$$HOME/.local/share/man/man1/gemini.1 \
+	$$HOME/.local/share/man/man1/titan.1
 
 # Run the test using two jobs.
 test:

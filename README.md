@@ -45,6 +45,9 @@ You need to use a Titan-enabled client.
 
 Known clients:
 
+- This repository comes with a Perl script called
+      [titan](https://alexschroeder.ch/cgit/gemini-wiki/plain/titan) to upload
+      files
 - [Gemini Write](https://alexschroeder.ch/cgit/gemini-write/) is an
       extension for the Emacs Gopher and Gemini client
       [Elpher](https://thelambdalab.xyz/elpher/)

@@ -50,6 +50,10 @@ Known clients:
 
 =over
 
+=item This repository comes with a Perl script called
+      L<titan|https://alexschroeder.ch/cgit/gemini-wiki/plain/titan> to upload
+      files
+
 =item L<Gemini Write|https://alexschroeder.ch/cgit/gemini-write/> is an
       extension for the Emacs Gopher and Gemini client
       L<Elpher|https://thelambdalab.xyz/elpher/>

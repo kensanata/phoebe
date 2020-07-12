@@ -162,9 +162,8 @@ You should get back a page that starts as follows:
 
 Yay! 😁🎉 🚀🚀
 
-Let me return to the topic of Titan-enabled clients for a moment. If you install
-[Gemini & Titan for Bash](https://alexschroeder.ch/cgit/gemini-titan/about/)
-then you can do simple things like this:
+Let me return to the topic of Titan-enabled clients for a moment. With those,
+you can do simple things like this:
 
     echo "Hello! This is a test!" | titan localhost/test hello
 
@@ -173,6 +172,16 @@ Or this:
     titan localhost/test hello test.txt
 
 That makes it a lot easier to upload new content! 😅
+
+If you have a bunch of Gemtext files in a directory, you can upload them all in
+one go with a little shell scripting:
+
+    for f in *.gmi; do
+      n=$(basename "$f" .gmi)
+      echo Uploading $n
+      u=$(perl -MURI::Escape -e 'print uri_escape(shift)' "$n")
+      titan localhost/$u hello "$f"
+    done
 
 ## Wiki Directory
 

@@ -72,7 +72,7 @@ die "⚠ The URL '$url' must use the titan scheme\n" unless $scheme and $scheme 
 die "⚠ The URL '$url' must have an authority\n" unless $authority;
 die "⚠ The URL '$url' must have a path\n" unless $path;
 die "⚠ The URL '$url' must have a path that doesn't end in a slash\n" if $path =~ /\/$/;
-die "⚠ The URL '$url' must not have query\n" if $query;
+die "⚠ The URL '$url' must not have a query\n" if $query;
 die "⚠ The URL '$url' must not have a fragment\n" if $fragment;
 
 die "⚠ The file '$file' does not exist\n" if $file and not -e $file;

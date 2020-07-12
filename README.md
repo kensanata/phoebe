@@ -174,14 +174,9 @@ Or this:
 That makes it a lot easier to upload new content! 😅
 
 If you have a bunch of Gemtext files in a directory, you can upload them all in
-one go with a little shell scripting:
+one go:
 
-    for f in *.gmi; do
-      n=$(basename "$f" .gmi)
-      echo Uploading $n
-      u=$(perl -MURI::Escape -e 'print uri_escape(shift)' "$n")
-      titan localhost/$u hello "$f"
-    done
+    titan titan://localhost/ hello *.gmi
 
 ## Wiki Directory
 

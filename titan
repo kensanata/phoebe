@@ -49,6 +49,8 @@ Or from a pipe:
 
 use Modern::Perl '2018';
 use Pod::Text;
+use URI::Escape;
+use File::Basename;
 use File::Temp qw(tempfile);
 use IO::Socket::SSL;
 
@@ -60,7 +62,7 @@ if ($ARGV[0] and $ARGV[0] eq '--help') {
 }
 
 # Regular arguments
-my ($url, $token, $file) = @ARGV;
+my ($url, $token, @files) = @ARGV;
 $token //= '';
 
 die "⚠ You must provide an URL\n" unless $url;
@@ -71,49 +73,66 @@ my($scheme, $authority, $path, $query, $fragment) =
 die "⚠ The URL '$url' must use the titan scheme\n" unless $scheme and $scheme eq 'titan';
 die "⚠ The URL '$url' must have an authority\n" unless $authority;
 die "⚠ The URL '$url' must have a path\n" unless $path;
-die "⚠ The URL '$url' must have a path that doesn't end in a slash\n" if $path =~ /\/$/;
 die "⚠ The URL '$url' must not have a query\n" if $query;
 die "⚠ The URL '$url' must not have a fragment\n" if $fragment;
 
-die "⚠ The file '$file' does not exist\n" if $file and not -e $file;
-die "⚠ The file '$file' cannot be read\n" if $file and not -r $file;
+if (@files > 1) {
+  die "⚠ The URL '$url' must have a path that ends in a slash\n" if $path !~ /\/$/;
+} elsif (not @files) {
+  die "⚠ The URL '$url' must have a path that does not end in a slash\n" if $path =~ /\/$/;
+}
+
+for my $file (@files) {
+  die "⚠ The file '$file' does not exist\n" unless -e $file;
+  die "⚠ The file '$file' cannot be read\n" unless -r $file;
+}
 warn "Without a token chances are slim… 😅\n" unless $token;
-say "Start typing and end your input with Ctrl-D… 😁" if -t and not $file;
-say "Reading from the pipe… 😁" if not -t and not $file;
+say "Start typing and end your input with Ctrl-D… 😁" if -t and not @files;
+say "Reading from the pipe… 😁" if not -t and not @files;
 
 my ($host, $port) = split(/:/, $authority, 2);
 $port //= 1965;
 
 undef $/;
-my $data;
-my $fh;
-if ($file) {
-  open($fh, '<', $file) or die "⚠ The file '$file' cannot be read: $!\n";
-  $data = <$fh>;
-} else {
-  $data = <STDIN>;
-  ($fh, $file) = tempfile();
-  print $fh $data;
+my $temp_fh; # closing this deletes the tempfile so don't do it
+
+unless (@files) {
+  my $data = <STDIN>;
+  my $file;
+  ($temp_fh, $file) = tempfile();
+  print $temp_fh $data;
+  push(@files, $file);
 }
 
-my $size = length($data);
+for my $file (@files) {
+  open(my $fh, '<', $file) or die "⚠ The file '$file' cannot be read: $!\n";
+  my $data = <$fh>;
+  close($fh);
+  my $size = length($data);
+  my $type = qx(/usr/bin/file --mime-type --brief $file);
+  $type =~ s/\s+$//; # remove trailing whitespace
 
-my $type = qx(/usr/bin/file --mime-type --brief $file);
-$type =~ s/\s+$//; # remove trailing whitespace
+  # If the URL ends in a slash, append the URI-escaped filename without suffix
+  my $furl = $url;
+  if ($path =~ /\/$/) {
+    my ($name) = fileparse($file, '.gmi');
+    $furl .= uri_escape($name);
+  }
 
-close($fh); # deletes temporary file, if any
+  # create client
+  my $socket = IO::Socket::SSL->new(
+    PeerHost => $host,
+    PeerService => $port,
+    SSL_verify_mode => SSL_VERIFY_NONE)
+      or die "Cannot construct client socket: $@";
 
-# create client
-my $socket = IO::Socket::SSL->new(
-  PeerHost => $host,
-  PeerService => $port)
-    or die "Cannot construct client socket: $@";
+  # send data in one go
+  print $socket "$furl;size=$size;mime=$type;token=$token\r\n$data";
 
-# send data in one go
-warn "$url;size=$size;mime=$type;token=$token\n";
-print $socket "$url;size=$size;mime=$type;token=$token\r\n$data";
+  # print response
+  my $response = <$socket>;
+  $response =~ s/\r//g;
+  print $response;
+}
 
-# print response
-my $response = <$socket>;
-$response =~ s/\r//g;
-print $response;
+close($temp_fh) if $temp_fh; # delete tempfile, if any

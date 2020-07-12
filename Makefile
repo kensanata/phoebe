@@ -26,7 +26,7 @@ README.md: gemini-wiki.pl
 
 # Run the test using two jobs.
 test:
-	prove --jobs 2 t
+	prove --state=slow,save --jobs 4 t/
 
 # Run the tests individually, with the server logging debug output,
 # and with the test output getting printed instead of being

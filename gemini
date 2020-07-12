@@ -28,7 +28,7 @@ This is a test client. All it does is dump the response.
 
 =item The rest is the response itself
 
-=end
+=back
 
 Usage:
 

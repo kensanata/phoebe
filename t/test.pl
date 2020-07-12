@@ -107,8 +107,6 @@ sub query_gemini {
   my $socket = IO::Socket::SSL->new(
     PeerHost => "127.0.0.1",
     PeerService => $port,
-    SSL_cert_file => 'cert.pem',
-    SSL_key_file => 'key.pem',
     SSL_verify_mode => SSL_VERIFY_NONE)
       or die "Cannot construct client socket: $@";
 

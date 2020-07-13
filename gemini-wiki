@@ -183,18 +183,18 @@ Yay! 😁🎉 🚀🚀
 Let me return to the topic of Titan-enabled clients for a moment. With those,
 you can do simple things like this:
 
-    echo "Hello! This is a test!" | titan localhost/test hello
+    echo "Hello! This is a test!" | titan --url=localhost/test --token=hello
 
 Or this:
 
-    titan localhost/test hello test.txt
+    titan --url=localhost/test --token=hello test.txt
 
 That makes it a lot easier to upload new content! 😅
 
 If you have a bunch of Gemtext files in a directory, you can upload them all in
 one go:
 
-    titan titan://localhost/ hello *.gmi
+    titan --url=titan://localhost/ --token=hello *.gmi
 
 =head2 Wiki Directory
 

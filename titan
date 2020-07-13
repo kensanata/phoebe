@@ -18,22 +18,28 @@
 
 =head1 Titan
 
-This is a script to upload content to a Titan-enabled site like Gemini Wiki. It takes up to three arguments:
+This is a script to upload content to a Titan-enabled site like Gemini Wiki. It
+takes a varying number of arguments:
 
 =over
 
-=item the Titan URL to use; this should be really similar to the Gemini URL you
-      used to read the page
+=item B<--url=URL> specifies the Titan URL to use; this should be really similar
+      to the Gemini URL you used to read the page
 
-=item the token to use; this is optional but spammers and vandals basically
-      ensured that any site out on the Internet needs some sort of protection;
-      how to get a token depends on the site you're editing
+=item B<--token=TOKEN> specifies the token to use; this is optional but spammers
+      and vandals basically ensured that any site out on the Internet needs some
+      sort of protection; how to get a token depends on the site you're editing
 
-=item the file to upload; this is optional: you can also use a pipe, or type a
-      few words by hand (terminating it with a Ctrl-D, the end of transmission
-      byte)
+=item B<FILES...> are the files to upload, if any; this is optional: you can
+      also use a pipe, or type a few words by hand (terminating it with a
+      Ctrl-D, the end of transmission byte)
 
 =back
+
+Note that if you specify multiple files, the URL must end in a slash and all the
+filenames are used as page names. So, uploading F<Alex.gmi> and F<Berta.gmi> to
+C<titan://localhost/> will create C<gemini://localhost/Alex> and
+C<gemini://localhost/Berta>.
 
 If available, it will use F<client-cert.pem> and F<client-key.pem> to upload
 files, just in case. 😃
@@ -56,16 +62,30 @@ use URI::Escape;
 use File::Basename;
 use File::Temp qw(tempfile);
 use IO::Socket::SSL;
+use Getopt::Long;
 
-# Help
-if ($ARGV[0] and $ARGV[0] eq '--help') {
+my $cert_file;
+my $cert_key;
+my $token;
+my $help;
+my $url;
+
+GetOptions ("cert_file=s" => \$cert_file,
+	    "cert_key=s" => \$cert_key,
+	    "token=s"  => \$token,
+	    "help"  => \$help,
+	    "url=s"  => \$url,)
+    or die("Error in command line arguments\n");
+
+# Help comes first
+if ($help) {
   my $parser = Pod::Text->new();
   $parser->parse_file($0);
   exit;
 }
 
-# Regular arguments
-my ($url, $token, @files) = @ARGV;
+# Remaining arguments
+my (@files) = @ARGV;
 $token //= '';
 
 die "⚠ You must provide an URL\n" unless $url;

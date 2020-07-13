@@ -37,6 +37,7 @@ It does two and a half things:
 - [Configuration](#configuration)
 - [Wiki Spaces](#wiki-spaces)
 - [Tokens per Wiki Space](#tokens-per-wiki-space)
+- [Client Certificates](#client-certificates)
 - [Virtual Hosting](#virtual-hosting)
 
 ## How do you edit a Gemini Wiki?
@@ -532,6 +533,75 @@ you to overwrite those, and the config file is read for every request!
     };
 
 This code simply deactivates the token list. No more tokens!
+
+## Client Certificates
+
+Gemini Wiki serves a public wiki by default. In theory, limiting editing to
+known users (that is, known client certificates) is possible. I say "in theory"
+because this requires a small change to [Net::Server::Proto::SSL](https://metacpan.org/pod/Net%3A%3AServer%3A%3AProto%3A%3ASSL). For your
+convenience, this repository comes with a patched version (based on
+[Net::Server](https://metacpan.org/pod/Net%3A%3AServer) 2.009). All this does is add SSL\_verify\_callback to the list of
+options for [IO::Socket::SSL](https://metacpan.org/pod/IO%3A%3ASocket%3A%3ASSL). Gemini Wiki includes the local `lib` directory
+in its library search path, so if you have the `lib/Net/Server/Proto/SSL.pm`
+file in the current directory where you start `gemini-wiki`, it should simply
+work.
+
+Here's a config file using client certificates to limit writing to a single,
+known fingerprint:
+
+    # -*- mode: perl -*-
+    package Gemini::Wiki;
+    use Modern::Perl;
+    our (@init, @extensions);
+    my @fingerprints = ('sha256$e4b871adf0d74d9ab61fbf0b6773d75a152594090916834278d416a769712570');
+    push(@extensions, \&protected_wiki);
+    sub protected_wiki {
+      my $self = shift;
+      my $url = shift;
+      my $host_regex = $self->host_regex();
+      my $port = $self->port();
+      my $spaces = join("|", map { quotemeta } $self->spaces());
+      my $fingerprint = $self->{server}->{client}->get_fingerprint();
+      if (my ($host, $path) = $url =~ m!^titan://($host_regex)(?::$port)?([^?#]*)!) {
+        my ($space, $resource) = $path =~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!;
+        if (not $resource) {
+          $self->log(4, "The Titan URL is malformed: $path $spaces");
+          say "59 The Titan URL is malformed\r";
+        } elsif ($fingerprint and grep { $_ eq $fingerprint} @fingerprints) {
+          $self->log(3, "Successfully identified client certificate");
+          my ($id, @params) = split(/[;=&]/, $resource);
+          $self->write_page($host, $self->space($host, $space), decode_utf8(uri_unescape($id)),
+                            {map {decode_utf8(uri_unescape($_))} @params});
+        } elsif ($fingerprint) {
+          $self->log(3, "Unknown client certificate $fingerprint");
+          say "61 Your client certificate is not authorized for editing\r";
+        } else {
+          $self->log(3, "Requested client certificate");
+          say "60 You need a client certificate to edit this wiki\r";
+        }
+        return 1;
+      }
+      return;
+    }
+    1;
+
+`@fingerprints` is a list, so you could add more fingerprints:
+
+    my @fingerprints = qw(
+      sha256$e4b871adf0d74d9ab61fbf0b6773d75a152594090916834278d416a769712570
+      sha256$4a948f5a11f4a81d0a2e8b60b1e4b3c9d1e25f4d95694965d98b333a443a3b25);
+
+Or you could read them from a file:
+
+    use File::Slurper qw(read_lines);
+    my @fingerprints = read_lines("fingerprints");
+
+The important part is that this code matches the same Titan requests as the
+default code, and it comes first. Thus, the old code can no longer be reached
+and this code checks for a known fingerprint.
+
+To be sure, it doesn't check anything else! It doesn't check whether the client
+certificate has expired, for example.
 
 ## Virtual Hosting
 

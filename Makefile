@@ -77,3 +77,16 @@ cert:
 	openssl req -new -x509 -newkey ec \
 	-pkeyopt ec_paramgen_curve:prime256v1 \
 	-days 1825 -nodes -out cert.pem -keyout key.pem
+
+# Generate client certificates for testing. These use eliptic
+# curves and are valid for five years.
+client-cert:
+	openssl req -new -x509 -newkey ec \
+	-pkeyopt ec_paramgen_curve:prime256v1 \
+	-days 1825 -nodes -out client-cert.pem -keyout client-key.pem
+
+# Generates the fingerprint of the client certificate in a form
+# suitable for comparison with fingerprints by IO::Socket::SSL.
+client-fingerprint:
+	openssl x509 -in client-cert.pem -noout -sha256 -fingerprint \
+	| sed -e 's/://g' -e 's/SHA256 Fingerprint=/sha256$$/' | tr [:upper:] [:lower:]

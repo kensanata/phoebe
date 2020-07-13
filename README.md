@@ -540,7 +540,7 @@ Gemini Wiki serves a public wiki by default. In theory, limiting editing to
 known users (that is, known client certificates) is possible. I say "in theory"
 because this requires a small change to [Net::Server::Proto::SSL](https://metacpan.org/pod/Net%3A%3AServer%3A%3AProto%3A%3ASSL). For your
 convenience, this repository comes with a patched version (based on
-[Net::Server](https://metacpan.org/pod/Net%3A%3AServer) 2.009). All this does is add SSL\_verify\_callback to the list of
+[Net::Server](https://metacpan.org/pod/Net%3A%3AServer) 2.009). All this does is add `SSL_verify_callback` to the list of
 options for [IO::Socket::SSL](https://metacpan.org/pod/IO%3A%3ASocket%3A%3ASSL). Gemini Wiki includes the local `lib` directory
 in its library search path, so if you have the `lib/Net/Server/Proto/SSL.pm`
 file in the current directory where you start `gemini-wiki`, it should simply

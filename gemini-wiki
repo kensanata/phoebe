@@ -600,7 +600,7 @@ Gemini Wiki serves a public wiki by default. In theory, limiting editing to
 known users (that is, known client certificates) is possible. I say "in theory"
 because this requires a small change to L<Net::Server::Proto::SSL>. For your
 convenience, this repository comes with a patched version (based on
-L<Net::Server> 2.009). All this does is add SSL_verify_callback to the list of
+L<Net::Server> 2.009). All this does is add C<SSL_verify_callback> to the list of
 options for L<IO::Socket::SSL>. Gemini Wiki includes the local F<lib> directory
 in its library search path, so if you have the F<lib/Net/Server/Proto/SSL.pm>
 file in the current directory where you start F<gemini-wiki>, it should simply

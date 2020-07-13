@@ -1107,6 +1107,34 @@ sub serve_index {
   }
 }
 
+sub serve_index_via_http {
+  my $self = shift;
+  my $host = shift;
+  my $space = shift;
+  $self->log(3, "Serving index of all pages via HTTP");
+  say "HTTP/1.1 200 OK\r";
+  say "Content-Type: text/html\r";
+  say "\r";
+  say "<!DOCTYPE html>";
+  say "<html>";
+  say "<head>";
+  say "<meta charset=\"utf-8\">";
+  say "<title>All Pages</title>";
+  say "</head>";
+  say "<body>";
+  say "<h1>All Pages</h1>";
+  my @pages = $self->pages($host, $space);
+  if (@pages) {
+    say "<ul>";
+    for my $id (sort { $self->newest_first($a, $b) } @pages) {
+      say "<li>" . $self->link_html($host, $space, $id);
+    }
+    say "</ul>";
+  } else {
+    say "<p>The are no pages."
+  }
+}
+
 sub files {
   my $self = shift;
   my $host = shift;
@@ -1135,11 +1163,11 @@ sub serve_files {
   }
 }
 
-sub serve_index_via_http {
+sub serve_files_via_http {
   my $self = shift;
   my $host = shift;
   my $space = shift;
-  $self->log(3, "Serving index of all pages via HTTP");
+  $self->log(3, "Serving all files via HTTP");
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: text/html\r";
   say "\r";
@@ -1147,19 +1175,19 @@ sub serve_index_via_http {
   say "<html>";
   say "<head>";
   say "<meta charset=\"utf-8\">";
-  say "<title>All Pages</title>";
+  say "<title>All Files</title>";
   say "</head>";
   say "<body>";
-  say "<h1>All Pages</h1>";
-  my @pages = $self->pages($host, $space);
-  if (@pages) {
+  say "<h1>All Files</h1>";
+  my @files = $self->files($host, $space);
+  if (@files) {
     say "<ul>";
-    for my $id (sort { $self->newest_first($a, $b) } @pages) {
-      say "<li>" . $self->link_html($host, $space, $id);
+    for my $id (sort @files) {
+      say "<li>" . $self->link_html($host, $space, $id, "file/$id");
     }
     say "</ul>";
   } else {
-    say "<p>The are no pages."
+    say "<p>The are no files."
   }
 }
 
@@ -1874,6 +1902,44 @@ sub serve_file {
   print read_binary($file);
 }
 
+sub serve_file_via_http {
+  my $self = shift;
+  my $host = shift;
+  my $space = shift;
+  my $id = shift;
+  my $revision = shift;
+  $self->log(3, "Serve file $id");
+  my $dir = $self->{server}->{wiki_dir};
+  $dir .= "/$space" if $space;
+  my $file = "$dir/file/$id";
+  my $meta = "$dir/meta/$id";
+  if (not -f $file) {
+    say "HTTP/1.1 404 Error\r";
+    say "Content-Type: text/plain\r";
+    say "\r";
+    say "File not found\r";
+    return;
+  } elsif (not -f $meta) {
+    say "HTTP/1.1 500 Error\r";
+    say "Content-Type: text/plain\r";
+    say "\r";
+    say "Metadata not found\r";
+    return;
+  }
+  my %meta = (map { split(/: /, $_, 2) } read_lines($meta));
+  if (not $meta{'content-type'}) {
+    say "HTTP/1.1 500 Error\r";
+    say "Content-Type: text/plain\r";
+    say "\r";
+    say "Metadata corrupt\r";
+    return;
+  }
+  say "HTTP/1.1 200 OK\r";
+  say "Content-Type: " . $meta{'content-type'} ."\r";
+  say "\r";
+  print read_binary($file);
+}
+
 sub newest_first {
   my $self = shift;
   my ($date_a, $article_a) = $a =~ /^(\d\d\d\d-\d\d(?:-\d\d)? ?)?(.*)/;
@@ -2261,6 +2327,9 @@ sub process_request {
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/html/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_html_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/file/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_file_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/raw/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_raw_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
@@ -2270,6 +2339,9 @@ sub process_request {
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/index HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_index_via_http($host, $self->space($host, $space));
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/files HTTP/1.[01]$!
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_files_via_http($host, $self->space($host, $space));
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/spaces HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_spaces_via_http($host);

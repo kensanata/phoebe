@@ -35,6 +35,9 @@ This is a script to upload content to a Titan-enabled site like Gemini Wiki. It 
 
 =back
 
+If available, it will use F<client-cert.pem> and F<client-key.pem> to upload
+files, just in case. 😃
+
 Usage:
 
     echo "This is my test." > test.txt
@@ -94,14 +97,27 @@ my ($host, $port) = split(/:/, $authority, 2);
 $port //= 1965;
 
 undef $/;
-my $temp_fh; # closing this deletes the tempfile so don't do it
+my $temp_fh;
 
 unless (@files) {
   my $data = <STDIN>;
   my $file;
   ($temp_fh, $file) = tempfile();
   print $temp_fh $data;
+  close($temp_fh);
   push(@files, $file);
+}
+
+my %args = (PeerHost => $host,
+	    PeerService => $port,
+	    SSL_verify_mode => SSL_VERIFY_NONE);
+# Default certs
+$args{SSL_cert_file} = 'client-cert.pem' if -f 'client-cert.pem';
+$args{SSL_key_file} = 'client-key.pem' if -f 'client-key.pem';
+# Read --cert_file and --key_file
+for (grep(/--(key|cert)_file=/, @ARGV)) {
+  $args{SSL_cert_file} = $1 if /--cert_file=(.*)/;
+  $args{SSL_key_file} = $1 if /--key_file=(.*)/;
 }
 
 for my $file (@files) {
@@ -120,10 +136,7 @@ for my $file (@files) {
   }
 
   # create client
-  my $socket = IO::Socket::SSL->new(
-    PeerHost => $host,
-    PeerService => $port,
-    SSL_verify_mode => SSL_VERIFY_NONE)
+  my $socket = IO::Socket::SSL->new(%args)
       or die "Cannot construct client socket: $@";
 
   # send data in one go
@@ -134,5 +147,3 @@ for my $file (@files) {
   $response =~ s/\r//g;
   print $response;
 }
-
-close($temp_fh) if $temp_fh; # delete tempfile, if any

@@ -1,17 +1,15 @@
 # TODO
 
-Things I want:
+- fix extra spaces and domains-as-spaces: wiki spaces can be
+  associated with domains as spaces, perhaps? In other words, the
+  space "transjovian.org/toki" means that the toki space is only
+  visible from transjovian.org.
 
-- different tokens for different spaces
-
-- diff with previous version
+- fix All Changes
 
 - HTML output of changes
 
-- paging through changes or simply listing all changes
+- diff with previous version
 
-I'm super annoyed with client certificates and by now I'm pretty sure
-I hate them. I can't figure out how to connect to astrobotany using
-gnutls-cli, and so it doesn't even make sense for me to try and
-connect to my own server using client certificates.
+- paging through changes or simply listing all changes
 

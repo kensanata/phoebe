@@ -175,7 +175,7 @@ EOT
 $page = query_gemini("titan://localhost:$port/berta/raw/Haiku;size=72;mime=text/plain;token=hello", $haiku);
 like($page, qr/^30 gemini:\/\/localhost:$port\/berta\/page\/Haiku\r$/, "Haiku saved for localhost/berta");
 
-$page = query_gemini("gemini://$base/page/Haiku");
+$page = query_gemini("$base/page/Haiku");
 unlike($page, qr/Spoons scrape over plates/, "Haiku for 127.0.0.1 not found");
 
 $page = query_gemini("gemini://localhost:$port/berta/page/Haiku");
@@ -184,5 +184,11 @@ like($page, qr/^=> gemini:\/\/localhost:$port\/berta\/raw\/Haiku Raw text/m, "Li
 
 $page = query_gemini("gemini://$base/berta/page/Haiku");
 unlike($page, qr/Spoons scrape over plates/, "Haiku for 127.0.0.1/berta namespace not found");
+
+$page = query_gemini("$base/do/spaces");
+like($page, qr/^=> gemini:\/\/localhost:$port\/berta localhost\/berta$/m, "berta space listed");
+like($page, qr/^=> gemini:\/\/localhost:$port\/ localhost$/m, "localhost space listed");
+like($page, qr/^=> $base\/alex 127\.0\.0\.1\/alex$/m, "alex space listed");
+like($page, qr/^=> $base\/ 127\.0\.0\.1$/m, "127.0.0.1 space listed");
 
 done_testing();

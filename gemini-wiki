@@ -894,7 +894,7 @@ sub link {
   my $host = shift;
   my $space = shift;
   my $id = shift;
-  my $schema = shift || "gemini";
+  my $scheme = shift || "gemini";
   my $port = $self->port();
   if ($space) {
     $space = "" if $space eq $host;
@@ -902,7 +902,7 @@ sub link {
     $space = uri_escape_utf8($space);
   }
   # don't encode the slash
-  return "$schema://$host:$port/"
+  return "$scheme://$host:$port/"
       . ($space ? "$space/" : "")
       . join("/", map { uri_escape_utf8($_) } split (/\//, $id));
 }
@@ -1210,26 +1210,20 @@ sub serve_files_via_http {
 sub serve_spaces {
   my $self = shift;
   my $host = shift;
+  my $port = shift;
   $self->success();
   $self->log(3, "Serving all spaces");
   say "# Spaces";
-  $self->print_link($host, undef, "Main space", "/");
-  for my $space (sort $self->spaces()) {
-    if (grep { $_ eq $space } @{$self->{server}->{wiki_space}}) {
-      # this is a space that was specified via the --wiki_space option
-      $self->print_link($host, $space, $space, "/");
-    } else {
-      # this is a space that wasn't added manually via the --wiki_space option,
-      # i.e. it is a space that maps to a hostname due to --wiki_space=* and
-      # therefore we should use it as a hostname
-      $self->print_link($space, $space, $space, "/");
-    }
+  my %spaces = $self->space_links("gemini", $host, $port);
+  for my $url (keys %spaces) {
+    say "=> $url $spaces{$url}";
   }
 }
 
 sub serve_spaces_via_http {
   my $self = shift;
   my $host = shift;
+  my $port = shift;
   $self->log(3, "Serving all spaces via HTTP");
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: text/html\r";
@@ -1243,17 +1237,9 @@ sub serve_spaces_via_http {
   say "<body>";
   say "<h1>All Spaces</h1>";
   say "<ul>";
-  say "<li>" . $self->link_html($host, undef, "Main space", "/");
-  for my $space (sort $self->spaces()) {
-    if (grep { $_ eq $space } @{$self->{server}->{wiki_space}}) {
-      # this is a space that was specified via the --wiki_space option
-      say "<li>" . $self->link_html($host, $space, $space, "/");
-    } else {
-      # this is a space that wasn't added manually via the --wiki_space option,
-      # i.e. it is a space that maps to a hostname due to --wiki_space=* and
-      # therefore we should use it as a hostname
-      say "<li>" . $self->link_html($space, $space, $space, "/");
-    }
+  my %spaces = $self->space_links("https", $host, $port);
+  for my $url (keys %spaces) {
+    say "<li><a href=\"$url\">$spaces{$url}</a>";
   }
   say "</ul>";
 }
@@ -1504,15 +1490,15 @@ sub rss {
   my $self = shift;
   my $host = shift;
   my $space = shift;
-  my $schema = shift;
+  my $scheme = shift;
   my $name = $self->{server}->{wiki_main_page} || "Gemini Wiki";
   my $port = $self->port();
   say "<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">";
   say "<channel>";
   say "<title>" . $self->quote_html($name) . "</title>";
   say "<description>Changes on this wiki.</description>";
-  say "<link>$schema://$host:$port/</link>";
-  say "<atom:link rel=\"self\" type=\"application/rss+xml\" href=\"$schema://$host:$port/do/rss\" />";
+  say "<link>$scheme://$host:$port/</link>";
+  say "<atom:link rel=\"self\" type=\"application/rss+xml\" href=\"$scheme://$host:$port/do/rss\" />";
   say "<generator>Gemini Wiki</generator>";
   say "<docs>http://blogs.law.harvard.edu/tech/rss</docs>";
   my $dir = $self->{server}->{wiki_dir};
@@ -1528,7 +1514,7 @@ sub rss {
       $seen{$id} = 1;
       say "<item>";
       say "<title>" . $self->quote_html($id) . "</title>";
-      my $link = $self->link($host, $space, "page/$id", $schema);
+      my $link = $self->link($host, $space, "page/$id", $scheme);
       say "<link>$link</link>";
       say "<guid>$link</guid>";
       say "<description>" . $self->quote_html($self->text($host, $space, $id)) . "</description>";
@@ -1568,15 +1554,15 @@ sub atom {
   my $self = shift;
   my $host = shift;
   my $space = shift;
-  my $schema = shift;
+  my $scheme = shift;
   my $name = $self->{server}->{wiki_main_page} || "Gemini Wiki";
   my $port = $self->port();
   say "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
   say "<feed xmlns=\"http://www.w3.org/2005/Atom\">";
   say "<title>" . $self->quote_html($name) . "</title>";
-  say "<link href=\"$schema://$host:$port/\"/>";
-  say "<link rel=\"self\" type=\"application/atom+xml\" href=\"$schema://$host:$port/do/atom\"/>";
-  say "<id>$schema://$host:$port/do/atom</id>";
+  say "<link href=\"$scheme://$host:$port/\"/>";
+  say "<link rel=\"self\" type=\"application/atom+xml\" href=\"$scheme://$host:$port/do/atom\"/>";
+  say "<id>$scheme://$host:$port/do/atom</id>";
   my $dir = $self->{server}->{wiki_dir};
   $dir .= "/$space" if $space;
   my $log = "$dir/changes.log";
@@ -1595,7 +1581,7 @@ sub atom {
       $seen{$id} = 1;
       say "<entry>";
       say "<title>" . $self->quote_html($id) . "</title>";
-      my $link = $self->link($host, $space, "page/$id", $schema);
+      my $link = $self->link($host, $space, "page/$id", $scheme);
       say "<link href=\"$link\"/>";
       say "<id>$link</id>";
       say "<summary>" . $self->quote_html($self->text($host, $space, $id)) . "</summary>";
@@ -2235,16 +2221,47 @@ sub space {
   return $space;
 }
 
+sub space_links {
+  my $self = shift;
+  my $scheme = shift;
+  my $host = shift;
+  my $port = shift;
+  if (grep { $_ eq "*" } @{$self->{server}->{wiki_space}}) {
+    # these directories minus the special directories are hostnames
+    my %spaces;
+    my $dir = $self->{server}->{wiki_dir};
+    for (read_dir($dir)) {
+      next if /^(page|keep|meta|file)$/;
+      $spaces{"$scheme://$_:$port/"} = $_ if -d "$dir/$_";
+    }
+    # these are the additional namespaces from the command line
+    for my $space (@{$self->{server}->{wiki_space}}) {
+      next if $space eq "*";
+      my ($ahost, $aspace) = split(/\//m, $space, 2);
+      $spaces{"$scheme://$ahost:$port/$aspace"} = $space; # handle "hostname/space" entries
+    }
+    return map { $_ => $spaces{$_} } sort keys %spaces;
+  } elsif (@{$self->{server}->{wiki_space}}) {
+    # these are the namespaces from the command line
+    my @data = ("$scheme://$host:$port/" => "Main space");
+    for (sort @{$self->{server}->{wiki_space}}) {
+      push(@data, "$scheme://$host:$port/$_/" => $_);
+    }
+    return @data;
+  }
+}
+
 sub spaces {
   my $self = shift;
   if (grep { $_ eq "*" } @{$self->{server}->{wiki_space}}) {
-    # the existing wiki-space directories minus the special directories
+    # these directories minus the special directories are hostnames
     my %spaces;
     my $dir = $self->{server}->{wiki_dir};
     for (read_dir($dir)) {
       next if /^(page|keep|meta|file)$/;
       $spaces{$_} = 1 if -d "$dir/$_";
     }
+    # these are the additional namespaces from the command line
     for my $space (@{$self->{server}->{wiki_space}}) {
       next if $space eq "*";
       my @names = split(/\//m, $space, 2);
@@ -2252,6 +2269,7 @@ sub spaces {
     }
     return keys %spaces;
   } elsif (@{$self->{server}->{wiki_space}}) {
+    # these are the namespaces from the command line
     return @{$self->{server}->{wiki_space}};
   }
 }
@@ -2305,7 +2323,7 @@ sub process_request {
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/files$!) {
       $self->serve_files($host, $self->space($host, $space));
     } elsif (($host) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/spaces$!) {
-      $self->serve_spaces($host);
+      $self->serve_spaces($host, $port);
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/data$!) {
       $self->serve_data($host, $self->space($host, $space));
     } elsif ($url =~ m!^gemini://($host_regex)(?::$port)?/do/source$!) {
@@ -2375,7 +2393,7 @@ sub process_request {
       $self->serve_files_via_http($host, $self->space($host, $space));
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/spaces HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
-      $self->serve_spaces_via_http($host);
+      $self->serve_spaces_via_http($host, $port);
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/rss HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_rss_via_http($host, $self->space($host, $space));

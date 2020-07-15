@@ -811,25 +811,21 @@ sub options {
 sub post_configure_hook {
   my $self = shift;
   $self->{server}->{wiki_dir} = $ENV{GEMINI_WIKI_DATA_DIR} if $ENV{GEMINI_WIKI_DATA_DIR};
-  $self->log(3, "PID $$");
-  $self->log(3, "Host " . ("@{$self->{server}->{host}}" || "*"));
-  $self->log(3, "Port @{$self->{server}->{port}}");
-  $self->log(3, "Token @{$self->{server}->{wiki_token}}");
-  $self->log(3, "Main $self->{server}->{wiki_main_page}");
-  $self->log(3, "Pages @{$self->{server}->{wiki_page}}");
-  $self->log(3, "Space @{$self->{server}->{wiki_space}}");
-  $self->log(3, "MIME types @{$self->{server}->{wiki_mime_type}}");
-
-  # Note: if you use sudo to run gemini-server.pl, these options might not work!
-  $self->log(4, "--wikir_dir says $self->{server}->{wiki_dir}");
-  $self->log(4, "\$GEMINI_WIKI_DATA_DIR says " . ($ENV{GEMINI_WIKI_DATA_DIR}||""));
-  $self->log(3, "Wiki data directory is $self->{server}->{wiki_dir}");
-
   # gemini config file with extra code, run it for every request
   my $config = $self->{server}->{wiki_dir} . "/config";
   $self->log(3, "Running $config");
   do $config if -r $config;
   $self->log(1, "$@") if $@;
+  # summarize config results
+  $self->log(3, "PID $$");
+  $self->log(3, "Host " . ("@{$self->{server}->{host}}" || "*"));
+  $self->log(3, "Port @{$self->{server}->{port}}");
+  $self->log(3, "Token @{$self->{server}->{wiki_token}}");
+  $self->log(3, "Main page $self->{server}->{wiki_main_page}");
+  $self->log(3, "Pages @{$self->{server}->{wiki_page}}");
+  $self->log(3, "Space @{$self->{server}->{wiki_space}}");
+  $self->log(3, "MIME types @{$self->{server}->{wiki_mime_type}}");
+  $self->log(3, "Wiki data directory is $self->{server}->{wiki_dir}");
 }
 
 sub success {

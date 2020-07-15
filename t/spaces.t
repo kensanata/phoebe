@@ -134,13 +134,21 @@ $page = query_gemini("$titan/alex/raw/Haiku;size=70;mime=text/plain;token=*secre
 like($page, qr/^30 $base\/alex\/page\/Haiku\r$/, "Titan Haiku");
 
 open($config, ">>", "$dir/config");
-say $config 'push(@init, sub{ my $self = shift; $self->{server}->{wiki_token} = ["hello"]; $self->{server}->{wiki_space} = ["*", "alex", "berta"]});';
+say $config 'push(@init, sub{ my $self = shift; $self->{server}->{wiki_token} = ["hello"]; $self->{server}->{wiki_space} = ["*", "127.0.0.1/alex", "localhost/berta"]});';
+say $config 'push(@init, sub{ my $self = shift; $self->log(4, "Init done, spaces: @{$self->{server}->{wiki_space}}")});';
 close($config);
 is(kill('HUP', $pid), 1, "Restarted server, again");
 sleep 1;
 
 $page = query_gemini("$base/alex/page/Haiku");
-like($page, qr/Rattling keys and quiet/, "alex space still works");
+unlike($page, qr/Rattling keys and quiet/, "alex space is no longer accessible");
+
+ok(mkdir("$dir/127.0.0.1"), "Create directory for 127.0.0.1");
+ok(rename("$dir/alex", "$dir/127.0.0.1/alex"), "Move alex space to 127.0.0.1 host");
+
+$page = query_gemini("$base/alex/page/Haiku");
+like($page, qr/Rattling keys and quiet/, "alex space is again accessible");
+like($page, qr/^=> $base\/alex\/raw\/Haiku Raw text/m, "Links work inside alex space");
 
 $haiku = <<EOT;
 Children shout and run.
@@ -152,12 +160,29 @@ $page = query_gemini("titan://localhost:$port/raw/Haiku;size=77;mime=text/plain;
 like($page, qr/^30 gemini:\/\/localhost:$port\/page\/Haiku\r$/, "Haiku saved for localhost");
 
 $page = query_gemini("gemini://localhost:$port/page/Haiku");
-like($page, qr/Children shout and run/, "Haiku for implicit localhost namespace found");
-
-$page = query_gemini("$base/localhost/page/Haiku");
-like($page, qr/Children shout and run/, "Haiku for explicit localhost namespace found");
+like($page, qr/Children shout and run/, "Haiku for localhost namespace found");
+like($page, qr/^=> gemini:\/\/localhost:$port\/raw\/Haiku Raw text/m, "Links work inside localhost space");
 
 $page = query_gemini("$base/page/Haiku");
 like($page, qr/This page does not yet exist/, "Haiku for 127.0.0.1 in the main space still does not exist");
+
+$haiku = <<EOT;
+Spoons scrape over plates
+The sink is full of dishes
+I love tomato soup
+EOT
+
+$page = query_gemini("titan://localhost:$port/berta/raw/Haiku;size=72;mime=text/plain;token=hello", $haiku);
+like($page, qr/^30 gemini:\/\/localhost:$port\/berta\/page\/Haiku\r$/, "Haiku saved for localhost/berta");
+
+$page = query_gemini("gemini://$base/page/Haiku");
+unlike($page, qr/Spoons scrape over plates/, "Haiku for 127.0.0.1 not found");
+
+$page = query_gemini("gemini://localhost:$port/berta/page/Haiku");
+like($page, qr/Spoons scrape over plates/, "Haiku for localhost/berta namespace found");
+like($page, qr/^=> gemini:\/\/localhost:$port\/berta\/raw\/Haiku Raw text/m, "Links work inside localhost/berta space");
+
+$page = query_gemini("gemini://$base/berta/page/Haiku");
+unlike($page, qr/Spoons scrape over plates/, "Haiku for 127.0.0.1/berta namespace not found");
 
 done_testing();

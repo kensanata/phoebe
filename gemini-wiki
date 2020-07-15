@@ -692,27 +692,29 @@ arguments.
 
 Here's a simple, stand-alone setup that will work on your local machine. These
 are usually reachable using the IPv4 C<127.0.0.1> or the name C<localhost>. The
-following command tells Gemini Wiki to serve both C<localhost> and C<127.0.0.1>
-(the default is to just use C<localhost>), and to use a wiki space of the same
+following command tells Gemini Wiki to serve both C<127.0.0.1> and C<localhost>
+(the default is to just serve C<localhost>), and to use wiki spaces of the same
 name.
 
-    perl gemini-wiki.pl --host=localhost --host=127.0.0.1 --wiki_space=*
+    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost --wiki_space=*
 
-Visit both L<gemini://localhost/> and L<gemini://127.0.0.1/> and create a new
-page, then examine the data directory F<wiki>. You'll see both F<wiki/localhost>
-and F<wiki/127.0.0.1>.
+Visit both at L<gemini://localhost/> and L<gemini://127.0.0.1/>, and create a
+new page in each one, then examine the data directory F<wiki>. You'll see both
+F<wiki/localhost> and F<wiki/127.0.0.1>.
 
-Beware, however: if you specify more spaces in addition to C<--wiki_space=*>,
-then those spaces can be seen from both hostnames. Here's an example:
+If you specify more spaces in addition to C<--wiki_space=*>, then you need to
+prefix them with hostnames so that Gemini Wiki knows to which hostnames they
+belong:
 
-    perl gemini-wiki.pl --host=localhost --host=127.0.0.1 --wiki_space=* --wiki_space=oops
+    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost --wiki_space=* \
+        --wiki_space=127.0.0.1/alex --wiki_space=localhost/berta
 
-In this situation, you can visit both L<gemini://localhost/oops/> and
-L<gemini://127.0.0.1/oops/> and the content will be the same. This may or may
-not be what you intended. A search index would index both, for example. My guess
-is that you should should either specify the wiki spaces explicity, or you
-should use virtual hosting by specifying C<--wiki_space=*>, but not both. Not
-using spaces is fine, too. 😀
+In this situation, you can visit L<gemini://127.0.0.1/>,
+L<gemini://127.0.0.1/alex/>, L<gemini://localhost/>, and
+L<gemini://localhost/berta/>, and they will all be different.
+
+If this is confusing, remember that not using virtual hosting and not using
+spaces is fine, too. 😀
 
 =cut
 
@@ -883,7 +885,7 @@ sub host_regex {
 
 sub port {
   my $self = shift;
-  return $self->{server}->{sockport};
+  return $self->{server}->{sockport}; # the actual port
 }
 
 # if you call this yourself, $id must look like "page/foo"
@@ -894,9 +896,14 @@ sub link {
   my $id = shift;
   my $schema = shift || "gemini";
   my $port = $self->port();
+  if ($space) {
+    $space = "" if $space eq $host;
+    $space =~ s/.*\///;
+    $space = uri_escape_utf8($space);
+  }
   # don't encode the slash
   return "$schema://$host:$port/"
-      . ($space && $space ne $host ? uri_escape_utf8($space) . "/" : "")
+      . ($space ? "$space/" : "")
       . join("/", map { uri_escape_utf8($_) } split (/\//, $id));
 }
 
@@ -2209,12 +2216,23 @@ sub space {
   my $self = shift;
   my $host = shift;
   my $space = shift;
-  return decode_utf8(uri_unescape($space)) if $space;
+  $space = decode_utf8(uri_unescape($space)) if $space;
   # if --wiki_space="*" was given, hostnames are wiki spaces
   if (grep { $_ eq "*" } @{$self->{server}->{wiki_space}}) {
-    return $host;
+    # if no space was specified, the hostname is the space
+    return $host unless $space;
+    my @combo = grep(/\//, @{$self->{server}->{wiki_space}});
+    # if no combos were specified, the hostname is wiki space
+    return $host unless @combo;
+    # if the host was found in a combo, the space must match
+    return "$host/$space" if grep { $_ eq "$host/$space" } @combo;
+    # else it's an error and we jump out to the eval {} in process_request
+    say "40 $host doesn't know about $space\r";
+    die "unknown space: $host/$space\n";
   }
-  return undef;
+  # Without wildcards, just return the space. We already know that the space
+  # matched the regular expression of spaces.
+  return $space;
 }
 
 sub spaces {
@@ -2227,8 +2245,10 @@ sub spaces {
       next if /^(page|keep|meta|file)$/;
       $spaces{$_} = 1 if -d "$dir/$_";
     }
-    for (@{$self->{server}->{wiki_space}}) {
-      $spaces{$_} = 1 unless $_ eq "*";
+    for my $space (@{$self->{server}->{wiki_space}}) {
+      next if $space eq "*";
+      my @names = split(/\//m, $space, 2);
+      $spaces{pop(@names)} = 1; # handle "hostname/space" entries
     }
     return keys %spaces;
   } elsif (@{$self->{server}->{wiki_space}}) {
@@ -2239,7 +2259,7 @@ sub spaces {
 sub process_request {
   my $self = shift;
   eval {
-    my $url;
+    my $url; # declare here so we can print it on a timeout
     local $SIG{'ALRM'} = sub {
       if ($url) {
 	$self->log(1, "Timeout processing $url");
@@ -2254,6 +2274,7 @@ sub process_request {
     my $port = $self->port();
     my $spaces = join("|", map { quotemeta } $self->spaces());
     $self->log(4, "Serving $host_regex:$port");
+    $self->log(4, "Spaces $spaces");
     $url = <STDIN>; # no loop
     $url =~ s/\s+$//g; # no trailing whitespace
     # $url =~ s!^([^/:]+://[^/:]+)(/.*|)$!$1:$port$2!; # add port
@@ -2267,14 +2288,13 @@ sub process_request {
     if ($self->run_extensions($url, $headers)) {
       # config file goes first
     } elsif (($host) = $url =~ m!^titan://($host_regex)(?::$port)?!) {
-      if ($path !~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!) {
-	$self->log(4, "The path $path is malformed");
-	say "59 The path $path is malformed\r";
-      } else {
-	$space = $1;
+      if (($space) = $path =~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!) {
 	my ($id, @params) = split(/[;=&]/, $2);
 	$self->write_page($host, $self->space($host, $space), decode_utf8(uri_unescape($id)),
 			  {map {decode_utf8(uri_unescape($_))} @params});
+      } else {
+	$self->log(4, "The path $path is malformed");
+	say "59 The path $path is malformed\r";
       }
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/?$!) {
       $self->serve_main_menu($host, $self->space($host, $space));
@@ -2300,13 +2320,16 @@ sub process_request {
     } elsif ($url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/search$!) {
       say "10 Find page by content (Perl regex)\r";
     } elsif ($query and ($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/search\?!) {
-      $self->serve_search($host, map {decode_utf8(uri_unescape($_))} $space, $query); # search terms include spaces
+      $self->serve_search($host, $self->space($host, $space), decode_utf8(uri_unescape($query))); # search terms include spaces
     } elsif ($url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/new$!) {
       say "10 New page\r";
     } elsif ($query and ($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/new\?!) {
       # no URI escaping required
-      say "30 gemini://$host:$port/$space/raw/$query\r" if $space;
-      say "30 gemini://$host:$port/raw/$query\r";
+      if ($space) {
+	say "30 gemini://$host:$port/$space/raw/$query\r";
+      } else {
+	say "30 gemini://$host:$port/raw/$query\r";
+      }
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/changes$!) {
       $self->serve_changes($host, $self->space($host, $space));
     } elsif (($host) = $url =~ m!^gemini://($host_regex)(?::$port)?/do/all/changes$!) {

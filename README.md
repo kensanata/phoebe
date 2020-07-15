@@ -166,18 +166,18 @@ Yay! 😁🎉 🚀🚀
 Let me return to the topic of Titan-enabled clients for a moment. With those,
 you can do simple things like this:
 
-    echo "Hello! This is a test!" | titan localhost/test hello
+    echo "Hello! This is a test!" | titan --url=localhost/test --token=hello
 
 Or this:
 
-    titan localhost/test hello test.txt
+    titan --url=localhost/test --token=hello test.txt
 
 That makes it a lot easier to upload new content! 😅
 
 If you have a bunch of Gemtext files in a directory, you can upload them all in
 one go:
 
-    titan titan://localhost/ hello *.gmi
+    titan --url=titan://localhost/ --token=hello *.gmi
 
 ## Wiki Directory
 
@@ -447,7 +447,15 @@ and created a separate `gemini` user, you could simply use `--user=gemini` and
 ## Configuration
 
 This section describes some hooks you can use to customize your wiki using the
-`config` file.
+`config` file. Once you're happy with the changes you've made, reload the
+server to make it read the config file. You can do that by sending it the HUP
+signal, if you know the pid, or if you have a pid file:
+
+\`\`\`
+kill -s SIGHUP \`cat gemini-wiki.pid\`
+\`\`\`
+
+Here are the ways you can hook into the Gemini Wiki code:
 
 - `@init` is a list of code references allowing you to change the
       configuration of the server; it gets executed as the server starts, after
@@ -520,8 +528,7 @@ up using `--wiki_token` which defaults to the token "hello"). Thus, the above
 code sets up the token `*secret*` for the `alex` wiki space.
 
 You can use the config file to change the values of other properties as well,
-even if these properties are set via the command line. The config file allows
-you to overwrite those, and the config file is read for every request!
+even if these properties are set via the command line.
 
     package Gemini::Wiki;
     use Modern::Perl;
@@ -625,24 +632,26 @@ arguments.
 
 Here's a simple, stand-alone setup that will work on your local machine. These
 are usually reachable using the IPv4 `127.0.0.1` or the name `localhost`. The
-following command tells Gemini Wiki to serve both `localhost` and `127.0.0.1`
-(the default is to just use `localhost`), and to use a wiki space of the same
+following command tells Gemini Wiki to serve both `127.0.0.1` and `localhost`
+(the default is to just serve `localhost`), and to use wiki spaces of the same
 name.
 
-    perl gemini-wiki.pl --host=localhost --host=127.0.0.1 --wiki_space=*
+    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost --wiki_space=*
 
-Visit both [gemini://localhost/](gemini://localhost/) and [gemini://127.0.0.1/](gemini://127.0.0.1/) and create a new
-page, then examine the data directory `wiki`. You'll see both `wiki/localhost`
-and `wiki/127.0.0.1`.
+Visit both at [gemini://localhost/](gemini://localhost/) and [gemini://127.0.0.1/](gemini://127.0.0.1/), and create a
+new page in each one, then examine the data directory `wiki`. You'll see both
+`wiki/localhost` and `wiki/127.0.0.1`.
 
-Beware, however: if you specify more spaces in addition to `--wiki_space=*`,
-then those spaces can be seen from both hostnames. Here's an example:
+If you specify more spaces in addition to `--wiki_space=*`, then you need to
+prefix them with hostnames so that Gemini Wiki knows to which hostnames they
+belong:
 
-    perl gemini-wiki.pl --host=localhost --host=127.0.0.1 --wiki_space=* --wiki_space=oops
+    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost --wiki_space=* \
+        --wiki_space=127.0.0.1/alex --wiki_space=localhost/berta
 
-In this situation, you can visit both [gemini://localhost/oops/](gemini://localhost/oops/) and
-[gemini://127.0.0.1/oops/](gemini://127.0.0.1/oops/) and the content will be the same. This may or may
-not be what you intended. A search index would index both, for example. My guess
-is that you should should either specify the wiki spaces explicity, or you
-should use virtual hosting by specifying `--wiki_space=*`, but not both. Not
-using spaces is fine, too. 😀
+In this situation, you can visit [gemini://127.0.0.1/](gemini://127.0.0.1/),
+[gemini://127.0.0.1/alex/](gemini://127.0.0.1/alex/), [gemini://localhost/](gemini://localhost/), and
+[gemini://localhost/berta/](gemini://localhost/berta/), and they will all be different.
+
+If this is confusing, remember that not using virtual hosting and not using
+spaces is fine, too. 😀

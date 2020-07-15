@@ -2216,7 +2216,6 @@ sub space {
   return decode_utf8(uri_unescape($space)) if $space;
   # if --wiki_space="*" was given, hostnames are wiki spaces
   if (grep { $_ eq "*" } @{$self->{server}->{wiki_space}}) {
-    my $spaces = join("|", map {quotemeta} @{$self->{server}->{wiki_space}});
     return $host;
   }
   return undef;

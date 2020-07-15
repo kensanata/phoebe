@@ -2244,8 +2244,13 @@ sub spaces {
 sub process_request {
   my $self = shift;
   eval {
+    my $url;
     local $SIG{'ALRM'} = sub {
-      $self->log(1, "Timeout!");
+      if ($url) {
+	$self->log(1, "Timeout processing $url");
+      } else {
+	$self->log(1, "Timeout");
+      }
       die "Timed Out!\n";
     };
     alarm(10); # timeout
@@ -2254,7 +2259,7 @@ sub process_request {
     my $port = $self->port();
     my $spaces = join("|", map { quotemeta } $self->spaces());
     $self->log(4, "Serving $host_regex:$port");
-    my $url = <STDIN>; # no loop
+    $url = <STDIN>; # no loop
     $url =~ s/\s+$//g; # no trailing whitespace
     # $url =~ s!^([^/:]+://[^/:]+)(/.*|)$!$1:$port$2!; # add port
     # $url .= '/' if $url =~ m!^[^/]+://[^/]+$!; # add missing trailing slash

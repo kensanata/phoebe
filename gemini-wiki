@@ -495,7 +495,15 @@ C<--group=gemini> instead. 👍
 =head2 Configuration
 
 This section describes some hooks you can use to customize your wiki using the
-F<config> file.
+F<config> file. Once you're happy with the changes you've made, reload the
+server to make it read the config file. You can do that by sending it the HUP
+signal, if you know the pid, or if you have a pid file:
+
+```
+kill -s SIGHUP `cat gemini-wiki.pid`
+```
+
+Here are the ways you can hook into the Gemini Wiki code:
 
 =over
 
@@ -580,8 +588,7 @@ up using C<--wiki_token> which defaults to the token "hello"). Thus, the above
 code sets up the token C<*secret*> for the C<alex> wiki space.
 
 You can use the config file to change the values of other properties as well,
-even if these properties are set via the command line. The config file allows
-you to overwrite those, and the config file is read for every request!
+even if these properties are set via the command line.
 
     package Gemini::Wiki;
     use Modern::Perl;
@@ -817,6 +824,12 @@ sub post_configure_hook {
   $self->log(4, "--wikir_dir says $self->{server}->{wiki_dir}");
   $self->log(4, "\$GEMINI_WIKI_DATA_DIR says " . ($ENV{GEMINI_WIKI_DATA_DIR}||""));
   $self->log(3, "Wiki data directory is $self->{server}->{wiki_dir}");
+
+  # gemini config file with extra code, run it for every request
+  my $config = $self->{server}->{wiki_dir} . "/config";
+  $self->log(3, "Running $config");
+  do $config if -r $config;
+  $self->log(1, "$@") if $@;
 }
 
 sub success {
@@ -2149,11 +2162,6 @@ sub write_page {
 sub allow_deny_hook {
   my $self = shift;
   my $client = shift;
-  # gemini config file with extra code, run it for every request
-  my $config = $self->{server}->{wiki_dir} . "/config";
-  $self->log(3, "Running $config");
-  do $config if -r $config;
-  $self->log(1, "$@") if $@;
   # consider adding rate limiting?
   return 1;
 }

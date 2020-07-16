@@ -268,8 +268,9 @@ And here's some documentation:
       the default is "hello"; you can use this option multiple times and give
       different users different passwords, if you want
 
-=item C<--wiki_page> is an extra page to show in the main menu; you can use
-      this option multiple times
+=item C<--wiki_page> is an extra page to show in the main menu; you can use this
+      option multiple times; this is ideal for general items like I<About> or
+      I<Contact>
 
 =item C<--wiki_main_page> is the page containing your header for the main page;
       that's were you would put your ASCII art header, your welcome message, and
@@ -283,8 +284,8 @@ And here's some documentation:
 
 =item C<--host> is the hostname to serve; the default is C<localhost> – you
       probably want to pick the name of your machine, if it is reachable from
-      the Internet; you use it multiple times, each host gets its own wiki space
-      (see C<--wiki_space> below)
+      the Internet; if you use it multiple times, each host gets its own wiki
+      space (see C<--wiki_space> below)
 
 =item C<--port> is the port to use; the default is 1965
 
@@ -295,7 +296,9 @@ And here's some documentation:
 =item C<--wiki_space> adds an extra space that acts as its own wiki; a
       subdirectory with the same name gets created in your wiki data directory
       and thus you shouldn't name spaces like any of the files and directories
-      already there (see L</Wiki Directory>)
+      already there (see L</Wiki Directory>); not that settings such as
+      C<--wiki_page> and C<--wiki_main_page> apply to all spaces, but the page
+      content will be different for every wiki space
 
 =item C<--cert_file> is the certificate PEM file to use; the default is
       F<cert.pem>
@@ -420,7 +423,8 @@ places like the RSS and Atom feeds.
 In order to be more flexible, the name of the main page does not get printed. If
 you want it, you need to add it yourself using a header. This allows you to keep
 the main page in a page called "Welcome" containing some ASCII art such that the
-word "Welcome" does not show on the main page.
+word "Welcome" does not show on the main page. This assumes you're using
+C<--wiki_main_page=Welcome>, of course.
 
 If you have pages with names that start with an ISO date like 2020-06-30, then
 I'm assuming you want some sort of blog. In this case, up to ten of them will be

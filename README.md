@@ -238,8 +238,9 @@ And here's some documentation:
 - `--wiki_token` is for the token that users editing pages have to provide;
       the default is "hello"; you can use this option multiple times and give
       different users different passwords, if you want
-- `--wiki_page` is an extra page to show in the main menu; you can use
-      this option multiple times
+- `--wiki_page` is an extra page to show in the main menu; you can use this
+      option multiple times; this is ideal for general items like _About_ or
+      _Contact_
 - `--wiki_main_page` is the page containing your header for the main page;
       that's were you would put your ASCII art header, your welcome message, and
       so on, see ["Main Page and Title"](#main-page-and-title) below
@@ -250,7 +251,8 @@ And here's some documentation:
       password using `--wiki_token`)
 - `--host` is the hostname to serve; the default is `localhost` – you
       probably want to pick the name of your machine, if it is reachable from
-      the Internet
+      the Internet; if you use it multiple times, each host gets its own wiki
+      space (see `--wiki_space` below)
 - `--port` is the port to use; the default is 1965
 - `--wiki_dir` is the wiki data directory to use; the default is either the
       value of the `GEMINI_WIKI_DATA_DIR` environment variable, or the "./wiki"
@@ -258,7 +260,9 @@ And here's some documentation:
 - `--wiki_space` adds an extra space that acts as its own wiki; a
       subdirectory with the same name gets created in your wiki data directory
       and thus you shouldn't name spaces like any of the files and directories
-      already there (see ["Wiki Directory"](#wiki-directory))
+      already there (see ["Wiki Directory"](#wiki-directory)); not that settings such as
+      `--wiki_page` and `--wiki_main_page` apply to all spaces, but the page
+      content will be different for every wiki space
 - `--cert_file` is the certificate PEM file to use; the default is
       `cert.pem`
 - `--key_file` is the private key PEM file to use; the default is
@@ -371,7 +375,8 @@ places like the RSS and Atom feeds.
 In order to be more flexible, the name of the main page does not get printed. If
 you want it, you need to add it yourself using a header. This allows you to keep
 the main page in a page called "Welcome" containing some ASCII art such that the
-word "Welcome" does not show on the main page.
+word "Welcome" does not show on the main page. This assumes you're using
+`--wiki_main_page=Welcome`, of course.
 
 If you have pages with names that start with an ISO date like 2020-06-30, then
 I'm assuming you want some sort of blog. In this case, up to ten of them will be
@@ -627,26 +632,23 @@ The output is the fingerprint you need to put into your config file.
 
 Sometimes you want have a machine reachable under different domain names and you
 want each domain name to have their own wiki space, automatically. You can do
-this by using `--wiki_space=*` and the appropriate `--host=example.org`
-arguments.
+this by using multiple `--host` options.
 
 Here's a simple, stand-alone setup that will work on your local machine. These
 are usually reachable using the IPv4 `127.0.0.1` or the name `localhost`. The
 following command tells Gemini Wiki to serve both `127.0.0.1` and `localhost`
-(the default is to just serve `localhost`), and to use wiki spaces of the same
-name.
+(the default is to just serve `localhost`).
 
-    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost --wiki_space=*
+    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost
 
 Visit both at [gemini://localhost/](gemini://localhost/) and [gemini://127.0.0.1/](gemini://127.0.0.1/), and create a
 new page in each one, then examine the data directory `wiki`. You'll see both
 `wiki/localhost` and `wiki/127.0.0.1`.
 
-If you specify more spaces in addition to `--wiki_space=*`, then you need to
-prefix them with hostnames so that Gemini Wiki knows to which hostnames they
-belong:
+If you're using more wiki spaces, you need to prefix them with the respective
+hostname if you use more than one:
 
-    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost --wiki_space=* \
+    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost \
         --wiki_space=127.0.0.1/alex --wiki_space=localhost/berta
 
 In this situation, you can visit [gemini://127.0.0.1/](gemini://127.0.0.1/),

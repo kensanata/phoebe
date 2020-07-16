@@ -22,6 +22,7 @@ our $host;
 our $port;
 our $base;
 our $dir;
+our @pages = qw(Alex Berta Chris);
 
 require './t/test.pl';
 

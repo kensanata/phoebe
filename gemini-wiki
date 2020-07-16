@@ -283,7 +283,8 @@ And here's some documentation:
 
 =item C<--host> is the hostname to serve; the default is C<localhost> – you
       probably want to pick the name of your machine, if it is reachable from
-      the Internet
+      the Internet; you use it multiple times, each host gets its own wiki space
+      (see C<--wiki_space> below)
 
 =item C<--port> is the port to use; the default is 1965
 
@@ -687,26 +688,23 @@ The output is the fingerprint you need to put into your config file.
 
 Sometimes you want have a machine reachable under different domain names and you
 want each domain name to have their own wiki space, automatically. You can do
-this by using C<--wiki_space=*> and the appropriate C<--host=example.org>
-arguments.
+this by using multiple C<--host> options.
 
 Here's a simple, stand-alone setup that will work on your local machine. These
 are usually reachable using the IPv4 C<127.0.0.1> or the name C<localhost>. The
 following command tells Gemini Wiki to serve both C<127.0.0.1> and C<localhost>
-(the default is to just serve C<localhost>), and to use wiki spaces of the same
-name.
+(the default is to just serve C<localhost>).
 
-    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost --wiki_space=*
+    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost
 
 Visit both at L<gemini://localhost/> and L<gemini://127.0.0.1/>, and create a
 new page in each one, then examine the data directory F<wiki>. You'll see both
 F<wiki/localhost> and F<wiki/127.0.0.1>.
 
-If you specify more spaces in addition to C<--wiki_space=*>, then you need to
-prefix them with hostnames so that Gemini Wiki knows to which hostnames they
-belong:
+If you're using more wiki spaces, you need to prefix them with the respective
+hostname if you use more than one:
 
-    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost --wiki_space=* \
+    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost \
         --wiki_space=127.0.0.1/alex --wiki_space=localhost/berta
 
 In this situation, you can visit L<gemini://127.0.0.1/>,
@@ -820,12 +818,22 @@ sub post_configure_hook {
   $self->log(1, "$@") if $@;
   # summarize config results
   $self->log(3, "PID $$");
-  $self->log(3, "Host " . ("@{$self->{server}->{host}}" || "*"));
   $self->log(3, "Port @{$self->{server}->{port}}");
+  $self->log(3, "Host " . ("@{$self->{server}->{host}}" || "*"));
+  $self->log(3, "Space @{$self->{server}->{wiki_space}}");
+  if (@{$self->{server}->{host}} > 1) {
+    my $host_regex = $self->host_regex();
+    for (grep(!/^$host_regex\//, @{$self->{server}->{wiki_space}})) {
+      $self->log(2, "Space $_ is not prefixed with a known host");
+    }
+  } else {
+    for (grep(/\//, @{$self->{server}->{wiki_space}})) {
+      $self->log(2, "Space $_ is prefixed with a host but we serve just one");
+    }
+  }
   $self->log(3, "Token @{$self->{server}->{wiki_token}}");
   $self->log(3, "Main page $self->{server}->{wiki_main_page}");
   $self->log(3, "Pages @{$self->{server}->{wiki_page}}");
-  $self->log(3, "Space @{$self->{server}->{wiki_space}}");
   $self->log(3, "MIME types @{$self->{server}->{wiki_mime_type}}");
   $self->log(3, "Wiki data directory is $self->{server}->{wiki_dir}");
 }
@@ -850,9 +858,7 @@ sub with_lock {
   my $space = shift;
   my $code = shift;
   my $retry = shift;
-  my $dir = $self->{server}->{wiki_dir};
-  $dir .= "/$space" if $space;
-  mkdir($dir) unless -d $dir;
+  my $dir = $self->wiki_dir($host, $space);
   my $lock = "$dir/locked";
   # remove stale locks
   rmdir $lock if -e $lock and time() - $self->modified($lock) > 5;
@@ -954,8 +960,7 @@ sub pages {
   my $host = shift;
   my $space = shift;
   my $re = shift;
-  my $dir = $self->{server}->{wiki_dir};
-  $dir .= "/$space" if $space;
+  my $dir = $self->wiki_dir($host, $space);
   my $index = "$dir/index";
   if (not -f $index) {
     return if not -d "$dir/page";
@@ -1008,7 +1013,7 @@ sub serve_main_menu {
   my $self = shift;
   my $host = shift||"";
   my $space = shift||"";
-  $self->log(3, "Serving main menu of $host/$space");
+  $self->log(3, "Serving main menu");
   $self->success();
   my $page = $self->{server}->{wiki_main_page};
   if ($page) {
@@ -1032,7 +1037,7 @@ sub serve_main_menu {
   $self->print_link($host, $space, "Index of all pages", "do/index");
   $self->print_link($host, $space, "Index of all files", "do/files");
   $self->print_link($host, undef, "Index of all spaces", "do/spaces")
-      if @{$self->{server}->{wiki_space}};
+      if @{$self->{server}->{wiki_space}} or @{$self->{server}->{host}} > 1;
   $self->print_link($host, $space, "Download data", "do/data");
   # a requirement of the GNU Affero General Public License
   $self->print_link($host, undef, "Source code", "do/source");
@@ -1075,7 +1080,7 @@ sub serve_main_menu_via_http {
   say "<li>" . $self->link_html($host, $space, "Index of all files", "do/files")
       if @{$self->{server}->{wiki_mime_type}};
   say "<li>" . $self->link_html($host, undef, "Index of all spaces", "do/spaces")
-      if @{$self->{server}->{wiki_space}};
+      if @{$self->{server}->{wiki_space}} or @{$self->{server}->{host}} > 1;
   say "<li>" . $self->link_html($host, $space, "Atom feed", "do/atom");
   say "<li>" . $self->link_html($host, $space, "RSS feed", "do/rss");
   # a requirement of the GNU Affero General Public License
@@ -1156,8 +1161,7 @@ sub files {
   my $host = shift;
   my $space = shift;
   my $re = shift;
-  my $dir = $self->{server}->{wiki_dir};
-  $dir .= "/$space" if $space;
+  my $dir = $self->wiki_dir($host, $space);
   $dir = "$dir/file";
   return if not -d $dir;
   my @files = read_dir($dir);
@@ -1214,9 +1218,9 @@ sub serve_spaces {
   $self->success();
   $self->log(3, "Serving all spaces");
   say "# Spaces";
-  my %spaces = $self->space_links("gemini", $host, $port);
-  for my $url (keys %spaces) {
-    say "=> $url $spaces{$url}";
+  my $spaces = $self->space_links("gemini", $host, $port);
+  for my $url (sort keys %$spaces) {
+    say "=> $url $spaces->{$url}";
   }
 }
 
@@ -1237,9 +1241,9 @@ sub serve_spaces_via_http {
   say "<body>";
   say "<h1>All Spaces</h1>";
   say "<ul>";
-  my %spaces = $self->space_links("https", $host, $port);
-  for my $url (keys %spaces) {
-    say "<li><a href=\"$url\">$spaces{$url}</a>";
+  my $spaces = $self->space_links("https", $host, $port);
+  for my $url (sort keys %$spaces) {
+    say "<li><a href=\"$url\">$spaces->{$url}</a>";
   }
   say "</ul>";
 }
@@ -1249,8 +1253,7 @@ sub serve_data {
   my $host = shift;
   my $space = shift;
   # use /bin/tar instead of Archive::Tar to save memory
-  my $dir = $self->{server}->{wiki_dir};
-  $dir .= "/$space" if $space;
+  my $dir = $self->wiki_dir($host, $space);
   my $file = "$dir/data.tar.gz";
   if (-e $file and time() - $self->modified($file) <= 300) { # data is valid for 5 minutes
     $self->log(3, "Serving cached data archive");
@@ -1336,7 +1339,6 @@ sub highlight {
   my $self = shift;
   my $host = shift;
   my $space = shift;
-  $self->log(4, "highlight: @_");
   my $id = shift;
   my $text = shift;
   my $str = shift;
@@ -1376,18 +1378,17 @@ sub serve_changes {
       if @{$self->{server}->{wiki_space}};
   $self->print_link($host, $space, "Atom Feed", "do/atom");
   $self->print_link($host, $space, "RSS Feed", "do/rss");
-  my $dir = $self->{server}->{wiki_dir};
-  $dir .= "/$space" if $space;
+  my $dir = $self->wiki_dir($host, $space);
   my $log = "$dir/changes.log";
   if (not -e $log) {
     say "No changes.";
     return;
   }
   my $fh = File::ReadBackwards->new($log);
-  $self->changes($host, sub {
+  $self->changes(sub {
     return unless $_ = $fh->readline;
     chomp;
-    split(/\x1f/), $space });
+    split(/\x1f/), $host, $space, 0 });
 }
 
 sub serve_all_changes {
@@ -1398,40 +1399,74 @@ sub serve_all_changes {
   say "# Changes for all spaces";
   # merge all logs
   my @log;
-  for my $space ("", @{$self->{server}->{wiki_space}}) {
-    my $dir = $self->{server}->{wiki_dir};
-    $dir .= "/$space" if $space;
-    my $log = "$dir/changes.log";
-    next if not -e $log;
+  my $dir = $self->{server}->{wiki_dir};
+  my @spaces = $self->space_dirs();
+  for my $space (@spaces) {
+    my $log = $dir;
+    $log .= "/$space" if $space;
+    $log .= "/changes.log";
+    next unless -f $log;
+    $self->log(4, "Reading $log");
     next unless my $fh = File::ReadBackwards->new($log);
-    for (1 .. 100) {
-      last unless $_ = $fh->readline;
-      chomp;
-      push(@log, [split(/\x1f/), $space]);
+    if (@{$self->{server}->{host}} > 1) {
+      push(@log, @{$self->read_log($fh, 100, split(/\//, $space, 2))});
+    } else {
+      push(@log, @{$self->read_log($fh, 100, $host, $space)});
     }
   }
   # sort them all
   @log = sort { $b->[0] <=> $a->[0] } @log;
   # taking the head of the @log to get new log entries
-  $self->changes($host, sub { @{shift(@log)}, 1 });
+  $self->changes(sub { @{shift(@log) }, 1 if @log });
+}
+
+sub read_log {
+  my $self = shift;
+  my $fh = shift;
+  my $n = shift;
+  my $host = shift;
+  my $space = shift;
+  my @log;
+  for (1 .. $n) {
+    last unless $_ = $fh->readline;
+    chomp;
+    push(@log, [split(/\x1f/), $host, $space]);
+  }
+  $self->log(4, "Read log: " . @log);
+  return \@log;
 }
 
 # $next is a code reference that returns the list of attributes for the next
 # change, these attributes being: the timestamp (as returned by time); the page
 # or file name; the page revision or zero if a file; the code to represent the
 # person that made the change, represented as a string of octal digits that will
-# be fed to the colourize sub; the name of the space, if any; and a boolean if
+# be fed to the colourize sub; the host, and the spacexs, if any; and a boolean if
 # space and page or file name should both be shown.
 sub changes {
   my $self = shift;
-  my $host = shift;
   my $next = shift;
   my $last_day = '';
   my %seen;
   for (1 .. 100) {
-    my ($ts, $id, $revision, $code, $space, $show_space) = $next->();
+    my ($ts, $id, $revision, $code, $host, $space, $show_space) = $next->();
+    # warn "$ts, $id, $revision, $code, $host, $space, $show_space\n";
     last unless $ts and $id;
-    my $name = $space && $show_space ? "[$space] $id" : $id;
+    my $name;
+    if ($show_space) {
+      if (@{$self->{server}->{host}} > 1) {
+	if ($space) {
+	  $name = "[$host/$space] $id";
+	} else {
+	  $name = "[$host] $id";
+	}
+      } elsif ($space) {
+	$name = "[$space] $id";
+      } else {
+	$name = $id;
+      }
+    } else {
+      $name = $id;
+    }
     my $day = $self->day($ts);
     if ($day ne $last_day) {
       say "## $day";
@@ -1439,12 +1474,12 @@ sub changes {
     }
     say $self->time_of_day($ts) . " by " . $self->colourize($code);
     if ($revision) {
-      if ($seen{$id}) {
+      if ($seen{$name}) {
 	$self->print_link($host, $space, "$name ($revision)", "page/$id/$revision");
 	$self->print_link($host, $space, "Differences", "diff/$id/$revision");
       } else {
 	$self->print_link($host, $space, "$name (current)", "page/$id");
-	$seen{$id} = 1;
+	$seen{$name} = 1;
 	$self->print_link($host, $space, "History", "history/$id");
       }
     } else {
@@ -1501,8 +1536,7 @@ sub rss {
   say "<atom:link rel=\"self\" type=\"application/rss+xml\" href=\"$scheme://$host:$port/do/rss\" />";
   say "<generator>Gemini Wiki</generator>";
   say "<docs>http://blogs.law.harvard.edu/tech/rss</docs>";
-  my $dir = $self->{server}->{wiki_dir};
-  $dir .= "/$space" if $space;
+  my $dir = $self->wiki_dir($host, $space);
   my $log = "$dir/changes.log";
   if (-e $log and my $fh = File::ReadBackwards->new($log)) {
     my %seen;
@@ -1563,8 +1597,7 @@ sub atom {
   say "<link href=\"$scheme://$host:$port/\"/>";
   say "<link rel=\"self\" type=\"application/atom+xml\" href=\"$scheme://$host:$port/do/atom\"/>";
   say "<id>$scheme://$host:$port/do/atom</id>";
-  my $dir = $self->{server}->{wiki_dir};
-  $dir .= "/$space" if $space;
+  my $dir = $self->wiki_dir($host, $space);
   my $log = "$dir/changes.log";
   my ($sec, $min, $hour, $mday, $mon, $year) = gmtime($self->modified($log)); # 2003-12-13T18:30:02Z
   say "<updated>"
@@ -1787,8 +1820,8 @@ sub serve_history {
   $self->log(3, "Serve history for $id");
   say "# Page history for $id";
   $self->print_link($host, $space, "$id (current)", "page/$id");
-  my $dir = $self->{server}->{wiki_dir};
-  $dir .= "/$space" if $space;
+  my $dir = $self->wiki_dir($host, $space);
+  return unless -d "$dir/keep/$id";
   my @revisions = sort { $b cmp $a } map { s/\.gmi$//; $_ } read_dir("$dir/keep/$id");
   my $last_day = '';
   my $last_time = '';
@@ -1841,8 +1874,7 @@ sub text {
   my $space = shift;
   my $id = shift;
   my $revision = shift;
-  my $dir = $self->{server}->{wiki_dir};
-  $dir .= "/$space" if $space;
+  my $dir = $self->wiki_dir($host, $space);
   return read_text "$dir/keep/$id/$revision.gmi" if $revision and -f "$dir/keep/$id/$revision.gmi";
   return read_text "$dir/page/$id.gmi" if -f "$dir/page/$id.gmi";
   return $self->robots() if $id eq "robots" and not $space;
@@ -1884,8 +1916,7 @@ sub serve_file {
   my $id = shift;
   my $revision = shift;
   $self->log(3, "Serve file $id");
-  my $dir = $self->{server}->{wiki_dir};
-  $dir .= "/$space" if $space;
+  my $dir = $self->wiki_dir($host, $space);
   my $file = "$dir/file/$id";
   my $meta = "$dir/meta/$id";
   if (not -f $file) {
@@ -1911,8 +1942,7 @@ sub serve_file_via_http {
   my $id = shift;
   my $revision = shift;
   $self->log(3, "Serve file $id");
-  my $dir = $self->{server}->{wiki_dir};
-  $dir .= "/$space" if $space;
+  my $dir = $self->wiki_dir($host, $space);
   my $file = "$dir/file/$id";
   my $meta = "$dir/meta/$id";
   if (not -f $file) {
@@ -1968,10 +1998,7 @@ sub write_file {
   my $data = shift;
   my $type = shift;
   $self->log(3, "Writing file $id");
-  my $dir = $self->{server}->{wiki_dir};
-  mkdir $dir unless -d $dir;
-  $dir .= "/$space" if $space;
-  mkdir $dir if $space and not -d $dir;
+  my $dir = $self->wiki_dir($host, $space);
   my $file = "$dir/file/$id";
   my $meta = "$dir/meta/$id";
   if (-e $file) {
@@ -2015,10 +2042,7 @@ sub write {
   my $id = shift;
   my $text = shift;
   $self->log(3, "Writing page $id");
-  my $dir = $self->{server}->{wiki_dir};
-  mkdir $dir unless -d $dir;
-  $dir .= "/$space" if $space;
-  mkdir $dir if $space and not -d $dir;
+  my $dir = $self->wiki_dir($host, $space);
   my $file = "$dir/page/$id.gmi";
   my $revision = 0;
   if (-e $file) {
@@ -2198,20 +2222,30 @@ sub headers {
   return \%result;
 }
 
+sub wiki_dir {
+  my $self = shift;
+  my $host = shift;
+  my $space = shift;
+  my $dir = $self->{server}->{wiki_dir};
+  if (@{$self->{server}->{host}} > 1) {
+    $dir .= "/$host" ;
+    mkdir($dir) unless -d $dir;
+  }
+  $dir .= "/$space" if $space;
+  mkdir($dir) unless -d $dir;
+  return $dir;
+}
+
+# If we are serving multiple hostnames, we need to check whether the space
+# supplied in the URL matches a known hostname/space combo.
 sub space {
   my $self = shift;
   my $host = shift;
   my $space = shift;
   $space = decode_utf8(uri_unescape($space)) if $space;
-  # if --wiki_space="*" was given, hostnames are wiki spaces
-  if (grep { $_ eq "*" } @{$self->{server}->{wiki_space}}) {
-    # if no space was specified, the hostname is the space
-    return $host unless $space;
-    my @combo = grep(/\//, @{$self->{server}->{wiki_space}});
-    # if no combos were specified, the hostname is wiki space
-    return $host unless @combo;
-    # if the host was found in a combo, the space must match
-    return "$host/$space" if grep { $_ eq "$host/$space" } @combo;
+  if (@{$self->{server}->{host}} > 1) {
+    return undef unless $space;
+    return $space if grep { $_ eq "$host/$space" } @{$self->{server}->{wiki_space}};
     # else it's an error and we jump out to the eval {} in process_request
     say "40 $host doesn't know about $space\r";
     die "unknown space: $host/$space\n";
@@ -2221,57 +2255,61 @@ sub space {
   return $space;
 }
 
+sub space_dirs {
+  my $self = shift;
+  my @spaces;
+  if (@{$self->{server}->{host}} > 1) {
+    push @spaces, @{$self->{server}->{host}};
+  } else {
+    push @spaces, undef;
+  }
+  push @spaces, @{$self->{server}->{wiki_space}};
+  return @spaces;
+}
+
+# A list of links to all the spaces we have. The tricky part here is that we
+# want to create appropriate links if we're virtual hosting. Keys are URLs,
+# values are names.
 sub space_links {
   my $self = shift;
   my $scheme = shift;
   my $host = shift;
   my $port = shift;
-  if (grep { $_ eq "*" } @{$self->{server}->{wiki_space}}) {
-    # these directories minus the special directories are hostnames
-    my %spaces;
-    my $dir = $self->{server}->{wiki_dir};
-    for (read_dir($dir)) {
-      next if /^(page|keep|meta|file)$/;
-      $spaces{"$scheme://$_:$port/"} = $_ if -d "$dir/$_";
+  my %spaces;
+  if (@{$self->{server}->{host}} > 1) {
+    for (@{$self->{server}->{host}}) {
+      $spaces{"$scheme://$_:$port/"} = $_;
     }
-    # these are the additional namespaces from the command line
     for my $space (@{$self->{server}->{wiki_space}}) {
-      next if $space eq "*";
       my ($ahost, $aspace) = split(/\//m, $space, 2);
-      $spaces{"$scheme://$ahost:$port/$aspace"} = $space; # handle "hostname/space" entries
+      $spaces{"$scheme://$ahost:$port/$aspace/"} = $space;
     }
-    return map { $_ => $spaces{$_} } sort keys %spaces;
   } elsif (@{$self->{server}->{wiki_space}}) {
-    # these are the namespaces from the command line
-    my @data = ("$scheme://$host:$port/" => "Main space");
+    $spaces{"$scheme://$host:$port/"} = "Main space";
     for (sort @{$self->{server}->{wiki_space}}) {
-      push(@data, "$scheme://$host:$port/$_/" => $_);
+      $spaces{"$scheme://$host:$port/$_/"} = $_;
     }
-    return @data;
   }
+  return \%spaces;
 }
 
-sub spaces {
+# A regular expression matching wiki spaces in URLs. The tricky part is that we
+# must strip the hostnames, as these aren't repeated: for a URL like
+# gemini://localhost:1965/alex/ the regular expression must just match 'alex'
+# and it's $self->('localhost', 'alex') that will check whether 'alex' is a
+# legal space for localhost.
+sub space_regex {
   my $self = shift;
-  if (grep { $_ eq "*" } @{$self->{server}->{wiki_space}}) {
-    # these directories minus the special directories are hostnames
-    my %spaces;
-    my $dir = $self->{server}->{wiki_dir};
-    for (read_dir($dir)) {
-      next if /^(page|keep|meta|file)$/;
-      $spaces{$_} = 1 if -d "$dir/$_";
+  my @spaces;
+  if (@{$self->{server}->{host}} > 1) {
+    for (@{$self->{server}->{wiki_space}}) {
+      my ($space) = /\/(.*)/;
+      push(@spaces, $space);
     }
-    # these are the additional namespaces from the command line
-    for my $space (@{$self->{server}->{wiki_space}}) {
-      next if $space eq "*";
-      my @names = split(/\//m, $space, 2);
-      $spaces{pop(@names)} = 1; # handle "hostname/space" entries
-    }
-    return keys %spaces;
   } elsif (@{$self->{server}->{wiki_space}}) {
-    # these are the namespaces from the command line
-    return @{$self->{server}->{wiki_space}};
+    @spaces = @{$self->{server}->{wiki_space}};
   }
+  return join("|", map { quotemeta } @spaces);
 }
 
 sub process_request {
@@ -2290,8 +2328,8 @@ sub process_request {
     $self->run_init();
     my $host_regex = $self->host_regex();
     my $port = $self->port();
-    my $spaces = join("|", map { quotemeta } $self->spaces());
-    $self->log(4, "Serving $host_regex:$port");
+    my $spaces = $self->space_regex();
+    $self->log(4, "Serving ($host_regex)(?::$port)?");
     $self->log(4, "Spaces $spaces");
     $url = <STDIN>; # no loop
     $url =~ s/\s+$//g; # no trailing whitespace

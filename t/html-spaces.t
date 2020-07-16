@@ -19,32 +19,17 @@ use File::Slurper qw(write_text write_binary read_binary);
 use utf8; # tests contain UTF-8 characters and it matters
 
 our $host;
+our @hosts = qw(127.0.0.1 localhost);
+our @spaces = qw(127.0.0.1/alex localhost/berta);
+our @pages = qw(Alex);
 our $port;
 our $base;
 our $dir;
 
 require './t/test.pl';
 
-# set up the main space with some test data
-
-mkdir("$dir/page");
-write_text("$dir/page/Alex.gmi", "Alex Schroeder\n=> /page/Berta Berta");
-write_text("$dir/page/Berta.gmi", "```\nHello!\nYo!\n```\n");
-mkdir("$dir/file");
-write_binary("$dir/file/alex.jpg", read_binary("t/alex.jpg"));
-mkdir("$dir/meta");
-write_text("$dir/meta/alex.jpg", "content-type: image/jpeg");
-
-# html
-
-my $page = query_gemini("GET / HTTP/1.0\r\nhost: $host:$port\r\n");
-like($page, qr!<a href="https://$host:$port/html/Alex">Alex</a>!, "main menu contains Alex");
-
-$page = query_gemini("GET /html/Alex HTTP/1.0\r\nhost: $host:$port\r\n");
-like($page, qr!<p>Alex Schroeder!, "Alex content");
-like($page, qr!<a href="/html/Berta">Berta</a>!, "Alex contains Berta link");
-
-$page = query_gemini("GET /html/Berta HTTP/1.0\r\nhost: $host:$port\r\n");
-like($page, qr!<pre>\nHello\!\nYo\!\n</pre>!, "Berta contains pre block");
+my $page = query_gemini("GET /alex HTTP/1.0\r\nhost: $host:$port\r\n");
+like($page, qr!<a href="https://$host:$port/alex/html/Alex">Alex</a>!, "main menu of alex space contains Alex");
+like($page, qr!<a href="https://$host:$port/do/source">Source</a>!, "HTML links to source code");
 
 done_testing();

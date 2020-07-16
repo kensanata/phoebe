@@ -18,7 +18,11 @@ use Test::More;
 use IO::Socket::SSL;
 use File::Slurper qw(write_text);
 
-our $host = "127.0.0.1";
+our $host //= "127.0.0.1";
+our @hosts;
+@hosts = ($host) unless @hosts;
+our @pages;
+our @spaces;
 our $port = random_port();
 our $base = "gemini://$host:$port";
 our $dir = "./" . sprintf("test-%04d", int(rand(10000)));
@@ -83,20 +87,15 @@ if (!defined $pid) {
   say "This is the server...";
   use Config;
   my $secure_perl_path = $Config{perlpath};
-  exec($secure_perl_path,
-       "./gemini-wiki",
-       "--host=$host",
-       "--host=localhost",
-       "--port=$port",
-       "--log_level=" . ($ENV{DEBUG}||0), # set to 4 for verbose logging
-       "--wiki_dir=$dir",
-       "--wiki_mime_type=image/jpeg",
-       "--wiki_page=Alex",
-       "--wiki_page=Berta",
-       "--wiki_page=Chris",
-       "--wiki_space=alex",
-       "--wiki_space=berta",)
-      or die "Cannot exec: $!";
+  my @args = ("./gemini-wiki",
+	      (map { "--host=$_" } @hosts),
+	      "--port=$port",
+	      "--log_level=" . ($ENV{DEBUG}||0), # set to 4 for verbose logging
+	      "--wiki_dir=$dir",
+	      "--wiki_mime_type=image/jpeg",
+	      (map { "--wiki_page=$_" } @pages),
+	      (map { "--wiki_space=$_" } @spaces));
+  exec($secure_perl_path, @args) or die "Cannot exec: $!";
 }
 
 sub query_gemini {

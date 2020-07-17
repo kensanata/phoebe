@@ -1081,13 +1081,12 @@ sub serve_main_menu_via_http {
   for my $id (@pages) {
     say "<li>" . $self->link_html($host, $space, $id);
   }
+  say "<li>" . $self->link_html($host, $space, "Changes", "do/changes");
   say "<li>" . $self->link_html($host, $space, "Index of all pages", "do/index");
   say "<li>" . $self->link_html($host, $space, "Index of all files", "do/files")
       if @{$self->{server}->{wiki_mime_type}};
   say "<li>" . $self->link_html($host, undef, "Index of all spaces", "do/spaces")
       if @{$self->{server}->{wiki_space}} or @{$self->{server}->{host}} > 1;
-  say "<li>" . $self->link_html($host, $space, "Atom feed", "do/atom");
-  say "<li>" . $self->link_html($host, $space, "RSS feed", "do/rss");
   # a requirement of the GNU Affero General Public License
   say "<li>" . $self->link_html($host, undef, "Source", "do/source");
   say "</ul>";
@@ -1392,12 +1391,67 @@ sub serve_changes {
   }
   say "Showing up to $n changes.";
   my $fh = File::ReadBackwards->new($log);
-  return unless $self->changes($n, sub {
-    return unless $_ = $fh->readline;
-    chomp;
-    split(/\x1f/), $host, $space, 0 });
+  return unless $self->changes(
+    $n,
+    sub { say "## " . shift },
+    sub { say shift . " by " . $self->colourize(shift) },
+    sub { $self->print_link(@_) },
+    sub {
+      return unless $_ = $fh->readline;
+      chomp;
+      split(/\x1f/), $host, $space, 0 });
   say "";
   $self->print_link($host, $space, "More...", "do/changes/" . 10 * $n);
+}
+
+sub serve_changes_via_http {
+  my $self = shift;
+  my $host = shift;
+  my $space = shift;
+  my $n = shift;
+  $self->log(3, "Serving $n changes via HTTP");
+  say "HTTP/1.1 200 OK\r";
+  say "Content-Type: text/html\r";
+  say "\r";
+  say "<!DOCTYPE html>";
+  say "<html>";
+  say "<head>";
+  say "<meta charset=\"utf-8\">";
+  say "<title>Changes</title>";
+  say "</head>";
+  say "<body>";
+  say "<h1>Changes</h1>";
+  say "<ul>";
+  # say "<li>" . $self->link_html($host, $space, "Changes for all spaces", "do/all/changes")
+  #     if @{$self->{server}->{wiki_space}};
+  say "<li>" . $self->link_html($host, $space, "Atom feed", "do/atom");
+  say "<li>" . $self->link_html($host, $space, "RSS feed", "do/rss");
+  say "</ul>";
+  my $dir = $self->wiki_dir($host, $space);
+  my $log = "$dir/changes.log";
+  if (not -e $log) {
+    say "<p>No changes.";
+    return;
+  }
+  say "<p>Showing up to $n changes.";
+  my $fh = File::ReadBackwards->new($log);
+  my $more = $self->changes(
+    $n,
+    sub { say "<h2>" . shift . "</h2>" },
+    sub { say "<p>" . shift . " by " . $self->colourize_html(shift) },
+    sub {
+      my ($host, $space, $title, $id) = @_;
+      if ($id =~ s/^page/html/) {
+	say " → " . $self->link_html($host, $space, $title, $id);
+      }
+    },
+    sub {
+      return unless $_ = $fh->readline;
+      chomp;
+      split(/\x1f/), $host, $space, 0 });
+  say "</ul>";
+  return unless $more;
+  say "<p>" . $self->link_html($host, $space, "More...", "do/changes/" . 10 * $n);
 }
 
 sub serve_all_changes {
@@ -1432,7 +1486,12 @@ sub serve_all_changes {
   @log = sort { $b->[0] <=> $a->[0] } @log;
   # taking the head of the @log to get new log entries
   say "Showing up to $n changes.";
-  return unless $self->changes($n, sub { @{shift(@log) }, 1 if @log });
+  return unless $self->changes(
+    $n,
+    sub { say "## " . shift },
+    sub { say shift . " by " . $self->colourize(shift) },
+    sub { $self->print_link(@_) },
+    sub { @{shift(@log) }, 1 if @log });
   say "";
   $self->print_link($host, undef, "More...", "do/all/changes/" . 10 * $n);
 }
@@ -1453,16 +1512,22 @@ sub read_log {
   return \@log;
 }
 
-# $n is the number of changes to show. $next is a code reference that returns
-# the list of attributes for the next change, these attributes being: the
-# timestamp (as returned by time); the page or file name; the page revision or
-# zero if a file; the code to represent the person that made the change,
-# represented as a string of octal digits that will be fed to the colourize sub;
-# the host, and the spacexs, if any; and a boolean if space and page or file
-# name should both be shown.
+# $n is the number of changes to show. $header is code reference that prints a
+# header for the date (one argument). $change is a code reference that prints
+# the time and code of the person making the change (two arguments). $link is a
+# code reference that prints a link (four arguments). $next is a code reference
+# that returns the list of attributes for the next change, these attributes
+# being: the timestamp (as returned by time); the page or file name; the page
+# revision or zero if a file; the code to represent the person that made the
+# change, represented as a string of octal digits that will be fed to the
+# colourize sub; the host, and the spaces, if any; and a boolean if space and
+# page or file name should both be shown (up to seven arguments).
 sub changes {
   my $self = shift;
   my $n = shift;
+  my $header = shift;
+  my $change = shift;
+  my $link = shift;
   my $next = shift;
   my $last_day = '';
   my %seen;
@@ -1488,25 +1553,25 @@ sub changes {
     }
     my $day = $self->day($ts);
     if ($day ne $last_day) {
-      say "## $day";
+      $header->($day);
       $last_day = $day;
     }
-    say $self->time_of_day($ts) . " by " . $self->colourize($code);
+    $change->($self->time_of_day($ts), $code);
     if ($revision) {
       if ($seen{$name}) {
-	$self->print_link($host, $space, "$name ($revision)", "page/$id/$revision");
-	$self->print_link($host, $space, "Differences", "diff/$id/$revision");
+	$link->($host, $space, "$name ($revision)", "page/$id/$revision");
+	$link->($host, $space, "Differences", "diff/$id/$revision");
       } else {
-	$self->print_link($host, $space, "$name (current)", "page/$id");
+	$link->($host, $space, "$name (current)", "page/$id");
 	$seen{$name} = 1;
-	$self->print_link($host, $space, "History", "history/$id");
+	$link->($host, $space, "History", "history/$id");
       }
     } else {
       # there can be pages and files sharing the same name
       if ($seen{$id . "\x1c"}) {
 	say "$name (file)";
       } else {
-	$self->print_link($host, $space, "$name (file)", "file/$id");
+	$link->($host, $space, "$name (file)", "file/$id");
 	$seen{$id . "\x1c"} = 1;
       }
     }
@@ -1518,6 +1583,26 @@ sub colourize {
   my $self = shift;
   my $code = shift;
   $code = join("", map { "\033[3${_};4${_}m${_}" } split //, $code) . "\033[0m ";
+  return $code;
+}
+
+# https://en.wikipedia.org/wiki/ANSI_escape_code#3/4_bit
+sub colourize_html {
+  my $self = shift;
+  my $code = shift;
+  my %html_colours = (
+    0 => "0,0,0",
+    1 => "222,56,43",
+    2 => "57,181,74",
+    3 => "255,199,6",
+    4 => "0,111,184",
+    5 => "118,38,113",
+    6 => "44,181,233 ",
+    7 => "204,204,204", );
+  $code = join("", map {
+    my $rgb = $html_colours{$_};
+    "<span style=\"color: rgb($rgb); background-color: rgb($rgb)\">$_</span>";
+	       } split //, $code);
   return $code;
 }
 
@@ -2444,6 +2529,9 @@ sub process_request {
     } elsif ($url =~ m!^GET /robots.txt HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_raw_via_http(undef, 'robots');
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/changes(?:/(\d+))? HTTP/1.[01]$!
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_changes_via_http($host, $self->space($host, $space), $n||100);
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/index HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_index_via_http($host, $self->space($host, $space));

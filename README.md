@@ -399,7 +399,8 @@ Here's my suggestion:
     Disallow: html/*
     Disallow: diff/*
     Disallow: history/*
-    Disallow: do/changes
+    Disallow: do/changes*
+    Disallow: do/all/changes*
     Disallow: do/rss
     Disallow: do/atom
     Disallow: do/new

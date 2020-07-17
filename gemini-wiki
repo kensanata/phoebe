@@ -764,7 +764,7 @@ die "I must have both --key_file and --cert_file\n"
     unless $args{SSL_cert_file} and $args{SSL_key_file};
 
 my $env = {};
-my $protocols = 'https?|ftp|afs|news|nntp|mid|cid|mailto|wais|prospero|telnet|gophers?|irc|feed';
+my $protocols = 'https?|ftp|afs|news|nntp|mid|cid|mailto|wais|prospero|telnet|gophers?|irc|feed|gemini';
 my $chars = '[-a-zA-Z0-9/@=+$_~*.,;:?!\'"()&#%]'; # see RFC 2396
 $env->{full_url_regex} ="((?:$protocols):$chars+)"; # when used in square brackets
 

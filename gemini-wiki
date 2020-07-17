@@ -1435,10 +1435,11 @@ sub serve_changes_via_http {
   }
   say "<p>Showing up to $n changes.";
   my $fh = File::ReadBackwards->new($log);
+  my $first = 1;
   my $more = $self->changes(
     $n,
-    sub { say "<h2>" . shift . "</h2>" },
-    sub { say "<p>" . shift . " by " . $self->colourize_html(shift) },
+    sub { say "</ul>" unless $first; $first = 0; say "<h2>" . shift . "</h2>"; say "<ul>"; },
+    sub { say "<li>" . shift . " by " . $self->colourize_html(shift) },
     sub {
       my ($host, $space, $title, $id) = @_;
       if ($id =~ s/^page/html/) {

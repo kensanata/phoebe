@@ -21,38 +21,41 @@
 This is a script to upload content to a Titan-enabled site like Gemini Wiki. It
 takes a varying number of arguments:
 
-=over
+B<--url=URL> specifies the Titan URL to use; this should be really similar to
+the Gemini URL you used to read the page
 
-=item B<--url=URL> specifies the Titan URL to use; this should be really similar
-      to the Gemini URL you used to read the page
+B<--token=TOKEN> specifies the token to use; this is optional but spammers and
+vandals basically ensured that any site out on the Internet needs some sort of
+protection; how to get a token depends on the site you're editing
 
-=item B<--token=TOKEN> specifies the token to use; this is optional but spammers
-      and vandals basically ensured that any site out on the Internet needs some
-      sort of protection; how to get a token depends on the site you're editing
-
-=item B<FILES...> are the files to upload, if any; this is optional: you can
-      also use a pipe, or type a few words by hand (terminating it with a
-      Ctrl-D, the end of transmission byte)
-
-=back
+B<FILES...> are the files to upload, if any; this is optional: you can also use
+a pipe, or type a few words by hand (terminating it with a Ctrl-D, the end of
+transmission byte)
 
 Note that if you specify multiple files, the URL must end in a slash and all the
 filenames are used as page names. So, uploading F<Alex.gmi> and F<Berta.gmi> to
 C<titan://localhost/> will create C<gemini://localhost/Alex> and
 C<gemini://localhost/Berta>.
 
-If available, it will use F<client-cert.pem> and F<client-key.pem> to upload
-files, just in case. 😃
+The following two options control the use of client certificates:
+
+B<--cert_file=FILE> specifies an optional client certificate to use; if you
+don't specify one, the default is to try to use F<client-cert.pem> in the
+current directory.
+
+B<--key_file=FILE> specifies an optional client certificate key to use; if you
+don't specify one, the default is to try to use F<client-key.pem> in the current
+directory.
 
 Usage:
 
     echo "This is my test." > test.txt
-    titan titan://alexschroeder.ch/Test hello text.txt
+    titan --url=titan://transjovian.org/test/raw/testing --token=hello text.txt
 
 Or from a pipe:
 
     echo "This is my test." \
-      | titan titan://alexschroeder.ch/Test hello
+      | titan --url=titan://transjovian.org/test/raw/testing --token=hello
 
 =cut
 

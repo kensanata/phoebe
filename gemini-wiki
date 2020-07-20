@@ -1814,7 +1814,7 @@ sub serve_html {
   $self->html_page($host, $space, $id, $revision);
 }
 
-sub serve_html_via_http {
+sub serve_page_via_http {
   my $self = shift;
   my $host = shift;
   my $space = shift;
@@ -1873,11 +1873,11 @@ sub print_html {
       say "<ul>" unless $list;
       say "<li>$1";
       $list = 1;
-    } elsif (my ($url, $text) = /^=&gt;\s*(\S+)\s+(.*)/) { # quoted HTML!
+    } elsif (my ($url, $text) = /^=&gt;\s*(\S+)\s*(.*)/) { # quoted HTML!
       say "<ul>" unless $list;
       $text ||= $url;
       $url =~ s!^gemini://$host(?::$port)?/?!/!;
-      $url =~ s!^/page/!/html/!;
+      $url =~ s!^(/$space)?/page/!$1/html/!;
       say "<li><a href=\"$url\">$text</a>";
       $list = 1;
     } elsif (/^(#{1,6})\s*(.*)/) {
@@ -1961,7 +1961,7 @@ sub footer {
   return join("\n", "\n\nMore:", @links, ""); # includes a trailing newline
 }
 
-sub serve_gemini {
+sub serve_page {
   my $self = shift;
   my $host = shift;
   my $space = shift;
@@ -2512,7 +2512,7 @@ sub process_request {
     } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/html/([^/]*)(?:/(\d+))?$!) {
       $self->serve_html($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($host, $space, $id, $n) = $url =~ m!gemini://($host_regex)(?::$port)?(?:/($spaces))?/page/([^/]+)(?:/(\d+))?$!) {
-      $self->serve_gemini($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
+      $self->serve_page($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($host, $space, $id) = $url =~ m!gemini://($host_regex)(?::$port)?(?:/($spaces))?/file/([^/]+)?$!) {
       $self->serve_file($host, $self->space($host, $space), decode_utf8(uri_unescape($id)));
     } elsif (($space) = $url =~ m!^GET (?:(?:/($spaces)/?)?|/) HTTP/1.[01]$!
@@ -2520,7 +2520,7 @@ sub process_request {
       $self->serve_main_menu_via_http($host, $self->space($host, $space));
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/html/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
-      $self->serve_html_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
+      $self->serve_page_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/file/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_file_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);

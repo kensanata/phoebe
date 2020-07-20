@@ -30,6 +30,7 @@ require './t/test.pl';
 mkdir("$dir/page");
 write_text("$dir/page/Alex.gmi", "Alex Schroeder\n=> /page/Berta Berta");
 write_text("$dir/page/Berta.gmi", "```\nHello!\nYo!\n```\n");
+write_text("$dir/page/Chris.gmi", "=> Alex\n");
 mkdir("$dir/file");
 write_binary("$dir/file/alex.jpg", read_binary("t/alex.jpg"));
 mkdir("$dir/meta");
@@ -38,13 +39,16 @@ write_text("$dir/meta/alex.jpg", "content-type: image/jpeg");
 # html
 
 my $page = query_gemini("GET / HTTP/1.0\r\nhost: $host:$port\r\n");
-like($page, qr!<a href="https://$host:$port/html/Alex">Alex</a>!, "main menu contains Alex");
+like($page, qr!<a href="https://$host:$port/page/Alex">Alex</a>!, "main menu contains Alex");
 
-$page = query_gemini("GET /html/Alex HTTP/1.0\r\nhost: $host:$port\r\n");
+$page = query_gemini("GET /page/Alex HTTP/1.0\r\nhost: $host:$port\r\n");
 like($page, qr!<p>Alex Schroeder!, "Alex content");
-like($page, qr!<a href="/html/Berta">Berta</a>!, "Alex contains Berta link");
+like($page, qr!<a href="/page/Berta">Berta</a>!, "Alex contains Berta link");
 
-$page = query_gemini("GET /html/Berta HTTP/1.0\r\nhost: $host:$port\r\n");
+$page = query_gemini("GET /page/Berta HTTP/1.0\r\nhost: $host:$port\r\n");
 like($page, qr!<pre>\nHello\!\nYo\!\n</pre>!, "Berta contains pre block");
+
+$page = query_gemini("GET /page/Chris HTTP/1.0\r\nhost: $host:$port\r\n");
+like($page, qr!<a href="Alex">Alex</a>!, "Chris contains Alex link");
 
 done_testing();

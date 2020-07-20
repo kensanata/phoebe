@@ -925,7 +925,7 @@ sub link_html {
   my $title = shift;
   my $id = shift;
   if (not $id) {
-    $id = "html/$title";
+    $id = "page/$title";
   }
   my $port = $self->port();
   # don't encode the slash
@@ -1442,9 +1442,7 @@ sub serve_changes_via_http {
     sub { say "<li>" . shift . " by " . $self->colourize_html(shift) },
     sub {
       my ($host, $space, $title, $id) = @_;
-      if ($id =~ s/^page/html/) {
-	say " → " . $self->link_html($host, $space, $title, $id);
-      }
+      say " → " . $self->link_html($host, $space, $title, $id);
     },
     sub {
       return unless $_ = $fh->readline;
@@ -1876,8 +1874,6 @@ sub print_html {
     } elsif (my ($url, $text) = /^=&gt;\s*(\S+)\s*(.*)/) { # quoted HTML!
       say "<ul>" unless $list;
       $text ||= $url;
-      $url =~ s!^gemini://$host(?::$port)?/?!/!;
-      $url =~ s!^(/$space)?/page/!$1/html/!;
       say "<li><a href=\"$url\">$text</a>";
       $list = 1;
     } elsif (/^(#{1,6})\s*(.*)/) {
@@ -2518,7 +2514,7 @@ sub process_request {
     } elsif (($space) = $url =~ m!^GET (?:(?:/($spaces)/?)?|/) HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_main_menu_via_http($host, $self->space($host, $space));
-    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/html/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/page/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_page_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/file/([^/]*)(?:/(\d+))? HTTP/1.[01]$!

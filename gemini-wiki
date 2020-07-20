@@ -732,6 +732,7 @@ use Algorithm::Diff;
 use IO::Socket::SSL;
 use URI::Escape;
 use Pod::Text;
+use utf8;
 use B;
 
 # The following is needed because there's a patched version of
@@ -1771,8 +1772,8 @@ sub serve_diff {
   my $old = $self->text($host, $space, $id, $revision);
   say $self->diff($old, $new,
 		  sub { say $_ for @_ },
-		  sub { say "> \033[31m$_\033[0m" for @_ },
-		  sub { say "> \033[32m$_\033[0m" for @_ });
+		  sub { say "> \033[31m$_\033[0m" for map { $_||"⏎" } @_ },
+		  sub { say "> \033[32m$_\033[0m" for map { $_||"⏎" } @_ });
 }
 
 sub serve_diff_via_http {
@@ -1798,8 +1799,8 @@ sub serve_diff_via_http {
   my $old = $self->text($host, $space, $id, $revision);
   say $self->diff($old, $new,
 		  sub { say "<p>$_" for @_ },
-		  sub { say "<p style=\"color: rgb(222,56,43)\">" . join("<br>", @_) },
-		  sub { say "<p style=\"color: rgb(57,181,74)\">" . join("<br>", @_) });
+		  sub { say "<p style=\"color: rgb(222,56,43)\">" . join("<br>", map { $_||"⏎" } @_) },
+		  sub { say "<p style=\"color: rgb(57,181,74)\">" . join("<br>", map { $_||"⏎" } @_) });
 }
 
 # old text, new text, code reference to print a paragraph, print deleted text,
@@ -1828,7 +1829,7 @@ sub diff {
       $paragraph->($min2 == $max2 ? "Added line $min2:" : "Added lines $min2–$max2:");
       $added->($diff->Items(2));
     } elsif ($diff->Diff == 1) {
-      $paragraph->($min1 == $max1, "Deleted line $min1:", "Deleted lines $min1–$max1:");
+      $paragraph->($min1 == $max1 ? "Deleted line $min1:" : "Deleted lines $min1–$max1:");
       $deleted->($diff->Items(1));
     }
     # if(not $diff->Items(2)) {

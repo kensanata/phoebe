@@ -1423,8 +1423,8 @@ sub serve_changes_via_http {
   say "<body>";
   say "<h1>Changes</h1>";
   say "<ul>";
-  # say "<li>" . $self->link_html($host, $space, "Changes for all spaces", "do/all/changes")
-  #     if @{$self->{server}->{wiki_space}};
+  say "<li>" . $self->link_html($host, $space, "Changes for all spaces", "do/all/changes")
+      if @{$self->{server}->{wiki_space}};
   say "<li>" . $self->link_html($host, $space, "Atom feed", "do/atom");
   say "<li>" . $self->link_html($host, $space, "RSS feed", "do/rss");
   say "</ul>";
@@ -1462,6 +1462,64 @@ sub serve_all_changes {
   $self->success();
   say "# Changes for all spaces";
   # merge all logs
+  my $log = $self->all_logs($host, $n);
+  if (not @$log) {
+    say "No changes.";
+    return;
+  }
+  # taking the head of the @$log to get new log entries
+  say "Showing up to $n changes.";
+  return unless $self->changes(
+    $n,
+    sub { say "## " . shift },
+    sub { say shift . " by " . $self->colourize(shift) },
+    sub { $self->print_link(@_) },
+    sub { @{shift(@$log) }, 1 if @$log });
+  say "";
+  $self->print_link($host, undef, "More...", "do/all/changes/" . 10 * $n);
+}
+
+sub serve_all_changes_via_http {
+  my $self = shift;
+  my $host = shift;
+  my $n = shift;
+  $self->log(3, "Serving $n all changes via HTTP");
+  say "HTTP/1.1 200 OK\r";
+  say "Content-Type: text/html\r";
+  say "\r";
+  say "<!DOCTYPE html>";
+  say "<html>";
+  say "<head>";
+  say "<meta charset=\"utf-8\">";
+  say "<title>Changes for all spaces</title>";
+  say "</head>";
+  say "<body>";
+  say "<h1>Changes for all spaces</h1>";
+  say "<ul>";
+  my $log = $self->all_logs($host, $n);
+  if (not @$log) {
+    say "<p>No changes.";
+    return;
+  }
+  # taking the head of the @$log to get new log entries
+  say "<p>Showing up to $n changes.";
+  my $first = 1;
+  my $more = $self->changes(
+    $n,
+    sub { say "</ul>" unless $first; $first = 0; say "<h2>" . shift . "</h2>"; say "<ul>"; },
+    sub { say "<li>" . shift . " by " . $self->colourize_html(shift) },
+    sub { say " → " . $self->link_html(@_) },
+    sub { @{shift(@$log) }, 1 if @$log });
+  say "</ul>";
+  return unless $more;
+  say "<p>" . $self->link_html($host, undef, "More...", "do/all/changes/" . 10 * $n);
+}
+
+sub all_logs {
+  my $self = shift;
+  my $host = shift;
+  my $n = shift;
+  # merge all logs
   my @log;
   my $dir = $self->{server}->{wiki_dir};
   my @spaces = $self->space_dirs();
@@ -1478,23 +1536,9 @@ sub serve_all_changes {
       push(@log, @{$self->read_log($fh, $n, $host, $space)});
     }
   }
-  if (not @log) {
-    say "No changes.";
-    return;
-  }
-  # sort them all
   @log = sort { $b->[0] <=> $a->[0] } @log;
-  # taking the head of the @log to get new log entries
-  say "Showing up to $n changes.";
-  return unless $self->changes(
-    $n,
-    sub { say "## " . shift },
-    sub { say shift . " by " . $self->colourize(shift) },
-    sub { $self->print_link(@_) },
-    sub { @{shift(@log) }, 1 if @log });
-  say "";
-  $self->print_link($host, undef, "More...", "do/all/changes/" . 10 * $n);
-}
+  return \@log;
+ }
 
 sub read_log {
   my $self = shift;
@@ -2632,6 +2676,9 @@ sub process_request {
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/changes(?:/(\d+))? HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_changes_via_http($host, $self->space($host, $space), $n||100);
+    } elsif (($space, $n) = $url =~ m!^GET /do/all/changes(?:/(\d+))? HTTP/1.[01]$!
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_all_changes_via_http($host, $n||100);
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/index HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_index_via_http($host, $self->space($host, $space));

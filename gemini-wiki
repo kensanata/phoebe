@@ -1769,9 +1769,10 @@ sub serve_diff {
   say "Showing the differences between revision $revision and the current revision of $id.";
   my $new = $self->text($host, $space, $id);
   my $old = $self->text($host, $space, $id, $revision);
-  say "```";
-  say $self->diff($old, $new);
-  say "```";
+  say $self->diff($old, $new,
+		  sub { say $_ for @_ },
+		  sub { say "> \033[31m$_\033[0m" for @_ },
+		  sub { say "> \033[32m$_\033[0m" for @_ });
 }
 
 sub serve_diff_via_http {
@@ -1795,15 +1796,21 @@ sub serve_diff_via_http {
   say "<p>Showing the differences between revision $revision and the current revision of $id.";
   my $new = $self->text($host, $space, $id);
   my $old = $self->text($host, $space, $id, $revision);
-  say "<pre>";
-  say $self->diff($old, $new);
-  say "</pre>";
+  say $self->diff($old, $new,
+		  sub { say "<p>$_" for @_ },
+		  sub { say "<p style=\"color: rgb(222,56,43)\">" . join("<br>", @_) },
+		  sub { say "<p style=\"color: rgb(57,181,74)\">" . join("<br>", @_) });
 }
 
+# old text, new text, code reference to print a paragraph, print deleted text,
+# print added text
 sub diff {
   my $self = shift;
   my @old = split(/\n/, shift);
   my @new = split(/\n/, shift);
+  my $paragraph = shift;
+  my $deleted = shift;
+  my $added = shift;
   $self->log(4, "Preparing a diff");
   my $diff = Algorithm::Diff->new(\@old, \@new);
   $diff->Base(1); # line numbers, not indices
@@ -1813,20 +1820,16 @@ sub diff {
     my $sep = '';
     my ($min1, $max1, $min2, $max2) = $diff->Get(qw(min1 max1 min2 max2));
     if ($diff->Diff == 3) {
-      say "Changed lines $min1–$max1 from:" if $min1 != $max1;
-      say "Changed line $min1 from:" if $min1 == $max1;
-      say "> $_" for $diff->Items(1);
-      say "to lines $min2–$max2:" if $min2 != $max2;
-      say "to:" if $min2 == $max2;
-      say "> $_" for $diff->Items(2);
+      $paragraph->($min1 == $max1 ? "Changed line $min1 from:" : "Changed lines $min1–$max1 from:");
+      $deleted->($diff->Items(1));
+      $paragraph->($min2 == $max2 ? "to:" : "to lines $min2–$max2:");
+      $added->($diff->Items(2));
     } elsif ($diff->Diff == 2) {
-      say "Added lines $min2–$max2:" if $min2 != $max2;
-      say "Added line $min2:" if $min2 == $max2;
-      say "> $_" for $diff->Items(2);
+      $paragraph->($min2 == $max2 ? "Added line $min2:" : "Added lines $min2–$max2:");
+      $added->($diff->Items(2));
     } elsif ($diff->Diff == 1) {
-      say "Deleted lines $min1–$max1:" if $min1 != $max1;
-      say "Deleted line $min1:" if $min1 == $max1;
-      say "> $_" for $diff->Items(1);
+      $paragraph->($min1 == $max1, "Deleted line $min1:", "Deleted lines $min1–$max1:");
+      $deleted->($diff->Items(1));
     }
     # if(not $diff->Items(2)) {
     #   $result .= "%d,%dd%d\n", $diff->Get(qw(Min1 Max1 Max2));

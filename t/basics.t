@@ -103,7 +103,8 @@ like($page, qr/Quiet disk ratling/m, "Revision 1 content");
 
 #diffs
 $page = query_gemini("$base/diff/Haiku/1");
-like($page, qr/^< Quiet disk ratling\n-+\n> Muffled honking cars\n$/m, "Diff 1 content");
+like($page, qr/^> \e\[31mQuiet disk ratling\e\[0m/m, "Removed content");
+like($page, qr/^> \e\[32mMuffled honking cars\e\[0m\n$/sm, "Added content");
 
 # index
 $page = query_gemini("$base/do/index");

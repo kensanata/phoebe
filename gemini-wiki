@@ -1495,7 +1495,6 @@ sub serve_all_changes_via_http {
   say "</head>";
   say "<body>";
   say "<h1>Changes for all spaces</h1>";
-  say "<ul>";
   my $log = $self->all_logs($host, $n);
   if (not @$log) {
     say "<p>No changes.";

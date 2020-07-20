@@ -1575,7 +1575,7 @@ sub changes {
       }
     }
   }
-  return $next->(); # return something, if there's more
+  return () = $next->(); # return something, if there's more
 }
 
 sub colourize {
@@ -1918,29 +1918,80 @@ sub serve_history {
   my $host = shift;
   my $space = shift;
   my $id = shift;
+  my $n = shift;
   $self->success();
   $self->log(3, "Serve history for $id");
   say "# Page history for $id";
-  $self->print_link($host, $space, "$id (current)", "page/$id");
   my $dir = $self->wiki_dir($host, $space);
-  return unless -d "$dir/keep/$id";
-  my @revisions = sort { $b cmp $a } map { s/\.gmi$//; $_ } read_dir("$dir/keep/$id");
-  my $last_day = '';
-  my $last_time = '';
-  for my $revision (@revisions) {
-    my $ts = $self->modified("$dir/keep/$id/$revision.gmi");
-    my $day = $self->day($ts);
-    if ($day ne $last_day) {
-      say "## $day";
-      $last_day = $day;
-      $last_time = '';
-    }
-    my $time = $self->time_of_day($ts);
-    say $time if $time ne $last_time;
-    $last_time = $time;
-    $self->print_link($host, $space, "$id ($revision)", "page/$id/$revision");
-    $self->print_link($host, $space, "Differences", "diff/$id/$revision");
+  my $log = "$dir/changes.log";
+  if (not -e $log) {
+    say "No changes.";
+    return;
   }
+  say "Showing up to $n changes.";
+  my $fh = File::ReadBackwards->new($log);
+  return unless $self->changes(
+    $n,
+    sub { say "## " . shift },
+    sub { say shift . " by " . $self->colourize(shift) },
+    sub { $self->print_link(@_) },
+    sub {
+    READ:
+      return unless $_ = $fh->readline;
+      chomp;
+      my ($ts, $id_log, $revision, $code) = split(/\x1f/);
+      goto READ if $id_log ne $id;
+      $ts, $id_log, $revision, $code, $host, $space, 0 });
+  say "";
+  $self->print_link($host, $space, "More...", "history/" . uri_escape_utf8($id) . "/" . 10 * $n);
+}
+
+sub serve_history_via_http {
+  my $self = shift;
+  my $host = shift;
+  my $space = shift;
+  my $id = shift;
+  my $n = shift;
+  $self->log(3, "Serve history for $id via HTTP");
+  say "HTTP/1.1 200 OK\r";
+  say "Content-Type: text/html\r";
+  say "\r";
+  say "<!DOCTYPE html>";
+  say "<html>";
+  say "<head>";
+  say "<meta charset=\"utf-8\">";
+  say "<title>Page history for " . $self->quote_html($id) . "</title>";
+  say "</head>";
+  say "<body>";
+  say "<h1>Page history for " . $self->quote_html($id) . "</h1>";
+  say "</ul>";
+  my $dir = $self->wiki_dir($host, $space);
+  my $log = "$dir/changes.log";
+  if (not -e $log) {
+    say "<p>No changes.";
+    return;
+  }
+  say "<p>Showing up to $n changes.";
+  my $fh = File::ReadBackwards->new($log);
+  my $first = 1;
+  my $more = $self->changes(
+    $n,
+    sub { say "</ul>" unless $first; $first = 0; say "<h2>" . shift . "</h2>"; say "<ul>"; },
+    sub { say "<li>" . shift . " by " . $self->colourize_html(shift) },
+    sub {
+      my ($host, $space, $title, $id) = @_;
+      say " → " . $self->link_html($host, $space, $title, $id);
+    },
+    sub {
+    READ:
+      return unless $_ = $fh->readline;
+      chomp;
+      my ($ts, $id_log, $revision, $code) = split(/\x1f/);
+      goto READ if $id_log ne $id;
+      $ts, $id_log, $revision, $code, $host, $space, 0 });
+  say "</ul>";
+  return unless $more;
+  say "<p>" . $self->link_html($host, $space, "More...", "history/" . uri_escape_utf8($id) . "/" . 10 * $n);
 }
 
 sub footer {
@@ -2499,8 +2550,8 @@ sub process_request {
       $self->serve_atom($host, $self->space($host, $space));
     } elsif ($url =~ m!^gemini://($host_regex)(?::$port)?/robots.txt$!) {
       $self->serve_raw(undef, "robots");
-    } elsif (($host, $space, $id) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/history/([^/]*)$!) {
-      $self->serve_history($host, $self->space($host, $space), decode_utf8(uri_unescape($id)));
+    } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(\d+))?$!) {
+      $self->serve_history($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n||10);
     } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?$!) {
       $self->serve_diff($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/raw/([^/]*)(?:/(\d+))?$!) {
@@ -2523,6 +2574,9 @@ sub process_request {
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/raw/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_raw_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/history/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_history_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n||10);
     } elsif ($url =~ m!^GET /robots.txt HTTP/1.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_raw_via_http(undef, 'robots');

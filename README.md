@@ -107,8 +107,8 @@ user just to be safe.
 Now you're in your home directory, `/home/gemini`. We're going to install
 things right here. First, get the source code:
 
-    curl --output gemini-wiki.pl \
-      https://alexschroeder.ch/cgit/gemini-wiki/plain/gemini-wiki.pl?h=main
+    curl --output gemini-wiki \
+      https://alexschroeder.ch/cgit/gemini-wiki/plain/gemini-wiki?h=main
 
 Since Gemini traffic is encrypted, we need to generate a certificate and a key.
 These are both stored in PEM files. To create your own copies of these files
@@ -122,10 +122,10 @@ don't, use this:
 This creates a certificate and a private key, both of them unencrypted, using
 eliptic curves of a particular kind, valid for five years.
 
-You should have three files, now: `gemini-wiki.pl`, `cert.pem`, and
+You should have three files, now: `gemini-wiki`, `cert.pem`, and
 `key.pem`. That's enough to get started! Start the server:
 
-    perl gemini-wiki.pl
+    perl gemini-wiki
 
 This starts the server in the foreground. Open a second terminal and test it:
 
@@ -227,7 +227,7 @@ might want to use right away.
 
 Here's an example:
 
-    perl gemini-wiki.pl \
+    perl gemini-wiki \
       --wiki_token=Elrond \
       --wiki_token=Thranduil \
       --wiki_page=Welcome \
@@ -298,7 +298,7 @@ Basically, this is the template for our service:
     [Service]
     Type=simple
     WorkingDirectory=/home/gemini
-    ExecStart=/home/gemini/gemini-wiki.pl
+    ExecStart=/home/gemini/gemini-wiki
     Restart=always
     User=gemini
     Group=gemini
@@ -439,7 +439,7 @@ Apache or nginx. It's a (simple) web server, too!
 Here's how you could serve the wiki both on Gemini, and the standard HTTPS port,
 443:
 
-    sudo ./gemini-wiki.pl --port=443 --port=1965 \
+    sudo ./gemini-wiki --port=443 --port=1965 \
       --user=$(id --user --name) --group=$(id --group  --name)
 
 We need to use `sudo` because all the ports below 1024 are priviledge ports and
@@ -640,7 +640,7 @@ are usually reachable using the IPv4 `127.0.0.1` or the name `localhost`. The
 following command tells Gemini Wiki to serve both `127.0.0.1` and `localhost`
 (the default is to just serve `localhost`).
 
-    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost
+    perl gemini-wiki --host=127.0.0.1 --host=localhost
 
 Visit both at [gemini://localhost/](gemini://localhost/) and [gemini://127.0.0.1/](gemini://127.0.0.1/), and create a
 new page in each one, then examine the data directory `wiki`. You'll see both
@@ -649,7 +649,7 @@ new page in each one, then examine the data directory `wiki`. You'll see both
 If you're using more wiki spaces, you need to prefix them with the respective
 hostname if you use more than one:
 
-    perl gemini-wiki.pl --host=127.0.0.1 --host=localhost \
+    perl gemini-wiki --host=127.0.0.1 --host=localhost \
         --wiki_space=127.0.0.1/alex --wiki_space=localhost/berta
 
 In this situation, you can visit [gemini://127.0.0.1/](gemini://127.0.0.1/),

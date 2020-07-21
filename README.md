@@ -39,6 +39,7 @@ It does two and a half things:
 - [Tokens per Wiki Space](#tokens-per-wiki-space)
 - [Client Certificates](#client-certificates)
 - [Virtual Hosting](#virtual-hosting)
+- [Multiple Certificates](#multiple-certificates)
 
 ## How do you edit a Gemini Wiki?
 
@@ -658,3 +659,23 @@ In this situation, you can visit [gemini://127.0.0.1/](gemini://127.0.0.1/),
 
 If this is confusing, remember that not using virtual hosting and not using
 spaces is fine, too. 😀
+
+## Multiple Certificates
+
+If you're using virtual hosting as discussed above, you have two options: you
+can use one certificate for all your hostnames, or you can use different
+certificates for the hosts. If you want to use just one certificate for all your
+hosts, you don't need to do anything else. If you want to use different
+certificates for different hosts, you have to specify them all on the command
+line. Generally speaking, use `--host` to specifiy one or more hosts, followed
+by both `--cert_file` and `--key_file` to specifiy the certificate and key to
+use for the hosts.
+
+For example:
+
+    perl gemini-wiki --host=transjovian.org \
+        --cert_file=/var/lib/dehydrated/certs/transjovian.org/cert.pem \
+        --key_file=/var/lib/dehydrated/certs/transjovian.org/privkey.pem \
+        --host=alexschroeder.ch \
+        --cert_file=/var/lib/dehydrated/certs/alexschroeder.ch/cert.pem \
+        --key_file=/var/lib/dehydrated/certs/alexschroeder.ch/privkey.pem

@@ -719,6 +719,26 @@ L<gemini://localhost/berta/>, and they will all be different.
 If this is confusing, remember that not using virtual hosting and not using
 spaces is fine, too. 😀
 
+=head2 Multiple Certificates
+
+If you're using virtual hosting as discussed above, you have two options: you
+can use one certificate for all your hostnames, or you can use different
+certificates for the hosts. If you want to use just one certificate for all your
+hosts, you don't need to do anything else. If you want to use different
+certificates for different hosts, you have to specify them all on the command
+line. Generally speaking, use C<--host> to specifiy one or more hosts, followed
+by both C<--cert_file> and C<--key_file> to specifiy the certificate and key to
+use for the hosts.
+
+For example:
+
+    perl gemini-wiki --host=transjovian.org \
+        --cert_file=/var/lib/dehydrated/certs/transjovian.org/cert.pem \
+        --key_file=/var/lib/dehydrated/certs/transjovian.org/privkey.pem \
+        --host=alexschroeder.ch \
+        --cert_file=/var/lib/dehydrated/certs/alexschroeder.ch/cert.pem \
+        --key_file=/var/lib/dehydrated/certs/alexschroeder.ch/privkey.pem
+
 =cut
 
 package Gemini::Wiki;
@@ -744,34 +764,49 @@ use lib 'lib';
 # Gemini server variables you can set in the config file
 our (@init, @extensions, @main_menu);
 
-# Help
-if ($ARGV[0] and $ARGV[0] eq '--help') {
-  my $parser = Pod::Text->new();
-  $parser->parse_file($0);
-  exit;
+Gemini::Wiki->run(wiki_command_line());
+
+sub wiki_command_line {
+  # defaults
+  my %args = (
+    proto => 'ssl',
+    # default file names
+    SSL_cert_file => 'cert.pem',
+    SSL_key_file => 'key.pem',
+    # the following is needed for client certificates
+    SSL_verify_mode => SSL_VERIFY_PEER,
+    SSL_verify_callback => \&verify_fingerprint, );
+  my (@host, $cert, $key);
+  for (@ARGV) {
+    if ($_ eq '--help') {
+      my $parser = Pod::Text->new();
+      $parser->parse_file($0);
+      exit;
+    }
+    push(@host, $1) if /--host=([^\/*]+)/;
+    $cert = $1 if /--cert_file=(.*)/;
+    $key = $1 if /--key_file=(.*)/;
+    if ($cert and $key) {
+      if (@host) {
+	$args{SSL_cert_file} = {} unless ref $args{SSL_cert_file} eq 'HASH';
+	$args{SSL_key_file} = {} unless ref $args{SSL_key_file} eq 'HASH';
+	for (@host) {
+	  $args{SSL_cert_file}->{$_} = $cert;
+	  $args{SSL_key_file}->{$_} = $key;
+	}
+      } else {
+	$args{SSL_cert_file} = $cert;
+	$args{SSL_key_file} = $key;
+      }
+      $cert = $key = undef;
+      @host = ();
+    }
+  }
+  if ($cert or $key) {
+    die "I must have both --key_file and --cert_file\n";
+  }
+  return \%args;
 }
-
-# Sadly, we need this information before doing anything else
-my %args = (
-  proto => 'ssl',
-  SSL_cert_file => 'cert.pem',
-  SSL_key_file => 'key.pem',
-  SSL_verify_mode => SSL_VERIFY_PEER,
-  SSL_verify_callback => \&verify_fingerprint, );
-for (grep(/--(key|cert)_file=/, @ARGV)) {
-  $args{SSL_cert_file} = $1 if /--cert_file=(.*)/;
-  $args{SSL_key_file} = $1 if /--key_file=(.*)/;
-}
-die "I must have both --key_file and --cert_file\n"
-    unless $args{SSL_cert_file} and $args{SSL_key_file};
-
-my $env = {};
-my $protocols = 'https?|ftp|afs|news|nntp|mid|cid|mailto|wais|prospero|telnet|gophers?|irc|feed|gemini';
-my $chars = '[-a-zA-Z0-9/@=+$_~*.,;:?!\'"()&#%]'; # see RFC 2396
-$env->{full_url_regex} ="((?:$protocols):$chars+)"; # when used in square brackets
-
-my $server = Gemini::Wiki->new($env);
-$server->run(%args);
 
 sub verify_fingerprint {
   my ($ok, $ctx_store, $certname, $error, $cert, $depth) = @_;
@@ -779,7 +814,10 @@ sub verify_fingerprint {
 }
 
 sub default_values {
+  my $protocols = 'https?|ftp|afs|news|nntp|mid|cid|mailto|wais|prospero|telnet|gophers?|irc|feed|gemini';
+  my $chars = '[-a-zA-Z0-9/@=+$_~*.,;:?!\'"()&#%]'; # see RFC 2396
   return {
+    full_url_regex => "((?:$protocols):$chars+)",
     host => 'localhost',
     port => 1965,
     wiki_token => ['hello'],
@@ -796,6 +834,8 @@ sub options {
   my $prop = $self->{'server'};
   my $template = shift;
   $self->SUPER::options($template);
+  $prop->{full_url_regex} ||= undef;
+  $template->{full_url_regex} = \$prop->{full_url_regex};
   $prop->{wiki_dir} ||= undef;
   $template->{wiki_dir} = \$prop->{wiki_dir};
   $prop->{wiki_main_page} ||= undef;
@@ -826,7 +866,7 @@ sub post_configure_hook {
   $self->log(3, "PID $$");
   $self->log(3, "Port @{$self->{server}->{port}}");
   $self->log(3, "Host " . ("@{$self->{server}->{host}}" || "*"));
-  $self->log(3, "Space @{$self->{server}->{wiki_space}}");
+    $self->log(3, "Space @{$self->{server}->{wiki_space}}");
   if (@{$self->{server}->{host}} > 1) {
     my $host_regex = $self->host_regex();
     for (grep(!/^$host_regex\//, @{$self->{server}->{wiki_space}})) {
@@ -1576,7 +1616,6 @@ sub changes {
   my %seen;
   for (1 .. $n) {
     my ($ts, $id, $revision, $code, $host, $space, $show_space) = $next->();
-    # warn "$ts, $id, $revision, $code, $host, $space, $show_space\n";
     return unless $ts and $id;
     my $name;
     if ($show_space) {
@@ -2575,6 +2614,7 @@ sub process_request {
     $self->log(4, "Serving ($host_regex)(?::$port)?");
     $self->log(4, "Spaces $spaces");
     $url = <STDIN>; # no loop
+    return unless $url;
     $url =~ s/\s+$//g; # no trailing whitespace
     # $url =~ s!^([^/:]+://[^/:]+)(/.*|)$!$1:$port$2!; # add port
     # $url .= '/' if $url =~ m!^[^/]+://[^/]+$!; # add missing trailing slash

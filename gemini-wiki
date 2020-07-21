@@ -814,7 +814,7 @@ sub verify_fingerprint {
 }
 
 sub default_values {
-  my $protocols = 'https?|ftp|afs|news|nntp|mid|cid|mailto|wais|prospero|telnet|gophers?|irc|feed|gemini';
+  my $protocols = 'https?|ftp|afs|news|nntp|mid|cid|mailto|wais|prospero|telnet|gophers?|irc|feed|gemini|xmpp';
   my $chars = '[-a-zA-Z0-9/@=+$_~*.,;:?!\'"()&#%]'; # see RFC 2396
   return {
     full_url_regex => "((?:$protocols):$chars+)",

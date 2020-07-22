@@ -2298,7 +2298,7 @@ sub write_file {
     return;
   } else {
     my $peeraddr = $self->{server}->{'peeraddr'};
-    say $fh join("\x1f", scalar(time), "$id", 0, $self->bogus_hash($peeraddr));
+    say $fh join("\x1f", scalar(time), $id, 0, $self->bogus_hash($peeraddr));
     close($fh);
   }
   mkdir "$dir/file" unless -d "$dir/file";
@@ -2352,7 +2352,7 @@ sub write {
       say "59 Unable to write index: $!\r";
       return;
     } else {
-      say $fh "$id";
+      say $fh $id;
       close($fh);
     }
   }
@@ -2363,7 +2363,7 @@ sub write {
     return;
   } else {
     my $peeraddr = $self->{server}->{'peeraddr'};
-    say $fh join("\x1f", scalar(time), "$id", $revision + 1, $self->bogus_hash($peeraddr));
+    say $fh join("\x1f", scalar(time), $id, $revision + 1, $self->bogus_hash($peeraddr));
     close($fh);
     $revision = 1;
   }

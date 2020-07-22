@@ -1642,7 +1642,8 @@ sub changes {
     if ($revision) {
       if ($seen{$name}) {
 	$link->($host, $space, "$name ($revision)", "page/$id/$revision");
-	$link->($host, $space, "Differences", "diff/$id/$revision");
+	my $kept = $self->wiki_dir($host, $space) . "/keep/$id/$revision.gmi";
+	$link->($host, $space, "Differences", "diff/$id/$revision") if -e $kept;
       } else {
 	$link->($host, $space, "$name (current)", "page/$id");
 	$seen{$name} = 1;

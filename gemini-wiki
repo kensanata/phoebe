@@ -2293,8 +2293,8 @@ sub write_file {
   }
   my $log = "$dir/changes.log";
   if (not open(my $fh, ">>:encoding(UTF-8)", $log)) {
-    $self->log(1, "Cannot write log $log");
-    say "59 Unable to write log: $!\r";
+    $self->log(1, "Cannot write log $log: $!");
+    say "59 Unable to write log\r";
     return;
   } else {
     my $peeraddr = $self->{server}->{'peeraddr'};
@@ -2348,8 +2348,8 @@ sub write {
   } else {
     my $index = "$dir/index";
     if (not open(my $fh, ">>:encoding(UTF-8)", $index)) {
-      $self->log(1, "Cannot write index $index");
-      say "59 Unable to write index: $!\r";
+      $self->log(1, "Cannot write index $index: $!");
+      say "59 Unable to write index\r";
       return;
     } else {
       say $fh $id;
@@ -2358,8 +2358,8 @@ sub write {
   }
   my $log = "$dir/changes.log";
   if (not open(my $fh, ">>:encoding(UTF-8)", $log)) {
-    $self->log(1, "Cannot write log $log");
-    say "59 Unable to write log: $!\r";
+    $self->log(1, "Cannot write log $log: $!");
+    say "59 Unable to write log\r";
     return;
   } else {
     my $peeraddr = $self->{server}->{'peeraddr'};

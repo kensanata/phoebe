@@ -2621,7 +2621,7 @@ sub process_request {
     my($scheme, $authority, $path, $query, $fragment) =
 	$url =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?|;
     my $headers;
-    $headers = $self->headers() if $url =~ m!^[a-z]+ .* HTTP/1.[01]$!i;
+    $headers = $self->headers() if $url =~ m!^[a-z]+ .* HTTP/1\.[01]$!i;
     $self->log(3, "Looking at $url");
     my ($host, $space, $id, $n);
     if ($self->run_extensions($url, $headers)) {
@@ -2691,49 +2691,49 @@ sub process_request {
       $self->serve_page($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($host, $space, $id) = $url =~ m!gemini://($host_regex)(?::$port)?(?:/($spaces))?/file/([^/]+)?$!) {
       $self->serve_file($host, $self->space($host, $space), decode_utf8(uri_unescape($id)));
-    } elsif (($space) = $url =~ m!^GET (?:(?:/($spaces)/?)?|/) HTTP/1.[01]$!
+    } elsif (($space) = $url =~ m!^GET (?:(?:/($spaces)/?)?|/) HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_main_menu_via_http($host, $self->space($host, $space));
-    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/page/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/page/([^/]*)(?:/(\d+))? HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_page_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
-    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/file/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/file/([^/]*)(?:/(\d+))? HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_file_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
-    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/history/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/history/([^/]*)(?:/(\d+))? HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_history_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n||10);
-    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/diff/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/diff/([^/]*)(?:/(\d+))? HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_diff_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n||10);
-    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/raw/([^/]*)(?:/(\d+))? HTTP/1.[01]$!
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/raw/([^/]*)(?:/(\d+))? HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_raw_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
-    } elsif ($url =~ m!^GET /robots.txt HTTP/1.[01]$!
+    } elsif ($url =~ m!^GET /robots.txt HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_raw_via_http(undef, 'robots');
-    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/changes(?:/(\d+))? HTTP/1.[01]$!
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/changes(?:/(\d+))? HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_changes_via_http($host, $self->space($host, $space), $n||100);
-    } elsif (($space, $n) = $url =~ m!^GET /do/all/changes(?:/(\d+))? HTTP/1.[01]$!
+    } elsif (($space, $n) = $url =~ m!^GET /do/all/changes(?:/(\d+))? HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_all_changes_via_http($host, $n||100);
-    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/index HTTP/1.[01]$!
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/index HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_index_via_http($host, $self->space($host, $space));
-    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/files HTTP/1.[01]$!
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/files HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_files_via_http($host, $self->space($host, $space));
-    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/spaces HTTP/1.[01]$!
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/spaces HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_spaces_via_http($host, $port);
-    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/rss HTTP/1.[01]$!
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/rss HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_rss_via_http($host, $self->space($host, $space));
-    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/atom HTTP/1.[01]$!
+    } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/atom HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_atom_via_http($host, $self->space($host, $space));
-    } elsif ($url =~ m!^GET (?:/($spaces))?/do/source HTTP/1.[01]$!
+    } elsif ($url =~ m!^GET (?:/($spaces))?/do/source HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       say "HTTP/1.1 200 OK\r";
       say "Content-Type: text/plain; charset=UTF-8\r";

@@ -30,7 +30,7 @@ README.md: gemini-wiki
 	./update-readme
 
 # Create man pages.
-man: gemini-wiki.1 titan.1 gemini.1
+man: gemini-wiki.1 gemini-wiki-ctl.1 titan.1 gemini.1
 
 %.1: %
 	pod2man $< $@

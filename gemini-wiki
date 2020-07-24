@@ -1872,16 +1872,26 @@ sub serve_diff {
   my $space = shift;
   my $id = shift;
   my $revision = shift;
+  my $style = shift;
   $self->log(3, "Serving the diff of $id");
   $self->success();
   say "# Differences for $id";
+  if (not $style) { $self->print_link($host, $space, "Colour diff", "diff/$id/$revision/colour") }
+  else { $self->print_link($host, $space, "Normal diff", "diff/$id/$revision") }
   say "Showing the differences between revision $revision and the current revision of $id.";
   my $new = $self->text($host, $space, $id);
   my $old = $self->text($host, $space, $id, $revision);
-  say $self->diff($old, $new,
-		  sub { say $_ for @_ },
-		  sub { say "> \033[31m$_\033[0m" for map { $_||"⏎" } @_ },
-		  sub { say "> \033[32m$_\033[0m" for map { $_||"⏎" } @_ });
+  if (not $style) {
+    say $self->diff($old, $new,
+		    sub { say $_ for @_ },
+		    sub { say "> $_" for map { $_||"⏎" } @_ },
+		    sub { say "> $_" for map { $_||"⏎" } @_ });
+  } else {
+    say $self->diff($old, $new,
+		    sub { say $_ for @_ },
+		    sub { say "> \033[31m$_\033[0m" for map { $_||"⏎" } @_ },
+		    sub { say "> \033[32m$_\033[0m" for map { $_||"⏎" } @_ });
+  }
 }
 
 sub serve_diff_via_http {
@@ -2711,8 +2721,8 @@ sub process_request {
       $self->serve_raw(undef, "robots");
     } elsif (($host, $space, $id, $n, $style) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(\d+))?(?:/(colour|fancy))?$!) {
       $self->serve_history($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n||10, $style);
-    } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?$!) {
-      $self->serve_diff($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
+    } elsif (($host, $space, $id, $n, $style) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?(?:/(colour))?$!) {
+      $self->serve_diff($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n, $style);
     } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/raw/([^/]*)(?:/(\d+))?$!) {
       $self->serve_raw($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/html/([^/]*)(?:/(\d+))?$!) {

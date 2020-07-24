@@ -2073,9 +2073,13 @@ sub serve_history {
   my $space = shift;
   my $id = shift;
   my $n = shift;
+  my $style = shift;
   $self->success();
   $self->log(3, "Serve history for $id");
   say "# Page history for $id";
+  if (not $style) { $self->print_link($host, $space, "Colour history", "history/$id/$n/colour") }
+  elsif ($style eq "colour") { $self->print_link($host, $space, "Fancy history", "history/$id/$n/fancy") }
+  elsif ($style eq "fancy") { $self->print_link($host, $space, "Normal history", "history/$id/$n") }
   my $dir = $self->wiki_dir($host, $space);
   my $log = "$dir/changes.log";
   if (not -e $log) {
@@ -2087,7 +2091,7 @@ sub serve_history {
   return unless $self->changes(
     $n,
     sub { say "## " . shift },
-    sub { say shift . " by " . $self->colourize(shift) },
+    sub { say shift . " by " . $self->colourize(shift, $style) },
     sub { $self->print_link(@_) },
     sub {
     READ:
@@ -2097,7 +2101,7 @@ sub serve_history {
       goto READ if $id_log ne $id;
       $ts, $id_log, $revision, $code, $host, $space, 0 });
   say "";
-  $self->print_link($host, $space, "More...", "history/" . uri_escape_utf8($id) . "/" . 10 * $n);
+  $self->print_link($host, $space, "More...", "history/" . uri_escape_utf8($id) . "/" . 10 * $n . ($style ? "/$style" : ""));
 }
 
 sub serve_history_via_http {
@@ -2649,7 +2653,7 @@ sub process_request {
     my $headers;
     $headers = $self->headers() if $url =~ m!^[a-z]+ .* HTTP/1\.[01]$!i;
     $self->log(3, "Looking at $url");
-    my ($host, $space, $id, $n);
+    my ($host, $space, $id, $n, $style);
     if ($self->run_extensions($url, $headers)) {
       # config file goes first
     } elsif (($host) = $url =~ m!^titan://($host_regex)(?::$port)?!) {
@@ -2695,18 +2699,18 @@ sub process_request {
       } else {
 	say "30 gemini://$host:$port/raw/$query\r";
       }
-    } elsif (($host, $space, $n, $id) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
-      $self->serve_changes($host, $self->space($host, $space), $n||100, $id);
-    } elsif (($host, $n, $id) = $url =~ m!^gemini://($host_regex)(?::$port)?/do/all/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
-      $self->serve_all_changes($host, $n||100, $id);
+    } elsif (($host, $space, $n, $style) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
+      $self->serve_changes($host, $self->space($host, $space), $n||100, $style);
+    } elsif (($host, $n, $style) = $url =~ m!^gemini://($host_regex)(?::$port)?/do/all/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
+      $self->serve_all_changes($host, $n||100, $style);
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/rss$!) {
       $self->serve_rss($host, $self->space($host, $space));
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/atom$!) {
       $self->serve_atom($host, $self->space($host, $space));
     } elsif ($url =~ m!^gemini://($host_regex)(?::$port)?/robots.txt$!) {
       $self->serve_raw(undef, "robots");
-    } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(\d+))?$!) {
-      $self->serve_history($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n||10);
+    } elsif (($host, $space, $id, $n, $style) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(\d+))?(?:/(colour|fancy))?$!) {
+      $self->serve_history($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n||10, $style);
     } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?$!) {
       $self->serve_diff($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/raw/([^/]*)(?:/(\d+))?$!) {

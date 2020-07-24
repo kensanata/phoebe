@@ -1417,9 +1417,13 @@ sub serve_changes {
   my $host = shift;
   my $space = shift;
   my $n = shift;
+  my $style = shift;
   $self->log(3, "Serving $n changes");
   $self->success();
   say "# Changes";
+  $self->print_link($host, $space, "Colour changes", "do/changes/$n/colour") if not $style;
+  $self->print_link($host, $space, "Fancy changes", "do/changes/$n/fancy") if $style eq "colour";
+  $self->print_link($host, $space, "Normal changes", "do/changes/$n") if $style eq "fancy";
   $self->print_link($host, $space, "Changes for all spaces", "do/all/changes")
       if @{$self->{server}->{wiki_space}};
   $self->print_link($host, $space, "Atom Feed", "do/atom");
@@ -1435,14 +1439,14 @@ sub serve_changes {
   return unless $self->changes(
     $n,
     sub { say "## " . shift },
-    sub { say shift . " by " . $self->colourize(shift) },
+    sub { say shift . " by " . $self->colourize(shift, $style) },
     sub { $self->print_link(@_) },
     sub {
       return unless $_ = $fh->readline;
       chomp;
       split(/\x1f/), $host, $space, 0 });
   say "";
-  $self->print_link($host, $space, "More...", "do/changes/" . 10 * $n);
+  $self->print_link($host, $space, "More...", "do/changes/" . 10 * $n . ($style ? "/$style" : ""));
 }
 
 sub serve_changes_via_http {
@@ -1498,6 +1502,7 @@ sub serve_all_changes {
   my $self = shift;
   my $host = shift;
   my $n = shift;
+  my $style = shift;
   $self->log(3, "Serving $n all changes");
   $self->success();
   say "# Changes for all spaces";
@@ -1507,16 +1512,19 @@ sub serve_all_changes {
     say "No changes.";
     return;
   }
+  $self->print_link($host, undef, "Colour changes", "do/all/changes/$n/colour") if not $style;
+  $self->print_link($host, undef, "Fancy changes", "do/all/changes/$n/fancy") if $style eq "colour";
+  $self->print_link($host, undef, "Normal changes", "do/all/changes/$n") if $style eq "fancy";
   # taking the head of the @$log to get new log entries
   say "Showing up to $n changes.";
   return unless $self->changes(
     $n,
     sub { say "## " . shift },
-    sub { say shift . " by " . $self->colourize(shift) },
+    sub { say shift . " by " . $self->colourize(shift, $style) },
     sub { $self->print_link(@_) },
     sub { @{shift(@$log) }, 1 if @$log });
   say "";
-  $self->print_link($host, undef, "More...", "do/all/changes/" . 10 * $n);
+  $self->print_link($host, undef, "More...", "do/all/changes/" . 10 * $n . ($style ? "/$style" : ""));
 }
 
 sub serve_all_changes_via_http {
@@ -1665,7 +1673,24 @@ sub changes {
 sub colourize {
   my $self = shift;
   my $code = shift;
-  $code = join("", map { "\033[3${_};4${_}m${_}" } split //, $code) . "\033[0m ";
+  my $style = shift;
+  my %rgb;
+  if ($style eq "colour") {
+    # 3/4 bit
+    return join("", map { "\033[3${_};4${_}m${_}" } split //, $code) . "\033[0m ";
+  } elsif ($style eq "fancy") {
+    # 24 bit!
+    %rgb = (
+    0 => "0;0;0",
+    1 => "222;56;43",
+    2 => "57;181;74",
+    3 => "255;199;6",
+    4 => "0;111;184",
+    5 => "118;38;113",
+    6 => "44;181;233",
+    7 => "204;204;204", );
+    return join("", map { "\033[38;2;$rgb{$_};48;2;$rgb{$_}m$_" } split //, $code) . "\033[0m ";
+  }
   return $code;
 }
 
@@ -1673,7 +1698,7 @@ sub colourize {
 sub colourize_html {
   my $self = shift;
   my $code = shift;
-  my %html_colours = (
+  my %rgb = (
     0 => "0,0,0",
     1 => "222,56,43",
     2 => "57,181,74",
@@ -1683,8 +1708,7 @@ sub colourize_html {
     6 => "44,181,233 ",
     7 => "204,204,204", );
   $code = join("", map {
-    my $rgb = $html_colours{$_};
-    "<span style=\"color: rgb($rgb); background-color: rgb($rgb)\">$_</span>";
+    "<span style=\"color: rgb($rgb{$_}); background-color: rgb($rgb{$_})\">$_</span>";
 	       } split //, $code);
   return $code;
 }
@@ -2670,10 +2694,10 @@ sub process_request {
       } else {
 	say "30 gemini://$host:$port/raw/$query\r";
       }
-    } elsif (($host, $space, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/changes(?:/(\d+))?$!) {
-      $self->serve_changes($host, $self->space($host, $space), $n||100);
-    } elsif (($host, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?/do/all/changes(?:/(\d+))?$!) {
-      $self->serve_all_changes($host, $n||100);
+    } elsif (($host, $space, $n, $id) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
+      $self->serve_changes($host, $self->space($host, $space), $n||100, $id);
+    } elsif (($host, $n, $id) = $url =~ m!^gemini://($host_regex)(?::$port)?/do/all/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
+      $self->serve_all_changes($host, $n||100, $id);
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/rss$!) {
       $self->serve_rss($host, $self->space($host, $space));
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/atom$!) {

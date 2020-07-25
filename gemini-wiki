@@ -1908,10 +1908,10 @@ sub serve_diff_via_http {
   say "<html>";
   say "<head>";
   say "<meta charset=\"utf-8\">";
-  say "<title>Differences for " . quote_html($id) . "</title>";
+  say "<title>Differences for " . $self->quote_html($id) . "</title>";
   say "</head>";
   say "<body>";
-  say "<h1>Differences for " . quote_html($id) . "</h1>";
+  say "<h1>Differences for " . $self->quote_html($id) . "</h1>";
   say "<p>Showing the differences between revision $revision and the current revision.";
   my $new = $self->text($host, $space, $id);
   my $old = $self->text($host, $space, $id, $revision);

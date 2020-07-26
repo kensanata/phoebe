@@ -1603,7 +1603,7 @@ sub read_log {
   return \@log;
 }
 
-# $n is the number of changes to show. $header is code reference that prints a
+# $n is the number of changes to show. $header is a code reference that prints a
 # header for the date (one argument). $change is a code reference that prints
 # the time and code of the person making the change (two arguments). $link is a
 # code reference that prints a link (four arguments). $next is a code reference
@@ -1612,7 +1612,10 @@ sub read_log {
 # revision or zero if a file; the code to represent the person that made the
 # change, represented as a string of octal digits that will be fed to the
 # colourize sub; the host, and the spaces, if any; and a boolean if space and
-# page or file name should both be shown (up to seven arguments).
+# page or file name should both be shown (up to seven arguments). Finally, the
+# optional argument $kept is a code reference to say whether an old revision
+# actually exists. If not, there's no point in showing a diff link. The default
+# implementation checks for the existence of the keep file.
 sub changes {
   my $self = shift;
   my $n = shift;
@@ -1620,6 +1623,10 @@ sub changes {
   my $change = shift;
   my $link = shift;
   my $next = shift;
+  my $kept = shift || sub {
+    my ($host, $space, $id, $revision) = @_;
+    -e $self->wiki_dir($host, $space) . "/keep/$id/$revision.gmi";
+  };
   my $last_day = '';
   my %seen;
   for (1 .. $n) {
@@ -1649,9 +1656,8 @@ sub changes {
     $change->($self->time_of_day($ts), $code);
     if ($revision) {
       if ($seen{$name}) {
-	$link->($host, $space, "$name ($revision)", "page/$id/$revision");
-	my $kept = $self->wiki_dir($host, $space) . "/keep/$id/$revision.gmi";
-	$link->($host, $space, "Differences", "diff/$id/$revision") if -e $kept;
+	$link->($host, $space, "$name ($revision)", "page/$id/$revision");;
+	$link->($host, $space, "Differences", "diff/$id/$revision") if $kept->($host, $space, $id, $revision);
       } else {
 	$link->($host, $space, "$name (current)", "page/$id");
 	$seen{$name} = 1;

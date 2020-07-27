@@ -38,7 +38,13 @@ write_text("$dir/meta/alex.jpg", "content-type: image/jpeg");
 
 # html
 
-my $page = query_gemini("GET / HTTP/1.0\r\nhost: $host:$port\r\n");
+my $page = query_gemini("GET /robots.txt HTTP/1.0\r\nhost: $host:$port\r\n");
+for (qw(raw/* html/* diff/* history/* do/changes* do/all/changes* do/rss do/atom do/new do/more do/match do/search)) {
+  my $url = quotemeta;
+  like($page, qr/^Disallow: $url/m, "Robots are disallowed from $url");
+}
+
+$page = query_gemini("GET / HTTP/1.0\r\nhost: $host:$port\r\n");
 like($page, qr!<a href="https://$host:$port/page/Alex">Alex</a>!, "main menu contains Alex");
 
 $page = query_gemini("GET /page/Alex HTTP/1.0\r\nhost: $host:$port\r\n");

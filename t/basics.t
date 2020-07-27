@@ -26,8 +26,15 @@ our @pages = qw(Alex Berta Chris);
 
 require './t/test.pl';
 
+# robots
+my $page = query_gemini("$base/robots.txt");
+for (qw(raw/* html/* diff/* history/* do/changes* do/all/changes* do/rss do/atom do/new do/more do/match do/search)) {
+  my $url = quotemeta;
+  like($page, qr/^Disallow: $url/m, "Robots are disallowed from $url");
+}
+
 # main menu
-my $page = query_gemini("$base/");
+$page = query_gemini("$base/");
 
 unlike($page, qr/^=> .*\/$/m, "No empty links in the menu");
 

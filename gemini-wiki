@@ -2757,7 +2757,7 @@ sub process_request {
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/atom$!) {
       $self->serve_atom($host, $self->space($host, $space));
     } elsif ($url =~ m!^gemini://($host_regex)(?::$port)?/robots.txt$!) {
-      $self->serve_raw(undef, "robots");
+      $self->serve_raw($host, undef, "robots");
     } elsif (($host, $space, $id, $n, $style) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(\d+))?(?:/(colour|fancy))?$!) {
       $self->serve_history($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n||10, $style);
     } elsif (($host, $space, $id, $n, $style) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?(?:/(colour))?$!) {
@@ -2793,7 +2793,7 @@ sub process_request {
       $self->serve_raw_via_http($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif ($url =~ m!^GET /robots.txt HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
-      $self->serve_raw_via_http(undef, 'robots');
+      $self->serve_raw_via_http($host, undef, 'robots');
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/changes(?:/(\d+))? HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_changes_via_http($host, $self->space($host, $space), $n||100);

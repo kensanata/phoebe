@@ -1143,7 +1143,7 @@ sub serve_css_via_http {
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: text/css\r";
   say "\r";
-  say "html { max-width: 38rem; padding: 2rem; margin: auto; color: #111; background: #ffe; }";
+  say "html { max-width: 70ch; padding: 2ch; margin: auto; color: #111; background: #ffe; }";
 }
 
 sub quote_html {

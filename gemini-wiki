@@ -1891,12 +1891,14 @@ sub serve_diff {
     say $self->diff($old, $new,
 		    sub { say $_ for @_ },
 		    sub { say "> $_" for map { $_||"⏎" } @_ },
-		    sub { say "> $_" for map { $_||"⏎" } @_ });
+		    sub { say "> $_" for map { $_||"⏎" } @_ },
+		    sub { "｢$_[0]｣" });
   } else {
     say $self->diff($old, $new,
 		    sub { say $_ for @_ },
 		    sub { say "> \033[31m$_\033[0m" for map { $_||"⏎" } @_ },
-		    sub { say "> \033[32m$_\033[0m" for map { $_||"⏎" } @_ });
+		    sub { say "> \033[32m$_\033[0m" for map { $_||"⏎" } @_ },
+		    sub { "\033[1m$_[0]\033[22m" });
   }
 }
 
@@ -1924,7 +1926,8 @@ sub serve_diff_via_http {
   say $self->diff($old, $new,
 		  sub { say "<p>$_" for @_ },
 		  sub { say "<p style=\"color: rgb(222,56,43)\">" . join("<br>", map { $_||"⏎" } @_) },
-		  sub { say "<p style=\"color: rgb(57,181,74)\">" . join("<br>", map { $_||"⏎" } @_) });
+		  sub { say "<p style=\"color: rgb(57,181,74)\">" . join("<br>", map { $_||"⏎" } @_) },
+		  sub { "<strong>$_</strong>" });
 }
 
 # old text, new text, code reference to print a paragraph, print deleted text,
@@ -1936,6 +1939,7 @@ sub diff {
   my $paragraph = shift;
   my $deleted = shift;
   my $added = shift;
+  my $highlight = shift;
   $self->log(4, "Preparing a diff");
   my $diff = Algorithm::Diff->new(\@old, \@new);
   $diff->Base(1); # line numbers, not indices
@@ -1945,10 +1949,11 @@ sub diff {
     my $sep = '';
     my ($min1, $max1, $min2, $max2) = $diff->Get(qw(min1 max1 min2 max2));
     if ($diff->Diff == 3) {
+      my ($from, $to) = $self->refine([$diff->Items(1)], [$diff->Items(2)], $highlight);
       $paragraph->($min1 == $max1 ? "Changed line $min1 from:" : "Changed lines $min1–$max1 from:");
-      $deleted->($diff->Items(1));
+      $deleted->(@$from);
       $paragraph->($min2 == $max2 ? "to:" : "to lines $min2–$max2:");
-      $added->($diff->Items(2));
+      $added->(@$to);
     } elsif ($diff->Diff == 2) {
       $paragraph->($min2 == $max2 ? "Added line $min2:" : "Added lines $min2–$max2:");
       $added->($diff->Items(2));
@@ -1956,19 +1961,29 @@ sub diff {
       $paragraph->($min1 == $max1 ? "Deleted line $min1:" : "Deleted lines $min1–$max1:");
       $deleted->($diff->Items(1));
     }
-    # if(not $diff->Items(2)) {
-    #   $result .= "%d,%dd%d\n", $diff->Get(qw(Min1 Max1 Max2));
-    # } elsif(not $diff->Items(1)) {
-    #   $result .= sprintf "%da%d,%d\n", $diff->Get(qw(Max1 Min2 Max2));
-    # } else {
-    #   $sep = "---\n";
-    #   $result .= sprintf "%d,%dc%d,%d\n", $diff->Get(qw(Min1 Max1 Min2 Max2));
-    # }
-    # $result .= "< $_\n" for $diff->Items(1);
-    # $result .= $sep;
-    # $result .= "> $_\n" for $diff->Items(2);
   }
   return $result;
+}
+
+# $from_lines and $to_lines are references to lists of lines. The lines are
+# concatenated and split by words.
+sub refine {
+  my $self = shift;
+  my $from_lines = shift;
+  my $to_lines = shift;
+  my $highlight = shift;
+  my $diff = Algorithm::Diff->new([split(/(\s+)/, join("\n", @$from_lines))], [split(/(\s+)/, join("\n", @$to_lines))]);
+  my ($from, $to);
+  while($diff->Next()) {
+    if (my @list = $diff->Same()) {
+      $from .= join('', @list);
+      $to .= join('', @list);
+    } else {
+      $from .= join('', map { $_ =~ /\S+/ ? $highlight->($_) : $_ } $diff->Items(1));
+      $to .= join('', map { $_ =~ /\S+/ ? $highlight->($_) : $_ } $diff->Items(2));
+    }
+  }
+  return [split(/\n/, $from)], [split(/\n/, $to)];
 }
 
 sub serve_html {

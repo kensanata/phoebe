@@ -1108,6 +1108,7 @@ sub serve_main_menu_via_http {
   } else {
     say "<title>Gemini Wiki</title>";
   }
+  say "<link type=\"text/css\" rel=\"stylesheet\" href=\"/default.css\"/>";
   say "</head>";
   say "<body>";
   if ($page) {
@@ -1133,6 +1134,15 @@ sub serve_main_menu_via_http {
   say "</ul>";
   say "</body>";
   say "</html>";
+}
+
+sub serve_css_via_http {
+  my $self = shift;
+  $self->log(3, "Serving CSS via HTTP");
+  say "HTTP/1.1 200 OK\r";
+  say "Content-Type: text/css\r";
+  say "\r";
+  say "html { max-width: 38rem; padding: 2rem; margin: auto; color: #111; background: #ffe; }";
 }
 
 sub quote_html {
@@ -1186,6 +1196,7 @@ sub serve_index_via_http {
   say "<head>";
   say "<meta charset=\"utf-8\">";
   say "<title>All Pages</title>";
+  say "<link type=\"text/css\" rel=\"stylesheet\" href=\"/default.css\"/>";
   say "</head>";
   say "<body>";
   say "<h1>All Pages</h1>";
@@ -1241,6 +1252,7 @@ sub serve_files_via_http {
   say "<head>";
   say "<meta charset=\"utf-8\">";
   say "<title>All Files</title>";
+  say "<link type=\"text/css\" rel=\"stylesheet\" href=\"/default.css\"/>";
   say "</head>";
   say "<body>";
   say "<h1>All Files</h1>";
@@ -1282,6 +1294,7 @@ sub serve_spaces_via_http {
   say "<head>";
   say "<meta charset=\"utf-8\">";
   say "<title>All Spaces</title>";
+  say "<link type=\"text/css\" rel=\"stylesheet\" href=\"/default.css\"/>";
   say "</head>";
   say "<body>";
   say "<h1>All Spaces</h1>";
@@ -1463,6 +1476,7 @@ sub serve_changes_via_http {
   say "<head>";
   say "<meta charset=\"utf-8\">";
   say "<title>Changes</title>";
+  say "<link type=\"text/css\" rel=\"stylesheet\" href=\"/default.css\"/>";
   say "</head>";
   say "<body>";
   say "<h1>Changes</h1>";
@@ -1540,6 +1554,7 @@ sub serve_all_changes_via_http {
   say "<head>";
   say "<meta charset=\"utf-8\">";
   say "<title>Changes for all spaces</title>";
+  say "<link type=\"text/css\" rel=\"stylesheet\" href=\"/default.css\"/>";
   say "</head>";
   say "<body>";
   say "<h1>Changes for all spaces</h1>";
@@ -1917,6 +1932,7 @@ sub serve_diff_via_http {
   say "<head>";
   say "<meta charset=\"utf-8\">";
   say "<title>Differences for " . $self->quote_html($id) . "</title>";
+  say "<link type=\"text/css\" rel=\"stylesheet\" href=\"/default.css\"/>";
   say "</head>";
   say "<body>";
   say "<h1>Differences for " . $self->quote_html($id) . "</h1>";
@@ -2021,6 +2037,7 @@ sub html_page {
   say "<head>";
   say "<meta charset=\"utf-8\">";
   say "<title>" . $self->quote_html($id) . "</title>";
+  say "<link type=\"text/css\" rel=\"stylesheet\" href=\"/default.css\"/>";
   say "</head>";
   say "<body>";
   say "<h1>" . $self->quote_html($id) . "</h1>";
@@ -2150,6 +2167,7 @@ sub serve_history_via_http {
   say "<head>";
   say "<meta charset=\"utf-8\">";
   say "<title>Page history for " . $self->quote_html($id) . "</title>";
+  say "<link type=\"text/css\" rel=\"stylesheet\" href=\"/default.css\"/>";
   say "</head>";
   say "<body>";
   say "<h1>Page history for " . $self->quote_html($id) . "</h1>";
@@ -2752,6 +2770,9 @@ sub process_request {
       $self->serve_page($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($host, $space, $id) = $url =~ m!gemini://($host_regex)(?::$port)?(?:/($spaces))?/file/([^/]+)?$!) {
       $self->serve_file($host, $self->space($host, $space), decode_utf8(uri_unescape($id)));
+    } elsif (($space) = $url =~ m!^GET /default.css HTTP/1\.[01]$!
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_css_via_http();
     } elsif (($space) = $url =~ m!^GET (?:(?:/($spaces)/?)?|/) HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_main_menu_via_http($host, $self->space($host, $space));

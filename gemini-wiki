@@ -1857,7 +1857,7 @@ sub atom {
       my $link = $self->link($host, $space, "page/$id", $scheme);
       say "<link href=\"$link\"/>";
       say "<id>$link</id>";
-      say "<summary>" . $self->quote_html($self->text($host, $space, $id)) . "</summary>";
+      say "<content type=\"text\">" . $self->quote_html($self->text($host, $space, $id)) . "</content>";
       ($sec, $min, $hour, $mday, $mon, $year) = gmtime($ts); # 2003-12-13T18:30:02Z
       say "<updated>"
 	  . sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", $year + 1900, $mon, $mday, $hour, $min, $sec)

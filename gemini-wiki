@@ -1499,20 +1499,18 @@ sub serve_changes_via_http {
   }
   say "<p>Showing up to $n changes.";
   my $fh = File::ReadBackwards->new($log);
-  my $first = 1;
   my $more = $self->changes(
     $n,
-    sub { say "</ul>" unless $first; $first = 0; say "<h2>" . shift . "</h2>"; say "<ul>"; },
-    sub { say "<li>" . shift . " by " . $self->colourize_html(shift) },
+    sub { say "<h2>" . shift . "</h2>" },
+    sub { say "<p>" . shift . " by " . $self->colourize_html(shift) },
     sub {
       my ($host, $space, $title, $id) = @_;
-      say " → " . $self->link_html($host, $space, $title, $id);
+      say "<br> → " . $self->link_html($host, $space, $title, $id);
     },
     sub {
       return unless $_ = $fh->readline;
       chomp;
       split(/\x1f/), $host, $space, 0 });
-  say "</ul>";
   return unless $more;
   say "<p>" . $self->link_html($host, $space, "More...", "do/changes/" . 10 * $n);
 }
@@ -1571,14 +1569,12 @@ sub serve_all_changes_via_http {
   }
   # taking the head of the @$log to get new log entries
   say "<p>Showing up to $n changes.";
-  my $first = 1;
   my $more = $self->changes(
     $n,
-    sub { say "</ul>" unless $first; $first = 0; say "<h2>" . shift . "</h2>"; say "<ul>"; },
-    sub { say "<li>" . shift . " by " . $self->colourize_html(shift) },
-    sub { say " → " . $self->link_html(@_) },
+    sub { say "<h2>" . shift . "</h2>" },
+    sub { say "<p>" . shift . " by " . $self->colourize_html(shift) },
+    sub { say "<br> → " . $self->link_html(@_) },
     sub { @{shift(@$log) }, 1 if @$log });
-  say "</ul>";
   return unless $more;
   say "<p>" . $self->link_html($host, undef, "More...", "do/all/changes/" . 10 * $n);
 }
@@ -2180,7 +2176,6 @@ sub serve_history_via_http {
   say "</head>";
   say "<body>";
   say "<h1>Page history for " . $self->quote_html($id) . "</h1>";
-  say "</ul>";
   my $dir = $self->wiki_dir($host, $space);
   my $log = "$dir/changes.log";
   if (not -e $log) {
@@ -2192,11 +2187,11 @@ sub serve_history_via_http {
   my $first = 1;
   my $more = $self->changes(
     $n,
-    sub { say "</ul>" unless $first; $first = 0; say "<h2>" . shift . "</h2>"; say "<ul>"; },
-    sub { say "<li>" . shift . " by " . $self->colourize_html(shift) },
+    sub { say "<h2>" . shift . "</h2>" },
+    sub { say "<p>" . shift . " by " . $self->colourize_html(shift) },
     sub {
       my ($host, $space, $title, $id) = @_;
-      say " → " . $self->link_html($host, $space, $title, $id);
+      say "<br> → " . $self->link_html($host, $space, $title, $id);
     },
     sub {
     READ:
@@ -2205,7 +2200,6 @@ sub serve_history_via_http {
       my ($ts, $id_log, $revision, $code) = split(/\x1f/);
       goto READ if $id_log ne $id;
       $ts, $id_log, $revision, $code, $host, $space, 0 });
-  say "</ul>";
   return unless $more;
   say "<p>" . $self->link_html($host, $space, "More...", "history/" . uri_escape_utf8($id) . "/" . 10 * $n);
 }

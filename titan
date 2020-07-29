@@ -148,7 +148,7 @@ for my $file (@files) {
   my $data = <$fh>;
   close($fh);
   my $size = length($data);
-  my $type = qx(/usr/bin/file --mime-type --brief $file);
+  my $type = qx(/usr/bin/file --mime-type --brief "$file");
   $type =~ s/\s+$//; # remove trailing whitespace
 
   # If the URL ends in a slash, append the URI-escaped filename without suffix
@@ -167,6 +167,10 @@ for my $file (@files) {
 
   # print response
   my $response = <$socket>;
-  $response =~ s/\r//g;
-  print $response;
+  if ($response) {
+    $response =~ s/\r//g;
+    print $response;
+  } else {
+    warn "No response for $file: $!\n";
+  }
 }

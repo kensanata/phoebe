@@ -22,15 +22,19 @@ This is a script to upload content to a Titan-enabled site like Gemini Wiki. It
 takes a varying number of arguments:
 
 B<--url=URL> specifies the Titan URL to use; this should be really similar to
-the Gemini URL you used to read the page
+the Gemini URL you used to read the page.
 
 B<--token=TOKEN> specifies the token to use; this is optional but spammers and
 vandals basically ensured that any site out on the Internet needs some sort of
-protection; how to get a token depends on the site you're editing
+protection; how to get a token depends on the site you're editing.
+
+B<--mime=MIMETYPE> specifies the MIME type to send to the server. If you don't
+specify a MIME type, the C<file> utility is used to determine the MIME type of
+the file you're uploading.
 
 B<FILES...> are the files to upload, if any; this is optional: you can also use
 a pipe, or type a few words by hand (terminating it with a Ctrl-D, the end of
-transmission byte)
+transmission byte).
 
 Note that if you specify multiple files, the URL must end in a slash and all the
 filenames are used as page names. So, uploading F<Alex.gmi> and F<Berta.gmi> to
@@ -71,11 +75,13 @@ my $cert_file;
 my $cert_key;
 my $token;
 my $help;
+my $mime;
 my $url;
 
 GetOptions ("cert_file=s" => \$cert_file,
 	    "cert_key=s" => \$cert_key,
 	    "token=s"  => \$token,
+	    "mime=s"  => \$mime,
 	    "help"  => \$help,
 	    "url=s"  => \$url,)
     or die("Error in command line arguments\n");
@@ -148,7 +154,8 @@ for my $file (@files) {
   my $data = <$fh>;
   close($fh);
   my $size = length($data);
-  my $type = qx(/usr/bin/file --mime-type --brief "$file");
+  my $type = $mime;
+  $type //= qx(/usr/bin/file --mime-type --brief "$file");
   $type =~ s/\s+$//; # remove trailing whitespace
 
   # If the URL ends in a slash, append the URI-escaped filename without suffix

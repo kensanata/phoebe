@@ -141,13 +141,30 @@ for my $item(qw(2017-12-25 2017-12-26 2017-12-27)) {
 like($page, qr/2017-12-27.*2017-12-26.*2017-12-25/s,
      "search menu sorted newest first");
 
-# rc
+# changes
 $page = query_gemini("$base/do/changes");
-like($page, qr/^=> $base\/page\/Haiku Haiku \(current\)/m, "Current revision of Haiku in recent chanegs");
-like($page, qr/^=> $base\/page\/Haiku\/1 Haiku \(1\)/m, "Older revision of Haiku in recent chanegs");
+like($page, qr/^=> $base\/page\/Haiku Haiku \(current\)/m, "Current revision of Haiku in recent changes");
+like($page, qr/^=> $base\/page\/Haiku\/1 Haiku \(1\)/m, "Older revision of Haiku in recent changes");
+
+# delete page
+$page = query_gemini("$titan/raw/Haiku;size=0;mime=text/plain;token=hello", "");
+like($page, qr/^30 $base\/page\/Haiku\r$/, "Titan Haiku delete");
+$page = query_gemini("$base/page/Haiku");
+like($page, qr/This page does not yet exist/, "Page no longer exists");
+$page = query_gemini("$base/do/changes");
+like($page, qr/^=> $base\/page\/Haiku Haiku \(deleted\)/m, "Current revision of Haiku was deleted");
+$page = query_gemini("$base/do/index");
+unlike($page, qr/Haiku/, "Haiku is no longer in the index");
+
+# delete file
+$page = query_gemini("$titan/raw/Alex;size=0;mime=image/jpeg;token=hello", "");
+like($page, qr/^The file was deleted\./m, "Image Alex delete");
+$page = query_gemini("$base/file/Alex");
+like($page, qr/^40 /, "File no longer exists");
+$page = query_gemini("$base/do/changes");
+like($page, qr/^Alex \(deleted file\)/m, "Alex was deleted");
 
 # extension
-
 $page = query_gemini($base);
 like($page, qr/^=> gemini:\/\/localhost:1965\/do\/test Test\n/m, "Extension installed Test menu");
 $page = query_gemini("$base/do/test");

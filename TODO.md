@@ -1,6 +1,6 @@
 # TODO
 
-- remove pages by uploading an empty document
-
 - diff with previous version
+
+- fix diff ｢to｣ ｢avoid｣ ｢this｣
 

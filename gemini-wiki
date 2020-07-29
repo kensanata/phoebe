@@ -1458,8 +1458,9 @@ sub serve_changes {
     sub { say "## " . shift },
     sub { say shift . " by " . $self->colourize(shift, $style) },
     sub { $self->print_link(@_) },
+    sub { say @_ },
     sub {
-      return unless $_ = $fh->readline;
+      return unless $_ = decode_utf8($fh->readline);
       chomp;
       split(/\x1f/), $host, $space, 0 });
   say "";
@@ -1507,8 +1508,9 @@ sub serve_changes_via_http {
       my ($host, $space, $title, $id) = @_;
       say "<br> → " . $self->link_html($host, $space, $title, $id);
     },
+    sub { say "<br> → $_[0]" },
     sub {
-      return unless $_ = $fh->readline;
+      return unless $_ = decode_utf8($fh->readline);
       chomp;
       split(/\x1f/), $host, $space, 0 });
   return unless $more;
@@ -1539,6 +1541,7 @@ sub serve_all_changes {
     sub { say "## " . shift },
     sub { say shift . " by " . $self->colourize(shift, $style) },
     sub { $self->print_link(@_) },
+    sub { say @_ },
     sub { @{shift(@$log) }, 1 if @$log });
   say "";
   $self->print_link($host, undef, "More...", "do/all/changes/" . 10 * $n . ($style ? "/$style" : ""));
@@ -1574,6 +1577,7 @@ sub serve_all_changes_via_http {
     sub { say "<h2>" . shift . "</h2>" },
     sub { say "<p>" . shift . " by " . $self->colourize_html(shift) },
     sub { say "<br> → " . $self->link_html(@_) },
+    sub { say "<br> → $_[0]" },
     sub { @{shift(@$log) }, 1 if @$log });
   return unless $more;
   say "<p>" . $self->link_html($host, undef, "More...", "do/all/changes/" . 10 * $n);
@@ -1606,13 +1610,13 @@ sub all_logs {
 
 sub read_log {
   my $self = shift;
-  my $fh = shift;
+  my $fh = shift; # File::ReadBackwards
   my $n = shift;
   my $host = shift;
   my $space = shift;
   my @log;
   for (1 .. $n) {
-    last unless $_ = $fh->readline;
+    last unless $_ = decode_utf8($fh->readline);
     chomp;
     push(@log, [split(/\x1f/), $host, $space]);
   }
@@ -1623,7 +1627,8 @@ sub read_log {
 # $n is the number of changes to show. $header is a code reference that prints a
 # header for the date (one argument). $change is a code reference that prints
 # the time and code of the person making the change (two arguments). $link is a
-# code reference that prints a link (four arguments). $next is a code reference
+# code reference that prints a link (four arguments). $link is a code reference
+# that prints a name that isn't linked (one argument). $next is a code reference
 # that returns the list of attributes for the next change, these attributes
 # being: the timestamp (as returned by time); the page or file name; the page
 # revision or zero if a file; the code to represent the person that made the
@@ -1639,6 +1644,7 @@ sub changes {
   my $header = shift;
   my $change = shift;
   my $link = shift;
+  my $nolink = shift;
   my $next = shift;
   my $kept = shift || sub {
     my ($host, $space, $id, $revision) = @_;
@@ -1671,19 +1677,29 @@ sub changes {
       $last_day = $day;
     }
     $change->($self->time_of_day($ts), $code);
-    if ($revision) {
+    if ($revision eq "🖹") {
+      # a deleted page
+      $link->($host, $space, "$name (deleted)", "page/$id");
+      $link->($host, $space, "History", "history/$id");
+      $seen{$name} = 1;
+    } elsif ($revision eq "🖻") {
+      # a deleted file
+      $nolink->("$name (deleted file)");
+      $seen{$id . "\x1c"} = 1;
+    } elsif ($revision > 0) {
+      # a page
       if ($seen{$name}) {
 	$link->($host, $space, "$name ($revision)", "page/$id/$revision");;
 	$link->($host, $space, "Differences", "diff/$id/$revision") if $kept->($host, $space, $id, $revision);
       } else {
 	$link->($host, $space, "$name (current)", "page/$id");
-	$seen{$name} = 1;
 	$link->($host, $space, "History", "history/$id");
+	$seen{$name} = 1;
       }
     } else {
-      # there can be pages and files sharing the same name
+      # a file
       if ($seen{$id . "\x1c"}) {
-	say "$name (file)";
+	$nolink->("$name (file)");
       } else {
 	$link->($host, $space, "$name (file)", "file/$id");
 	$seen{$id . "\x1c"} = 1;
@@ -1777,7 +1793,7 @@ sub rss {
   if (-e $log and my $fh = File::ReadBackwards->new($log)) {
     my %seen;
     for (1 .. 100) {
-      last unless $_ = $fh->readline;
+      last unless $_ = decode_utf8($fh->readline);
       chomp;
       my ($ts, $id, $revision, $code) = split(/\x1f/);
       next if $seen{$id};
@@ -1843,7 +1859,7 @@ sub atom {
   if (-e $log and my $fh = File::ReadBackwards->new($log)) {
     my %seen;
     for (1 .. 100) {
-      last unless $_ = $fh->readline;
+      last unless $_ = decode_utf8($fh->readline);
       chomp;
       my ($ts, $id, $revision, $code) = split(/\x1f/);
       next if $seen{$id};
@@ -2145,9 +2161,10 @@ sub serve_history {
     sub { say "## " . shift },
     sub { say shift . " by " . $self->colourize(shift, $style) },
     sub { $self->print_link(@_) },
+    sub { say @_ },
     sub {
     READ:
-      return unless $_ = $fh->readline;
+      return unless $_ = decode_utf8($fh->readline);
       chomp;
       my ($ts, $id_log, $revision, $code) = split(/\x1f/);
       goto READ if $id_log ne $id;
@@ -2193,9 +2210,10 @@ sub serve_history_via_http {
       my ($host, $space, $title, $id) = @_;
       say "<br> → " . $self->link_html($host, $space, $title, $id);
     },
+    sub { "<br> → $_[0]" },
     sub {
     READ:
-      return unless $_ = $fh->readline;
+      return unless $_ = decode_utf8($fh->readline);
       chomp;
       my ($ts, $id_log, $revision, $code) = split(/\x1f/);
       goto READ if $id_log ne $id;
@@ -2399,6 +2417,29 @@ sub write_file {
   say "30 " . $self->link($host, $space, "file/$id") . "\r";
 }
 
+sub delete_file {
+  my $self = shift;
+  my $host = shift;
+  my $space = shift;
+  my $id = shift;
+  $self->log(3, "Deleting file $id");
+  my $dir = $self->wiki_dir($host, $space);
+  unlink("$dir/file/$id", "$dir/meta/$id");
+  my $log = "$dir/changes.log";
+  if (not open(my $fh, ">>:encoding(UTF-8)", $log)) {
+    $self->log(1, "Cannot write log $log: $!");
+    say "59 Unable to write log\r";
+    return;
+  } else {
+    my $peeraddr = $self->{server}->{'peeraddr'};
+    say $fh join("\x1f", scalar(time), $id, "🖻", $self->bogus_hash($peeraddr));
+    close($fh);
+  }
+  $self->success();
+  say "# $id";
+  say "The file was deleted.";
+}
+
 sub write {
   my $self = shift;
   my $host = shift;
@@ -2460,6 +2501,56 @@ sub write {
   }
 }
 
+sub delete {
+  my $self = shift;
+  my $host = shift;
+  my $space = shift;
+  my $id = shift;
+  $self->log(3, "Deleting page $id");
+  my $dir = $self->wiki_dir($host, $space);
+  my $file = "$dir/page/$id.gmi";
+  if (-e $file) {
+    my $revision = 0;
+    mkdir "$dir/keep" unless -d "$dir/keep";
+    if (-d "$dir/keep/$id") {
+      foreach (read_dir("$dir/keep/$id")) {
+	$revision = $1 if m/^(\d+)\.gmi$/ and $1 > $revision;
+      }
+      $revision++;
+    } else {
+      mkdir "$dir/keep/$id";
+      $revision = 1;
+    }
+    # effectively deleting the file
+    rename $file, "$dir/keep/$id/$revision.gmi";
+  }
+  my $index = "$dir/index";
+  if (-f $index) {
+    # remove $id from the index
+    my @pages = grep { $_ ne $id } read_lines $index;
+    if (not open(my $fh, ">:encoding(UTF-8)", $index)) {
+      $self->log(1, "Cannot write index $index: $!");
+      say "59 Unable to write index\r";
+      return;
+    } else {
+      say $fh @pages;
+      close($fh);
+    }
+  }
+  my $log = "$dir/changes.log";
+  if (not open(my $fh, ">>:encoding(UTF-8)", $log)) {
+    $self->log(1, "Cannot write log $log: $!");
+    say "59 Unable to write log\r";
+    return;
+  } else {
+    my $peeraddr = $self->{server}->{'peeraddr'};
+    say $fh join("\x1f", scalar(time), $id, "🖹", $self->bogus_hash($peeraddr));
+    close($fh);
+  }
+  $self->log(3, "Deleted $id");
+  say "30 " . $self->link($host, $space, "page/$id") . "\r";
+}
+
 sub write_page {
   my $self = shift;
   my $host = shift;
@@ -2513,20 +2604,24 @@ sub write_page {
     say "59 You need to send along the number of bytes, not $length\r";
     return;
   }
-  local $/ = undef;
-  my $data;
-  my $actual = read STDIN, $data, $length;
+  my ($data, $actual) = $self->read($length);
   if ($actual != $length) {
     $self->log(4, "Got $actual bytes instead of $length");
     say "59 Got $actual bytes instead of $length\r";
     return;
   }
   if ($type ne "text/plain") {
-    $self->log(3, "Writing $type to $id, $actual bytes");
-    $self->with_lock($host, $space, sub { $self->write_file($host, $space, $id, $data, $type) } );
+    if ($length == 0) {
+      $self->with_lock($host, $space, sub { $self->delete_file($host, $space, $id) } );
+      return;
+    } else {
+      $self->with_lock($host, $space, sub { $self->write_file($host, $space, $id, $data, $type) } );
+      return;
+    }
+  } elsif ($length == 0) {
+    $self->with_lock($host, $space, sub { $self->delete($host, $space, $id) } );
     return;
-  } elsif (utf8::decode($data)) {
-    $self->log(3, "Writing $type to $id, $actual bytes");
+  } elsif (decode_utf8($data)) {
     $self->with_lock($host, $space, sub { $self->write($host, $space, $id, $data) } );
     return;
   } else {
@@ -2534,6 +2629,17 @@ sub write_page {
     say "59 The text is invalid UTF-8\r";
     return;
   }
+}
+
+sub read {
+  my $self = shift;
+  my $length = shift;
+  return ('', 0) unless $length > 0;
+  local $/ = undef;
+  my $data;
+  my $actual = read(STDIN, $data, $length);
+  $self->log(2, "Reading data from STDIN: $!") unless defined $actual;
+  return ($data, $actual);
 }
 
 sub allow_deny_hook {

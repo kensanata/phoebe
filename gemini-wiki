@@ -2604,7 +2604,7 @@ sub write_page {
     say "59 You need to send along the number of bytes, not $length\r";
     return;
   }
-  my ($data, $actual) = $self->read($length);
+  my ($data, $actual) = $self->read_stdin($length);
   if ($actual != $length) {
     $self->log(4, "Got $actual bytes instead of $length");
     say "59 Got $actual bytes instead of $length\r";
@@ -2631,7 +2631,7 @@ sub write_page {
   }
 }
 
-sub read {
+sub read_stdin {
   my $self = shift;
   my $length = shift;
   return ('', 0) unless $length > 0;

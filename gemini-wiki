@@ -2621,7 +2621,7 @@ sub write_page {
   } elsif ($length == 0) {
     $self->with_lock($host, $space, sub { $self->delete($host, $space, $id) } );
     return;
-  } elsif (decode_utf8($data)) {
+  } elsif (utf8::decode($data)) { # decodes in-place and returns success
     $self->with_lock($host, $space, sub { $self->write($host, $space, $id, $data) } );
     return;
   } else {

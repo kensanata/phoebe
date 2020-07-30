@@ -2086,17 +2086,21 @@ sub refine {
   my $from_lines = shift;
   my $to_lines = shift;
   my $highlight = shift;
-  my $diff = Algorithm::Diff->new([split(/(\s+)/, join("\n", @$from_lines))], [split(/(\s+)/, join("\n", @$to_lines))]);
+  # split by words+whitespace, i.e. "split ", "by ", "words+whitespace, " ...
+  my $diff = Algorithm::Diff->new([split(/\b(?=\w)/, join("\n", @$from_lines))],
+				  [split(/\b(?=\w)/, join("\n", @$to_lines))]);
   my ($from, $to);
   while($diff->Next()) {
     if (my @list = $diff->Same()) {
       $from .= join('', @list);
       $to .= join('', @list);
     } else {
-      $from .= join('', map { $_ =~ /\S+/ ? $highlight->($_) : $_ } $diff->Items(1));
-      $to .= join('', map { $_ =~ /\S+/ ? $highlight->($_) : $_ } $diff->Items(2));
+      # reassemble the chunks, and highlight them per line
+      $from .= join("\n", map { $highlight->($_) } (split(/\n/, join('', $diff->Items(1)))));
+      $to   .= join("\n", map { $highlight->($_) } (split(/\n/, join('', $diff->Items(2)))));
     }
   }
+  # return lines
   return [split(/\n/, $from)], [split(/\n/, $to)];
 }
 

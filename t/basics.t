@@ -15,6 +15,7 @@
 
 use Modern::Perl;
 use Test::More;
+use Encode qw(decode_utf8);
 use File::Slurper qw(write_text read_binary);
 use utf8; # tests contain UTF-8 characters and it matters
 
@@ -108,10 +109,31 @@ like($page, qr/^=> $base\/page\/Haiku Haiku \(current\)/m, "Current revision is 
 $page = query_gemini("$base/page/Haiku/1");
 like($page, qr/Quiet disk ratling/m, "Revision 1 content");
 
-#diffs
+# diffs
+$page = decode_utf8(query_gemini("$base/diff/Haiku/1"));
+like($page, qr/^> ｢Quiet disk ratling｣$/m, "Removed content, per line");
+like($page, qr/^> ｢Muffled honking cars｣$/sm, "Added content, per line");
+
+# colour diffs
 $page = query_gemini("$base/diff/Haiku/1/colour");
-like($page, qr/^> \e\[31m\e\[1mQuiet\e\[22m \e\[1mdisk\e\[22m \e\[1mratling\e\[22m\e\[0m/m, "Removed content");
-like($page, qr/^> \e\[32m\e\[1mMuffled\e\[22m \e\[1mhonking\e\[22m \e\[1mcars\e\[22m\e\[0m\n$/sm, "Added content");
+like($page, qr/^> \e\[31m\e\[1mQuiet disk ratling\e\[22m\e\[0m/m, "Removed content, per line");
+like($page, qr/^> \e\[32m\e\[1mMuffled honking cars\e\[22m\e\[0m\n$/sm, "Added content");
+
+$haiku = <<EOT;
+Muffled spinning disk
+random clicking, then it stops.
+Rain falls and I think
+EOT
+
+$page = query_gemini("$titan/raw/Haiku;size=77;mime=text/plain;token=hello", $haiku);
+like($page, qr/^30 $base\/page\/Haiku\r$/, "Titan Haiku 3");
+
+# diffs accross lines
+$page = decode_utf8(query_gemini("$base/diff/Haiku/2"));
+like($page, qr/^> Muffled ｢honking cars｣$/m, "Removed content, partial line");
+like($page, qr/^> ｢Keyboard ｣clicking, then it stops\.$/m, "Removed content, partial line");
+like($page, qr/^> Muffled ｢spinning disk｣$/sm, "Added content, partial line");
+like($page, qr/^> ｢random ｣clicking, then it stops\.$/sm, "Added content, partial line");
 
 # index
 $page = query_gemini("$base/do/index");

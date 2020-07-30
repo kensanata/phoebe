@@ -5,18 +5,19 @@ This server serves a wiki as a Gemini site.
 It does two and a half things:
 
 - It's a program that you run on a computer and other people connect to it
-      using their [client](https://gemini.circumlunar.space/clients.html) in
-      order to read the pages on it.
+      using their [Gemini client](https://gemini.circumlunar.space/clients.html)
+      in order to read the pages on it.
 - It's a wiki, which means that people can edit the pages without needing an
       account. All they need is a client that speaks both
-      [Gemini](https://gemini.circumlunar.space/) and Titan, and the password.
-      The default password is "hello". 😃
+      [Gemini](https://gemini.circumlunar.space/) and
+      [Titan](https://communitywiki.org/wiki/Titan), and the password. The
+      default password is "hello". 😃
 - People can also access it using a regular web browser. They'll get a very
       simple, read-only version of the site.
 
     To take a look for yourself, check out the Gemini Test Wiki via the
-    [HTTP](https://alexschroeder.ch:1968/) or via
-    [gemini](gemini://alexschroeder.ch:1968/).
+    [web](https://transjovian.org:1965/) or via
+    [Gemini](gemini://transjovian.org/).
 
 **Table of Contents**
 
@@ -40,6 +41,7 @@ It does two and a half things:
 - [Client Certificates](#client-certificates)
 - [Virtual Hosting](#virtual-hosting)
 - [Multiple Certificates](#multiple-certificates)
+- [The Web](#the-web)
 
 ## How do you edit a Gemini Wiki?
 
@@ -679,3 +681,36 @@ For example:
         --host=alexschroeder.ch \
         --cert_file=/var/lib/dehydrated/certs/alexschroeder.ch/cert.pem \
         --key_file=/var/lib/dehydrated/certs/alexschroeder.ch/privkey.pem
+
+## The Web
+
+The wiki can also answer web requests. By default, it only does that on port
+1965\. The web pages refer to a CSS file at `/default.css`, and the response to
+a request for this CSS is served by a function that you can override in your
+config file. The following would be the beginning of a CSS that supports a dark
+them, for example. The
+[Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
+header makes sure browsers don't keep try to revalidate the CSS more than once a
+day.
+
+    sub serve_css_via_http {
+      my $self = shift;
+      $self->log(3, "Serving CSS via HTTP");
+      say "HTTP/1.1 200 OK\r";
+      say "Content-Type: text/css\r";
+      say "Cache-Control: public, max-age=86400, immutable\r"; # 24h
+      say "\r";
+      say <<'EOT';
+    html { max-width: 70ch; padding: 2ch; margin: auto; }
+    body { color: #111111; background-color: #fffff8; }
+    a:link { color: #0000ee }
+    a:visited { color: #551a8b }
+    a:hover { color: #7a67ee }
+    @media (prefers-color-scheme: dark) {
+       body { color: #eeeee8; background-color: #333333; }
+       a:link { color: #1e90ff }
+       a:hover { color: #63b8ff }
+       a:visited { color: #7a67ee }
+    }
+    EOT
+    }

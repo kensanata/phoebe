@@ -25,20 +25,21 @@ It does two and a half things:
 =over
 
 =item It's a program that you run on a computer and other people connect to it
-      using their L<client|https://gemini.circumlunar.space/clients.html> in
-      order to read the pages on it.
+      using their L<Gemini client|https://gemini.circumlunar.space/clients.html>
+      in order to read the pages on it.
 
 =item It's a wiki, which means that people can edit the pages without needing an
       account. All they need is a client that speaks both
-      L<Gemini|https://gemini.circumlunar.space/> and Titan, and the password.
-      The default password is "hello". 😃
+      L<Gemini|https://gemini.circumlunar.space/> and
+      L<Titan|https://communitywiki.org/wiki/Titan>, and the password. The
+      default password is "hello". 😃
 
 =item People can also access it using a regular web browser. They'll get a very
       simple, read-only version of the site.
 
 To take a look for yourself, check out the Gemini Test Wiki via the
-L<HTTP|https://alexschroeder.ch:1968/> or via
-L<gemini|gemini://alexschroeder.ch:1968/>.
+L<web|https://transjovian.org:1965/> or via
+L<Gemini|gemini://transjovian.org/>.
 
 =back
 
@@ -739,6 +740,39 @@ For example:
         --cert_file=/var/lib/dehydrated/certs/alexschroeder.ch/cert.pem \
         --key_file=/var/lib/dehydrated/certs/alexschroeder.ch/privkey.pem
 
+=head2 The Web
+
+The wiki can also answer web requests. By default, it only does that on port
+1965. The web pages refer to a CSS file at C</default.css>, and the response to
+a request for this CSS is served by a function that you can override in your
+config file. The following would be the beginning of a CSS that supports a dark
+them, for example. The
+L<Cache-Control|https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control>
+header makes sure browsers don't keep try to revalidate the CSS more than once a
+day.
+
+    sub serve_css_via_http {
+      my $self = shift;
+      $self->log(3, "Serving CSS via HTTP");
+      say "HTTP/1.1 200 OK\r";
+      say "Content-Type: text/css\r";
+      say "Cache-Control: public, max-age=86400, immutable\r"; # 24h
+      say "\r";
+      say <<'EOT';
+    html { max-width: 70ch; padding: 2ch; margin: auto; }
+    body { color: #111111; background-color: #fffff8; }
+    a:link { color: #0000ee }
+    a:visited { color: #551a8b }
+    a:hover { color: #7a67ee }
+    @media (prefers-color-scheme: dark) {
+       body { color: #eeeee8; background-color: #333333; }
+       a:link { color: #1e90ff }
+       a:hover { color: #63b8ff }
+       a:visited { color: #7a67ee }
+    }
+    EOT
+    }
+
 =cut
 
 package Gemini::Wiki;
@@ -1142,6 +1176,7 @@ sub serve_css_via_http {
   $self->log(3, "Serving CSS via HTTP");
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: text/css\r";
+  say "Cache-Control: public, max-age=86400, immutable\r"; # 24h
   say "\r";
   say "html { max-width: 70ch; padding: 2ch; margin: auto; color: #111; background: #ffe; }";
 }
@@ -2879,9 +2914,9 @@ sub process_request {
       $self->serve_page($host, $self->space($host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($host, $space, $id) = $url =~ m!gemini://($host_regex)(?::$port)?(?:/($spaces))?/file/([^/]+)?$!) {
       $self->serve_file($host, $self->space($host, $space), decode_utf8(uri_unescape($id)));
-    } elsif (($space) = $url =~ m!^GET /default.css HTTP/1\.[01]$!
+    } elsif ($url =~ m!^GET /default.css HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
-      $self->serve_css_via_http();
+      $self->serve_css_via_http($host);
     } elsif (($space) = $url =~ m!^GET (?:(?:/($spaces)/?)?|/) HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_main_menu_via_http($host, $self->space($host, $space));

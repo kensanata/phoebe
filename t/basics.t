@@ -135,6 +135,26 @@ like($page, qr/^> ｢Keyboard ｣clicking, then it stops\.$/m, "Removed content,
 like($page, qr/^> Muffled ｢spinning disk｣$/sm, "Added content, partial line");
 like($page, qr/^> ｢random ｣clicking, then it stops\.$/sm, "Added content, partial line");
 
+$haiku = <<EOT;
+Muffled spinning disk
+electronic humming just
+for us...
+
+I think
+EOT
+
+$page = query_gemini("$titan/raw/Haiku;size=65;mime=text/plain;token=hello", $haiku);
+like($page, qr/^30 $base\/page\/Haiku\r$/, "Titan Haiku 4"); # not really a haiku anymore…
+
+# diffs accross paragraphs
+$page = decode_utf8(query_gemini("$base/diff/Haiku/3"));
+like($page, qr/^> ｢random clicking, then it stops\.｣$/m, "Added content, paragraph");
+like($page, qr/^> ｢Rain falls and ｣I think$/m, "Added content, paragraph");
+like($page, qr/^> ｢electronic humming just｣$/m, "Added content, paragraph");
+like($page, qr/^> ｢for us\.\.\.｣$/m, "Added content, paragraph");
+like($page, qr/^> ｢｣$/m, "Added content, paragraph");
+like($page, qr/^> ｢｣I think$/m, "Added content, paragraph");
+
 # index
 $page = query_gemini("$base/do/index");
 for my $item(qw(2017-12-25 2017-12-26 2017-12-27 Haiku)) {

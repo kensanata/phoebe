@@ -1693,7 +1693,9 @@ sub read_log {
   my $space = shift;
   my @log;
   for (1 .. $n) {
-    last unless $_ = decode_utf8($fh->readline);
+    $_ = decode_utf8($fh->readline);
+    # $_ can be undefined or a newline (which won't split)
+    last unless $_ and $_ ne "\n";
     chomp;
     push(@log, [split(/\x1f/), $host, $space]);
   }

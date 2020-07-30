@@ -41,7 +41,8 @@ It does two and a half things:
 - [Client Certificates](#client-certificates)
 - [Virtual Hosting](#virtual-hosting)
 - [Multiple Certificates](#multiple-certificates)
-- [The Web](#the-web)
+- [CSS for the Web](#css-for-the-web)
+- [Favicon for the Web](#favicon-for-the-web)
 
 ## How do you edit a Gemini Wiki?
 
@@ -682,7 +683,7 @@ For example:
         --cert_file=/var/lib/dehydrated/certs/alexschroeder.ch/cert.pem \
         --key_file=/var/lib/dehydrated/certs/alexschroeder.ch/privkey.pem
 
-## The Web
+## CSS for the Web
 
 The wiki can also answer web requests. By default, it only does that on port
 1965\. The web pages refer to a CSS file at `/default.css`, and the response to
@@ -712,5 +713,47 @@ day.
        a:hover { color: #63b8ff }
        a:visited { color: #7a67ee }
     }
+    EOT
+    }
+
+## Favicon for the Web
+
+Here's an example where we a little Jupiter SVG is being served for the favicon,
+for all hosts. You could, of course, accept the `$headers` as an additional
+argument to `favicon`, match hostnames, pass the `$host` to
+`serve_favicon_via_http`, and return different images depending on the host.
+Let me know if you need this and you are stuck.
+
+    push(@extensions, \&favicon);
+
+    sub favicon {
+      my $self = shift;
+      my $url = shift;
+      if ($url =~ m!^GET /favicon.ico HTTP/1\.[01]$!) {
+        $self->serve_favicon_via_http();
+        return 1;
+      }
+      return 0;
+    }
+
+    sub serve_favicon_via_http {
+      my $self = shift;
+      $self->log(3, "Serving favicon via HTTP");
+      say "HTTP/1.1 200 OK\r";
+      say "Content-Type: image/svg+xml\r";
+      say "Cache-Control: public, max-age=86400, immutable\r"; # 24h
+      say "\r";
+      say <<'EOT';
+    <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+    <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+    <circle cx="50" cy="50" r="45" fill="white" stroke="black" stroke-width="5"/>
+    <line x1="12" y1="25" x2="88" y2="25" stroke="black" stroke-width="4"/>
+    <line x1="5" y1="45" x2="95" y2="45" stroke="black" stroke-width="7"/>
+    <line x1="5" y1="60" x2="95" y2="60" stroke="black" stroke-width="4"/>
+    <path d="M20,73 C30,65 40,63 60,70 C70,72 80,73 90,72
+             L90,74 C80,75 70,74 60,76 C40,83 30,81 20,73" fill="black"/>
+    <ellipse cx="40" cy="73" rx="11.5" ry="4.5" fill="red"/>
+    <line x1="22" y1="85" x2="78" y2="85" stroke="black" stroke-width="3"/>
+    </svg>
     EOT
     }

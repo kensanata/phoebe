@@ -2096,8 +2096,8 @@ sub refine {
       $to .= join('', @list);
     } else {
       # reassemble the chunks, and highlight them per line, don't strip trailing newlines!
-      $from .= join("\n", map { $highlight->($_) } (split(/\n/, join('', $diff->Items(1)), -1)));
-      $to   .= join("\n", map { $highlight->($_) } (split(/\n/, join('', $diff->Items(2)), -1)));
+      $from .= join("\n", map { $_ ? $highlight->($_) : $_ } (split(/\n/, join('', $diff->Items(1)), -1)));
+      $to   .= join("\n", map { $_ ? $highlight->($_) : $_ } (split(/\n/, join('', $diff->Items(2)), -1)));
     }
   }
   # return lines

@@ -152,8 +152,8 @@ like($page, qr/^> ｢random clicking, then it stops\.｣$/m, "Added content, par
 like($page, qr/^> ｢Rain falls and ｣I think$/m, "Added content, paragraph");
 like($page, qr/^> ｢electronic humming just｣$/m, "Added content, paragraph");
 like($page, qr/^> ｢for us\.\.\.｣$/m, "Added content, paragraph");
-like($page, qr/^> ｢｣$/m, "Added content, paragraph");
-like($page, qr/^> ｢｣I think$/m, "Added content, paragraph");
+like($page, qr/^> ⏎$/m, "Added content, paragraph");
+like($page, qr/^> I think$/m, "Added content, paragraph");
 
 # index
 $page = query_gemini("$base/do/index");

@@ -21,6 +21,7 @@ It does two and a half things:
 
 **Table of Contents**
 
+- [What are pages written in?](#what-are-pages-written-in)
 - [How do you edit a Gemini Wiki?](#how-do-you-edit-a-gemini-wiki)
 - [What is Titan?](#what-is-titan)
 - [Dependencies](#dependencies)
@@ -43,6 +44,45 @@ It does two and a half things:
 - [Multiple Certificates](#multiple-certificates)
 - [CSS for the Web](#css-for-the-web)
 - [Favicon for the Web](#favicon-for-the-web)
+
+## What are pages written in?
+
+Pages are written in gemtext, a lightweight hypertext format. You can use your
+favourite text editor to write them.
+
+A text line is a paragraph of text.
+
+    This is a paragraph.
+    This is another paragraph.
+
+A link line starts with "=>", a space, a URL, optionally followed by a space and some
+text; the URL can be absolute or relative.
+
+    => http://transjovian.org/ The Transjovian Council on the web
+    => Welcome Welcome to The Transjovian Council
+
+A line starting with "\`\`\`" toggles preformatting on and off.
+
+    Example:
+    ```
+    ./gemini-wiki
+    ```
+
+A line starting with "#", "##", or "###", followed by a space and some text is a
+heading.
+
+    ## License
+    The GNU Affero General Public License.
+
+A line starting with "\*", followed by a space and some text is a list item.
+
+    * one item
+    * another item
+
+A line starting with ">", followed by a space and some text is a quote.
+
+    The monologue at the end is fantastic, with the city lights and the rain.
+    > I've seen things you people wouldn't believe.
 
 ## How do you edit a Gemini Wiki?
 

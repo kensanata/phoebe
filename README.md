@@ -520,10 +520,13 @@ Here are the ways you can hook into the Gemini Wiki code:
 - `@footer` is a list of code references allowing you to add things like
       licenses or contact information to every page; each code reference gets
       called with the $host, $space, $id and $revision used to serve the page;
-      return a list of lines to append at the end; if you want to replace the
-      footer, overwrite the footer sub itself
+      return a string to append at the end; if you want to replace the Gemini
+      footer, overwrite the footer sub itself – the default implementation adds
+      History, Raw text and HTML link, and `@footer` to the bottom of every
+      page
 
-A very simple example to add a contact mail at the bottom of every page:
+A very simple example to add a contact mail at the bottom of every page; this
+works for both Gemini and the web:
 
     package Gemini::Wiki;
     package Gemini::Wiki;
@@ -531,7 +534,26 @@ A very simple example to add a contact mail at the bottom of every page:
     our (@footer);
     push(@footer, sub { '=> mailto:alex@alexschroeder.ch Mail' });
 
-A more elaborate example to add a new action the main menu and a handler for it:
+This prints a very simply footer instead of the usual footer for Gemini, as the
+`footer` sub is redefined. At the same time, the `@footer` array is still used
+for the web:
+
+    package Gemini::Wiki;
+    package Gemini::Wiki;
+    use Modern::Perl;
+    our (@footer); # HTML only
+    push(@footer, sub { '=> https://alexschroeder.ch/wiki/Contact Contact' });
+    # footer sub is Gemini only
+    no warnings qw(redefine);
+    sub footer {
+      return '—' x 10 . "\n" . '=> mailto:alex@alexschroeder.ch Mail';
+    }
+
+This example also shows how to redefine existing code in your config file
+without the warning "Subroutine … redefined".
+
+Here's a more elaborate example to add a new action the main menu and a handler
+for it:
 
     package Gemini::Wiki;
     use Modern::Perl;
@@ -629,7 +651,7 @@ known fingerprint:
       my $url = shift;
       my $host_regex = $self->host_regex();
       my $port = $self->port();
-      my $spaces = join("|", map { quotemeta } $self->spaces());
+      my $spaces = $self->space_regex();
       my $fingerprint = $self->{server}->{client}->get_fingerprint();
       if (my ($host, $path) = $url =~ m!^titan://($host_regex)(?::$port)?([^?#]*)!) {
         my ($space, $resource) = $path =~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!;

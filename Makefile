@@ -17,7 +17,8 @@ web:
 # code: when it detects a change, the server is restarted
 # automatically.
 dev:
-	morbo -- ./gemini-wiki --host localhost --host 127.0.0.1 --port=2020 \
+	morbo --watch ./gemini-wiki --watch ./wiki/config -- \
+	  ./gemini-wiki --host localhost --host 127.0.0.1 --port=2020 \
 	  --log_level=4 --wiki_space=127.0.0.1/alex --wiki_space=localhost/berta \
 	  --wiki_mime_type=image/jpeg --wiki_main_page=Welcome
 

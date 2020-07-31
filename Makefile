@@ -37,27 +37,31 @@ man: gemini-wiki.1 gemini-wiki-ctl.1 titan.1 gemini.1
 	pod2man $< $@
 
 # Install scripts and man pages in ~/.local
-install: $$HOME/.local/bin/gemini-wiki \
-	$$HOME/.local/bin/gemini \
-	$$HOME/.local/bin/titan \
-	$$HOME/.local/share/man/man1/gemini-wiki.1 \
-	$$HOME/.local/share/man/man1/gemini.1 \
-	$$HOME/.local/share/man/man1/titan.1
+install: ${HOME}/.local/bin/gemini-wiki \
+	${HOME}/.local/bin/gemini-wiki-ctl \
+	${HOME}/.local/bin/gemini \
+	${HOME}/.local/bin/titan \
+	${HOME}/.local/share/man/man1/gemini-wiki.1 \
+	${HOME}/.local/share/man/man1/gemini-wiki-ctl.1 \
+	${HOME}/.local/share/man/man1/gemini.1 \
+	${HOME}/.local/share/man/man1/titan.1
 
-$$HOME/.local/bin/%: %
+${HOME}/.local/bin/%: %
 	cp $< $@
 
-$$HOME/.local/share/man/man1/%: %
+${HOME}/.local/share/man/man1/%: %
 	cp $< $@
 
 uninstall:
 	rm \
-	$$HOME/.local/bin/gemini-wiki \
-	$$HOME/.local/bin/gemini \
-	$$HOME/.local/bin/titan \
-	$$HOME/.local/share/man/man1/gemini-wiki.1 \
-	$$HOME/.local/share/man/man1/gemini.1 \
-	$$HOME/.local/share/man/man1/titan.1
+	${HOME}/.local/bin/gemini-wiki \
+	${HOME}/.local/bin/gemini-wiki-ctl \
+	${HOME}/.local/bin/gemini \
+	${HOME}/.local/bin/titan \
+	${HOME}/.local/share/man/man1/gemini-wiki.1 \
+	${HOME}/.local/share/man/man1/gemini-wiki-ctl.1 \
+	${HOME}/.local/share/man/man1/gemini.1 \
+	${HOME}/.local/share/man/man1/titan.1
 
 # Run the test using two jobs.
 test:

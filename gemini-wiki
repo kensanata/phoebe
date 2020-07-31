@@ -708,7 +708,7 @@ known fingerprint:
       my $url = shift;
       my $host_regex = $self->host_regex();
       my $port = $self->port();
-      my $spaces = join("|", map { quotemeta } $self->spaces());
+      my $spaces = $self->space_regex();
       my $fingerprint = $self->{server}->{client}->get_fingerprint();
       if (my ($host, $path) = $url =~ m!^titan://($host_regex)(?::$port)?([^?#]*)!) {
 	my ($space, $resource) = $path =~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!;

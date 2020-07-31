@@ -517,8 +517,21 @@ Here are the ways you can hook into the Gemini Wiki code:
       the headers (in the case of HTTP requests)
 - `@main_menu` adds more lines to the main menu, possibly links that aren't
       simply links to existing pages
+- `@footer` is a list of code references allowing you to add things like
+      licenses or contact information to every page; each code reference gets
+      called with the $host, $space, $id and $revision used to serve the page;
+      return a list of lines to append at the end; if you want to replace the
+      footer, overwrite the footer sub itself
 
-The following example illustrates this:
+A very simple example to add a contact mail at the bottom of every page:
+
+    package Gemini::Wiki;
+    package Gemini::Wiki;
+    use Modern::Perl;
+    our (@footer);
+    push(@footer, sub { '=> mailto:alex@alexschroeder.ch Mail' });
+
+A more elaborate example to add a new action the main menu and a handler for it:
 
     package Gemini::Wiki;
     use Modern::Perl;
@@ -731,8 +744,8 @@ a request for this CSS is served by a function that you can override in your
 config file. The following would be the beginning of a CSS that supports a dark
 them, for example. The
 [Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
-header makes sure browsers don't keep try to revalidate the CSS more than once a
-day.
+header makes sure browsers don't keep trying to revalidate the CSS more than
+once a day.
 
     sub serve_css_via_http {
       my $self = shift;

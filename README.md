@@ -501,9 +501,7 @@ This section describes some hooks you can use to customize your wiki using the
 server to make it read the config file. You can do that by sending it the HUP
 signal, if you know the pid, or if you have a pid file:
 
-\`\`\`
-kill -s SIGHUP \`cat gemini-wiki.pid\`
-\`\`\`
+    kill -s SIGHUP `cat gemini-wiki.pid`
 
 Here are the ways you can hook into the Gemini Wiki code:
 
@@ -529,7 +527,6 @@ A very simple example to add a contact mail at the bottom of every page; this
 works for both Gemini and the web:
 
     package Gemini::Wiki;
-    package Gemini::Wiki;
     use Modern::Perl;
     our (@footer);
     push(@footer, sub { '=> mailto:alex@alexschroeder.ch Mail' });
@@ -538,7 +535,6 @@ This prints a very simply footer instead of the usual footer for Gemini, as the
 `footer` sub is redefined. At the same time, the `@footer` array is still used
 for the web:
 
-    package Gemini::Wiki;
     package Gemini::Wiki;
     use Modern::Perl;
     our (@footer); # HTML only
@@ -764,7 +760,7 @@ The wiki can also answer web requests. By default, it only does that on port
 1965\. The web pages refer to a CSS file at `/default.css`, and the response to
 a request for this CSS is served by a function that you can override in your
 config file. The following would be the beginning of a CSS that supports a dark
-them, for example. The
+theme, for example. The
 [Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
 header makes sure browsers don't keep trying to revalidate the CSS more than
 once a day.

@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GEMINI-WIKI 1"
-.TH GEMINI-WIKI 1 "2020-07-31" "perl v5.28.1" "User Contributed Perl Documentation"
+.TH GEMINI-WIKI 1 "2020-08-03" "perl v5.28.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -651,9 +651,9 @@ This section describes some hooks you can use to customize your wiki using the
 server to make it read the config file. You can do that by sending it the \s-1HUP\s0
 signal, if you know the pid, or if you have a pid file:
 .PP
-```
-kill \-s \s-1SIGHUP\s0 `cat gemini\-wiki.pid`
-```
+.Vb 1
+\&    kill \-s SIGHUP \`cat gemini\-wiki.pid\`
+.Ve
 .PP
 Here are the ways you can hook into the Gemini Wiki code:
 .ie n .IP "@init is a list of code references allowing you to change the configuration of the server; it gets executed as the server starts, after regular configuration" 4
@@ -674,8 +674,7 @@ Here are the ways you can hook into the Gemini Wiki code:
 A very simple example to add a contact mail at the bottom of every page; this
 works for both Gemini and the web:
 .PP
-.Vb 5
-\&    package Gemini::Wiki;
+.Vb 4
 \&    package Gemini::Wiki;
 \&    use Modern::Perl;
 \&    our (@footer);
@@ -686,8 +685,7 @@ This prints a very simply footer instead of the usual footer for Gemini, as the
 \&\f(CW\*(C`footer\*(C'\fR sub is redefined. At the same time, the \f(CW@footer\fR array is still used
 for the web:
 .PP
-.Vb 10
-\&    package Gemini::Wiki;
+.Vb 9
 \&    package Gemini::Wiki;
 \&    use Modern::Perl;
 \&    our (@footer); # HTML only
@@ -937,7 +935,7 @@ The wiki can also answer web requests. By default, it only does that on port
 1965. The web pages refer to a \s-1CSS\s0 file at \f(CW\*(C`/default.css\*(C'\fR, and the response to
 a request for this \s-1CSS\s0 is served by a function that you can override in your
 config file. The following would be the beginning of a \s-1CSS\s0 that supports a dark
-them, for example. The
+theme, for example. The
 Cache-Control <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control>
 header makes sure browsers don't keep trying to revalidate the \s-1CSS\s0 more than
 once a day.

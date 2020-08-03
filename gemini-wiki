@@ -821,7 +821,7 @@ The wiki can also answer web requests. By default, it only does that on port
 1965. The web pages refer to a CSS file at C</default.css>, and the response to
 a request for this CSS is served by a function that you can override in your
 config file. The following would be the beginning of a CSS that supports a dark
-them, for example. The
+theme, for example. The
 L<Cache-Control|https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control>
 header makes sure browsers don't keep trying to revalidate the CSS more than
 once a day.

@@ -545,9 +545,7 @@ F<config> file. Once you're happy with the changes you've made, reload the
 server to make it read the config file. You can do that by sending it the HUP
 signal, if you know the pid, or if you have a pid file:
 
-```
-kill -s SIGHUP `cat gemini-wiki.pid`
-```
+    kill -s SIGHUP `cat gemini-wiki.pid`
 
 Here are the ways you can hook into the Gemini Wiki code:
 

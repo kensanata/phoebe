@@ -580,7 +580,6 @@ A very simple example to add a contact mail at the bottom of every page; this
 works for both Gemini and the web:
 
     package Gemini::Wiki;
-    package Gemini::Wiki;
     use Modern::Perl;
     our (@footer);
     push(@footer, sub { '=> mailto:alex@alexschroeder.ch Mail' });
@@ -589,7 +588,6 @@ This prints a very simply footer instead of the usual footer for Gemini, as the
 C<footer> sub is redefined. At the same time, the C<@footer> array is still used
 for the web:
 
-    package Gemini::Wiki;
     package Gemini::Wiki;
     use Modern::Perl;
     our (@footer); # HTML only

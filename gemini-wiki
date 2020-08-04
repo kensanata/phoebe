@@ -557,7 +557,7 @@ Here are the ways you can hook into the Gemini Wiki code:
 
 =item C<@extensions> is a list of code references allowing you to handle
       additional URLs; return 1 if you handle a URL; each code reference gets
-      called with the first line of the request (a Gemini URL, a Gopher
+      called with $self, the first line of the request (a Gemini URL, a Gopher
       selector, a finger user, a HTTP request line), and a hash reference for
       the headers (in the case of HTTP requests)
 
@@ -566,11 +566,11 @@ Here are the ways you can hook into the Gemini Wiki code:
 
 =item C<@footer> is a list of code references allowing you to add things like
       licenses or contact information to every page; each code reference gets
-      called with the $host, $space, $id and $revision used to serve the page;
-      return a string to append at the end; if you want to replace the Gemini
-      footer, overwrite the footer sub itself – the default implementation adds
-      History, Raw text and HTML link, and C<@footer> to the bottom of every
-      page
+      called with $self, $host, $space, $id and $revision used to serve the
+      page; return a string to append at the end; if you want to replace the
+      Gemini footer, overwrite the footer sub itself – the default
+      implementation adds History, Raw text and HTML link, and C<@footer> to the
+      bottom of every page
 
 =back
 
@@ -2228,7 +2228,7 @@ sub print_html {
   my $revision = shift;
   my $port = $self->port();
   my $text = $self->quote_html(join("\n", $self->text($host, $space, $id, $revision), '',
-				    map { $_->($host, $space, $id, $revision) } @footer));
+				    map { $_->($self, $host, $space, $id, $revision) } @footer));
   my $list;
   my $code;
   for (split /\n/, $text) {
@@ -2387,7 +2387,7 @@ sub footer {
   push(@links, $self->gemini_link($host, $space, "History", "history/$id"));
   push(@links, $self->gemini_link($host, $space, "Raw text", "raw/$id/$revision"));
   push(@links, $self->gemini_link($host, $space, "HTML", "html/$id/$revision"));
-  push(@links, $_->($host, $space, $id, $revision)) for @footer;
+  push(@links, $_->($self, $host, $space, $id, $revision)) for @footer;
   return join("\n", "\n\nMore:", @links, ""); # includes a trailing newline
 }
 

@@ -1371,7 +1371,7 @@ sub files {
   my $dir = $self->wiki_dir($host, $space);
   $dir = "$dir/file";
   return if not -d $dir;
-  my @files = read_dir($dir);
+  my @files = map { decode_utf8($_) } read_dir($dir);
   return grep /$re/i, @files if $re;
   return @files;
 }

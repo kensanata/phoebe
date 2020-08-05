@@ -566,11 +566,12 @@ Here are the ways you can hook into the Gemini Wiki code:
 
 =item C<@footer> is a list of code references allowing you to add things like
       licenses or contact information to every page; each code reference gets
-      called with $self, $host, $space, $id and $revision used to serve the
-      page; return a string to append at the end; if you want to replace the
-      Gemini footer, overwrite the footer sub itself – the default
-      implementation adds History, Raw text and HTML link, and C<@footer> to the
-      bottom of every page
+      called with $self, $host, $space, $id, $revision, and $scheme ('gemini' or
+      'http') used to serve the page; return a gemtext string to append at the
+      end; the alternative is to overwrite the C<footer> or C<html_footer> subs
+      – the default implementation for Gemini adds History, Raw text and HTML
+      link, and C<@footer> to the bottom of every page; the default
+      implementatino for HTTP just adds C<@footer> to the bottom of every page
 
 =back
 
@@ -1260,7 +1261,7 @@ sub serve_main_menu_via_http {
   say "</head>";
   say "<body>";
   if ($page) {
-    $self->print_html($host, $space, $page);
+    say $self->to_html($self->text($host, $space, $page));
   } else {
     say "<h1>Welcome to the Gemini Wiki!</h1>";
   }
@@ -2215,61 +2216,71 @@ sub html_page {
   say "</head>";
   say "<body>";
   say "<h1>" . $self->quote_html($id) . "</h1>";
-  $self->print_html($host, $space, $id, $revision);
+  say $self->to_html($self->text($host, $space, $id, $revision));
+  say $self->to_html($self->html_footer($host, $space, $id, $revision));
   say "</body>";
   say "</html>";
 }
 
-sub print_html {
+# returns lines!
+sub to_html {
+  my $self = shift;
+  my $text = shift;
+  my @lines;
+  my $list;
+  my $code;
+  for (split /\n/, $self->quote_html($text)) {
+    if (/^```(?:type=([a-z+]))?/) {
+      my $type = $2||"default";
+      if ($code) {
+	push @lines, "</pre>";
+	$code = 0;
+      } else {
+	push @lines, "</ul>" if $list;
+	$list = 0;
+	push @lines, "<pre class=\"$type\">";
+	$code = 1;
+      }
+    } elsif ($code) {
+      push @lines, $_;
+    } elsif (/^\* +(.*)/) {
+      push @lines, "<ul>" unless $list;
+      push @lines, "<li>$1";
+      $list = 1;
+    } elsif (my ($url, $text) = /^=&gt;\s*(\S+)\s*(.*)/) { # quoted HTML!
+      push @lines, "<ul>" unless $list;
+      $text ||= $url;
+      push @lines, "<li><a href=\"$url\">$text</a>";
+      $list = 1;
+    } elsif (/^(#{1,6})\s*(.*)/) {
+      push @lines, "</ul>" if $list;
+      $list = 0;
+      my $level = length($1);
+      push @lines, "<h$level>$2</h$level>";
+    } elsif (/^&gt;\s*(.*)/) { # quoted HTML!
+      push @lines, "</ul>" if $list;
+      $list = 0;
+      push @lines, "<blockquote>$1</blockquote>";
+    } else {
+      push @lines, "</ul>" if $list;
+      $list = 0;
+      push @lines, "<p>$_";
+    }
+  }
+  push @lines, "</pre>" if $code;
+  push @lines, "</ul>" if $list;
+  return join("\n", @lines);
+}
+
+sub html_footer {
   my $self = shift;
   my $host = shift;
   my $space = shift;
   my $id = shift;
-  my $revision = shift;
-  my $port = $self->port();
-  my $text = $self->quote_html(join("\n", $self->text($host, $space, $id, $revision), '',
-				    map { $_->($self, $host, $space, $id, $revision) } @footer));
-  my $list;
-  my $code;
-  for (split /\n/, $text) {
-    if (/^```/) {
-      if ($code) {
-	say "</pre>";
-	$code = 0;
-      } else {
-	say "</ul>" if $list;
-	$list = 0;
-	say "<pre>";
-	$code = 1;
-      }
-    } elsif ($code) {
-      say $_;
-    } elsif (/^\* +(.*)/) {
-      say "<ul>" unless $list;
-      say "<li>$1";
-      $list = 1;
-    } elsif (my ($url, $text) = /^=&gt;\s*(\S+)\s*(.*)/) { # quoted HTML!
-      say "<ul>" unless $list;
-      $text ||= $url;
-      say "<li><a href=\"$url\">$text</a>";
-      $list = 1;
-    } elsif (/^(#{1,6})\s*(.*)/) {
-      say "</ul>" if $list;
-      $list = 0;
-      my $level = length($1);
-      say "<h$level>$2</h$level>";
-    } elsif (/^&gt;\s*(.*)/) { # quoted HTML!
-      say "</ul>" if $list;
-      $list = 0;
-      say "<blockquote>$1</blockquote>";
-    } else {
-      say "</ul>" if $list;
-      $list = 0;
-      say "<p>$_";
-    }
-  }
-  say "</pre>" if $code;
-  say "</ul>" if $list;
+  my $revision = shift||"";
+  my @links;
+  push(@links, $_->($self, $host, $space, $id, $revision, "html")) for @footer;
+  return join("\n", "\n\nMore:", @links);
 }
 
 sub day {
@@ -2387,7 +2398,7 @@ sub footer {
   push(@links, $self->gemini_link($host, $space, "History", "history/$id"));
   push(@links, $self->gemini_link($host, $space, "Raw text", "raw/$id/$revision"));
   push(@links, $self->gemini_link($host, $space, "HTML", "html/$id/$revision"));
-  push(@links, $_->($self, $host, $space, $id, $revision)) for @footer;
+  push(@links, $_->($self, $host, $space, $id, $revision, "gemini")) for @footer;
   return join("\n", "\n\nMore:", @links, ""); # includes a trailing newline
 }
 

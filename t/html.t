@@ -52,7 +52,7 @@ like($page, qr!<p>Alex Schroeder!, "Alex content");
 like($page, qr!<a href="/page/Berta">Berta</a>!, "Alex contains Berta link");
 
 $page = query_gemini("GET /page/Berta HTTP/1.0\r\nhost: $host:$port\r\n");
-like($page, qr!<pre>\nHello\!\nYo\!\n</pre>!, "Berta contains pre block");
+like($page, qr!<pre class="default">\nHello\!\nYo\!\n</pre>!, "Berta contains pre block");
 
 $page = query_gemini("GET /page/Chris HTTP/1.0\r\nhost: $host:$port\r\n");
 like($page, qr!<a href="Alex">Alex</a>!, "Chris contains Alex link");

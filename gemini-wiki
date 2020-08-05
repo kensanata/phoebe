@@ -566,8 +566,8 @@ Here are the ways you can hook into the Gemini Wiki code:
 
 =item C<@footer> is a list of code references allowing you to add things like
       licenses or contact information to every page; each code reference gets
-      called with $self, $host, $space, $id, $revision, and $scheme ('gemini' or
-      'http') used to serve the page; return a gemtext string to append at the
+      called with $self, $host, $space, $id, $revision, and $format ('gemini' or
+      'html') used to serve the page; return a gemtext string to append at the
       end; the alternative is to overwrite the C<footer> or C<html_footer> subs
       – the default implementation for Gemini adds History, Raw text and HTML
       link, and C<@footer> to the bottom of every page; the default
@@ -2280,7 +2280,9 @@ sub html_footer {
   my $revision = shift||"";
   my @links;
   push(@links, $_->($self, $host, $space, $id, $revision, "html")) for @footer;
-  return join("\n", "\n\nMore:", @links);
+  my $html = join("\n", @links);
+  return "\n\nMore:\n$html" if $html =~ /\S/;
+  return "";
 }
 
 sub day {

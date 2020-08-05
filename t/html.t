@@ -57,4 +57,8 @@ like($page, qr!<pre class="default">\nHello\!\nYo\!\n</pre>!, "Berta contains pr
 $page = query_gemini("GET /page/Chris HTTP/1.0\r\nhost: $host:$port\r\n");
 like($page, qr!<a href="Alex">Alex</a>!, "Chris contains Alex link");
 
+write_text("$dir/page/Berta.gmi", "```type=poetry\nHello!\nYo!\n```\n");
+$page = query_gemini("GET /page/Berta HTTP/1.0\r\nhost: $host:$port\r\n");
+like($page, qr!<pre class="poetry">\nHello\!\nYo\!\n</pre>!, "Class got passed");
+
 done_testing();

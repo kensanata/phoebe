@@ -2230,8 +2230,8 @@ sub to_html {
   my $list;
   my $code;
   for (split /\n/, $self->quote_html($text)) {
-    if (/^```(?:type=([a-z+]))?/) {
-      my $type = $2||"default";
+    if (/^```(?:type=([a-z]+))?/) {
+      my $type = $1||"default";
       if ($code) {
 	push @lines, "</pre>";
 	$code = 0;

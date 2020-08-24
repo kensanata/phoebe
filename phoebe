@@ -492,7 +492,7 @@ Here's my suggestion:
     Disallow: do/rss
     Disallow: do/atom
     Disallow: do/new
-    Disallow: do/more
+    Disallow: do/more/*
     Disallow: do/match
     Disallow: do/search
     # allowing do/index!
@@ -1177,14 +1177,15 @@ sub blog {
   my $self = shift;
   my $host = shift;
   my $space = shift;
+  my $n = shift || 10;
   my @blog = $self->blog_pages($host, $space);
   return unless @blog;
   say "Blog:";
   # we should check for pages marked for deletion!
-  for my $id (@blog[0..min($#blog, 9)]) {
+  for my $id (@blog[0 .. min($#blog, $n - 1)]) {
     $self->print_link($host, $space, $id);
   }
-  $self->print_link($host, $space, "More...", "do/more") if @blog > 10;
+  $self->print_link($host, $space, "More...", "do/more/" . ($n * 10)) if @blog > $n;
   say "";
 }
 
@@ -1192,12 +1193,13 @@ sub blog_html {
   my $self = shift;
   my $host = shift;
   my $space = shift;
+  my $n = shift || 10;
   my @blog = $self->blog_pages($host, $space);
   return unless @blog;
   say "<p>Blog:";
   say "<ul>";
   # we should check for pages marked for deletion!
-  for my $id (@blog[0..min($#blog, 9)]) {
+  for my $id (@blog[0 .. min($#blog, $n - 1)]) {
     say "<li>" . $self->link_html($host, $space, $id);
   }
   say "</ul>";
@@ -1216,7 +1218,7 @@ sub serve_main_menu {
     say "# Welcome to Phoebe!";
     say "";
   }
-  $self->blog($host, $space);
+  $self->blog($host, $space, 10);
   for my $id (@{$self->{server}->{wiki_page}}) {
     $self->print_link($host, $space, $id);
   }
@@ -1309,14 +1311,20 @@ sub serve_blog {
   my $self = shift;
   my $host = shift;
   my $space = shift;
+  my $n = shift;
   $self->success();
   $self->log(3, "Serving blog");
   say "# Blog";
-  my @blog = $self->blog($host, $space);
-  say "The are no blog pages." unless @blog;
-  for my $id (@blog) {
+  my @blog = $self->blog_pages($host, $space);
+  if (not @blog) {
+    say "The are no blog pages.";
+    return;
+  }
+  say "Serving up to $n entries.";
+  for my $id (@blog[0 .. min($#blog, $n - 1)]) {
     $self->print_link($host, $space, $id);
   }
+  $self->print_link($host, $space, "More...", "do/more/" . ($n * 10)) if @blog > $n;
 }
 
 sub serve_index {
@@ -3067,8 +3075,8 @@ sub process_request {
       }
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/?$!) {
       $self->serve_main_menu($host, $self->space($host, $space));
-    } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/more$!) {
-      $self->serve_blog($host, $self->space($host, $space));
+    } elsif (($host, $space, $n) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/more(?:/(\d+))?$!) {
+      $self->serve_blog($host, $self->space($host, $space), $n);
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/index$!) {
       $self->serve_index($host, $self->space($host, $space));
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/files$!) {

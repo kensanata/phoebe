@@ -140,7 +140,7 @@
 .nh
 .SH "Phoebe"
 .IX Header "Phoebe"
-This server serves a wiki as a Gemini site.
+Phoebe serves a wiki as a Gemini site.
 .PP
 It does two and a half things:
 .IP "It's a program that you run on a computer and other people connect to it using their Gemini client <https://gemini.circumlunar.space/clients.html> in order to read the pages on it." 4
@@ -279,9 +279,8 @@ user just to be safe.
 Now you're in your home directory, \fI/home/phoebe\fR. We're going to install
 things right here. First, get the source code:
 .PP
-.Vb 2
-\&    curl \-\-output phoebe \e
-\&      https://alexschroeder.ch/cgit/phoebe/plain/phoebe?h=main
+.Vb 1
+\&    curl \-\-output phoebe https://alexschroeder.ch/cgit/phoebe/plain/phoebe
 .Ve
 .PP
 Since Phoebe traffic is encrypted, we need to generate a certificate and a key.
@@ -326,20 +325,20 @@ Let's create a new page using the Titan protocol, from the command line:
 .Vb 4
 \&    echo "Welcome to the wiki!" > test.txt
 \&    echo "Please be kind." >> test.txt
-\&    echo "titan://localhost/raw/"\`date \-\-iso\-8601=date\`";mime=text/plain;size="\`wc \-\-bytes < test.txt\`";token=hello" \e
+\&    echo "titan://localhost/raw/Welcome;mime=text/plain;size="\`wc \-\-bytes < test.txt\`";token=hello" \e
 \&      | cat \- test.txt | openssl s_client \-\-quiet \-\-connect localhost:1965 2>/dev/null
 .Ve
 .PP
 You should get a nice redirect message, with an appropriate date.
 .PP
 .Vb 1
-\&    30 gemini://localhost:1965/page/2020\-06\-27
+\&    30 gemini://localhost:1965/page/Welcome
 .Ve
 .PP
 You can check the page, now (replacing the appropriate date):
 .PP
 .Vb 2
-\&    echo gemini://localhost:1965/page/2020\-06\-27 \e
+\&    echo gemini://localhost:1965/page/Welcome \e
 \&      | openssl s_client \-\-quiet \-\-connect localhost:1965 2>/dev/null
 .Ve
 .PP
@@ -376,7 +375,7 @@ one go:
 .Ve
 .SS "Wiki Directory"
 .IX Subsection "Wiki Directory"
-You home directory should now also contain a wiki directory called \fIwiki\fR. In
+Your home directory should now also contain a wiki directory called \fIwiki\fR. In
 it, you'll find a few more files:
 .ie n .IP "\fIpage\fR is the directory with all the page files in it; each file has the ""gmi"" extension and should be written in Gemtext format" 4
 .el .IP "\fIpage\fR is the directory with all the page files in it; each file has the \f(CWgmi\fR extension and should be written in Gemtext format" 4
@@ -385,27 +384,27 @@ it, you'll find a few more files:
 .ie n .IP "\fIindex\fR is a file containing all the files in your \fIpage\fR directory for quick access; if you create new files in the \fIpage\fR directory, you should delete the \fIindex\fR file X it will get regenerated when needed; the format is one page name (without the "".gmi"" extension) per line, with lines separated from each other by a single ""\en""" 4
 .el .IP "\fIindex\fR is a file containing all the files in your \fIpage\fR directory for quick access; if you create new files in the \fIpage\fR directory, you should delete the \fIindex\fR file X it will get regenerated when needed; the format is one page name (without the \f(CW.gmi\fR extension) per line, with lines separated from each other by a single \f(CW\en\fR" 4
 .IX Item "index is a file containing all the files in your page directory for quick access; if you create new files in the page directory, you should delete the index file X it will get regenerated when needed; the format is one page name (without the .gmi extension) per line, with lines separated from each other by a single n"
-.ie n .IP "\fIkeep\fR is the directory with all the old revisions of pages in it X if you've only made one change, then it won't exist, yet; and if you don't care about the older revisions, you can delete them; assuming you have a page called ""Welcome"" and edit it once, you have the current revision as \fIpage/Welcome.gmi\fR, and the old revision in \fIkeep/Welcome/1.gmi\fR (the page name turns into a subdirectory and each revision gets an apropriate number)" 4
-.el .IP "\fIkeep\fR is the directory with all the old revisions of pages in it X if you've only made one change, then it won't exist, yet; and if you don't care about the older revisions, you can delete them; assuming you have a page called \f(CWWelcome\fR and edit it once, you have the current revision as \fIpage/Welcome.gmi\fR, and the old revision in \fIkeep/Welcome/1.gmi\fR (the page name turns into a subdirectory and each revision gets an apropriate number)" 4
-.IX Item "keep is the directory with all the old revisions of pages in it X if you've only made one change, then it won't exist, yet; and if you don't care about the older revisions, you can delete them; assuming you have a page called Welcome and edit it once, you have the current revision as page/Welcome.gmi, and the old revision in keep/Welcome/1.gmi (the page name turns into a subdirectory and each revision gets an apropriate number)"
-.ie n .IP "\fIfile\fR is the directory with all the uploaded files in it X if you haven't uploaded any files, then it won't exist, yet; you must explicitly allow \s-1MIME\s0 types for upload using the ""\-\-wiki_mime_type"" option (see \fIOptions\fR below)" 4
-.el .IP "\fIfile\fR is the directory with all the uploaded files in it X if you haven't uploaded any files, then it won't exist, yet; you must explicitly allow \s-1MIME\s0 types for upload using the \f(CW\-\-wiki_mime_type\fR option (see \fIOptions\fR below)" 4
-.IX Item "file is the directory with all the uploaded files in it X if you haven't uploaded any files, then it won't exist, yet; you must explicitly allow MIME types for upload using the --wiki_mime_type option (see Options below)"
+.ie n .IP "\fIkeep\fR is the directory with all the old revisions of pages in it X if you've only made one change, then it won't exist; if you don't care about the older revisions, you can delete them; assuming you have a page called ""Welcome"" and edit it once, you have the current revision as \fIpage/Welcome.gmi\fR, and the old revision in \fIkeep/Welcome/1.gmi\fR (the page name turns into a subdirectory and each revision gets an apropriate number)" 4
+.el .IP "\fIkeep\fR is the directory with all the old revisions of pages in it X if you've only made one change, then it won't exist; if you don't care about the older revisions, you can delete them; assuming you have a page called \f(CWWelcome\fR and edit it once, you have the current revision as \fIpage/Welcome.gmi\fR, and the old revision in \fIkeep/Welcome/1.gmi\fR (the page name turns into a subdirectory and each revision gets an apropriate number)" 4
+.IX Item "keep is the directory with all the old revisions of pages in it X if you've only made one change, then it won't exist; if you don't care about the older revisions, you can delete them; assuming you have a page called Welcome and edit it once, you have the current revision as page/Welcome.gmi, and the old revision in keep/Welcome/1.gmi (the page name turns into a subdirectory and each revision gets an apropriate number)"
+.ie n .IP "\fIfile\fR is the directory with all the uploaded files in it X if you haven't uploaded any files, then it won't exist; you must explicitly allow \s-1MIME\s0 types for upload using the ""\-\-wiki_mime_type"" option (see \fIOptions\fR below)" 4
+.el .IP "\fIfile\fR is the directory with all the uploaded files in it X if you haven't uploaded any files, then it won't exist; you must explicitly allow \s-1MIME\s0 types for upload using the \f(CW\-\-wiki_mime_type\fR option (see \fIOptions\fR below)" 4
+.IX Item "file is the directory with all the uploaded files in it X if you haven't uploaded any files, then it won't exist; you must explicitly allow MIME types for upload using the --wiki_mime_type option (see Options below)"
 .ie n .IP "\fImeta\fR is the directory with all the meta data for uploaded files in it X there should be a file here for every file in the \fIfile\fR directory; if you create new files in the \fIfile\fR directory, you should create a matching file here; if you have a file \fIfile/alex.jpg\fR you want to create a file \fImeta/alex.jpg\fR containing the line ""content\-type: image/jpeg""" 4
 .el .IP "\fImeta\fR is the directory with all the meta data for uploaded files in it X there should be a file here for every file in the \fIfile\fR directory; if you create new files in the \fIfile\fR directory, you should create a matching file here; if you have a file \fIfile/alex.jpg\fR you want to create a file \fImeta/alex.jpg\fR containing the line \f(CWcontent\-type: image/jpeg\fR" 4
 .IX Item "meta is the directory with all the meta data for uploaded files in it X there should be a file here for every file in the file directory; if you create new files in the file directory, you should create a matching file here; if you have a file file/alex.jpg you want to create a file meta/alex.jpg containing the line content-type: image/jpeg"
-.ie n .IP "\fIchanges.log\fR is a file listing all the pages made to the wiki; if you make changes to the files in the \fIpage\fR or \fIfile\fR directory, they aren't going to be listed in this file and thus people will be confused by the changes you made X your call (but in all fairness, if you're collaborating with others you probably shouldn't do this); the format is one change per line, with lines separated from each other by a single ""\en"", and each line consisting of time stamp, pagename or filename, revision number if a page or 0 if a file, and the numeric code of the user making the edit (see ""Privacy"" below)" 4
-.el .IP "\fIchanges.log\fR is a file listing all the pages made to the wiki; if you make changes to the files in the \fIpage\fR or \fIfile\fR directory, they aren't going to be listed in this file and thus people will be confused by the changes you made X your call (but in all fairness, if you're collaborating with others you probably shouldn't do this); the format is one change per line, with lines separated from each other by a single \f(CW\en\fR, and each line consisting of time stamp, pagename or filename, revision number if a page or 0 if a file, and the numeric code of the user making the edit (see ``Privacy'' below)" 4
-.IX Item "changes.log is a file listing all the pages made to the wiki; if you make changes to the files in the page or file directory, they aren't going to be listed in this file and thus people will be confused by the changes you made X your call (but in all fairness, if you're collaborating with others you probably shouldn't do this); the format is one change per line, with lines separated from each other by a single n, and each line consisting of time stamp, pagename or filename, revision number if a page or 0 if a file, and the numeric code of the user making the edit (see Privacy below)"
-.ie n .IP "\fIconfig\fR probably doesn't exist, yet; it is an optional file containing Perl code where you can mess with the code (see ""Configuration"" below)" 4
-.el .IP "\fIconfig\fR probably doesn't exist, yet; it is an optional file containing Perl code where you can mess with the code (see ``Configuration'' below)" 4
-.IX Item "config probably doesn't exist, yet; it is an optional file containing Perl code where you can mess with the code (see Configuration below)"
+.ie n .IP "\fIchanges.log\fR is a file listing all the pages made to the wiki; if you make changes to the files in the \fIpage\fR or \fIfile\fR directory, they aren't going to be listed in this file and thus people will be confused by the changes you made X your call (but in all fairness, if you're collaborating with others you probably shouldn't do this); the format is one change per line, with lines separated from each other by a single ""\en"", and each line consisting of time stamp, pagename or filename, revision number if a page or 0 if a file, and the numeric code of the user making the edit (see ""Privacy"" below), all separated from each other with a ""\ex1f""" 4
+.el .IP "\fIchanges.log\fR is a file listing all the pages made to the wiki; if you make changes to the files in the \fIpage\fR or \fIfile\fR directory, they aren't going to be listed in this file and thus people will be confused by the changes you made X your call (but in all fairness, if you're collaborating with others you probably shouldn't do this); the format is one change per line, with lines separated from each other by a single \f(CW\en\fR, and each line consisting of time stamp, pagename or filename, revision number if a page or 0 if a file, and the numeric code of the user making the edit (see ``Privacy'' below), all separated from each other with a \f(CW\ex1f\fR" 4
+.IX Item "changes.log is a file listing all the pages made to the wiki; if you make changes to the files in the page or file directory, they aren't going to be listed in this file and thus people will be confused by the changes you made X your call (but in all fairness, if you're collaborating with others you probably shouldn't do this); the format is one change per line, with lines separated from each other by a single n, and each line consisting of time stamp, pagename or filename, revision number if a page or 0 if a file, and the numeric code of the user making the edit (see Privacy below), all separated from each other with a x1f"
+.ie n .IP "\fIconfig\fR probably doesn't exist, yet; it is an optional file containing Perl code where you can add new features and change how Phoebe works (see ""Configuration"" below)" 4
+.el .IP "\fIconfig\fR probably doesn't exist, yet; it is an optional file containing Perl code where you can add new features and change how Phoebe works (see ``Configuration'' below)" 4
+.IX Item "config probably doesn't exist, yet; it is an optional file containing Perl code where you can add new features and change how Phoebe works (see Configuration below)"
 .PD
 .SS "Options"
 .IX Subsection "Options"
-Phoebe has a bunch of options, and it uses Net::Server in the
-background, which has even more options. Let's try to focus on the options you
-might want to use right away.
+Phoebe has a bunch of options, and it uses Net::Server in the background,
+which has even more options. Let's try to focus on the options you might want to
+use right away.
 .PP
 Here's an example:
 .PP
@@ -417,7 +416,7 @@ Here's an example:
 \&      \-\-wiki_page=About
 .Ve
 .PP
-And here's some documentation:
+Here's the documentation for the most useful options:
 .ie n .IP """\-\-wiki_token"" is for the token that users editing pages have to provide; the default is ""hello""; you can use this option multiple times and give different users different passwords, if you want" 4
 .el .IP "\f(CW\-\-wiki_token\fR is for the token that users editing pages have to provide; the default is ``hello''; you can use this option multiple times and give different users different passwords, if you want" 4
 .IX Item "--wiki_token is for the token that users editing pages have to provide; the default is hello; you can use this option multiple times and give different users different passwords, if you want"
@@ -500,7 +499,13 @@ Save this as \fIphoebe.service\fR, and then link it:
 \&    sudo ln \-s /home/phoebe/phoebe.service /etc/systemd/system/
 .Ve
 .PP
-Start it:
+Reload systemd:
+.PP
+.Vb 1
+\&    sudo systemctl daemon\-reload
+.Ve
+.PP
+Start Phoebe:
 .PP
 .Vb 1
 \&    sudo systemctl start phoebe
@@ -519,10 +524,9 @@ with a username. You set them using the \f(CW\*(C`\-\-wiki_token\*(C'\fR option.
 only password is \*(L"hello\*(R". That's why the Titan command above contained
 \&\*(L"token=hello\*(R". X
 .PP
-If you're going to check up on your wiki often, looking at Changes on a daily
-basis, you could just tell people about the token on a page of your wiki.
-Spammers would at least have to read the instructions and in my experience the
-hardly ever do.
+If you're going to check up on your wiki often (daily!), you could just tell
+people about the token on a page of your wiki. Spammers would at least have to
+read the instructions and in my experience the hardly ever do.
 .PP
 You could also create a separate password for every contributor and when they
 leave the project, you just remove the token from the options and restart
@@ -551,11 +555,11 @@ comply with the
 .SS "Files"
 .IX Subsection "Files"
 If you allow uploads of binary files, these are stored separately from the
-regular pages; the wiki also doesn't keep old revisions of files around. That
-also means that if somebody overwrites a file, the old revision is gone.
+regular pages; the wiki doesn't keep old revisions of files around. If somebody
+overwrites a file, the old revision is gone.
 .PP
 You definitely don't want random people uploading all sorts of images, videos
-and binaries files to your server. Make sure you set up those tokens
+and binaries to your server. Make sure you set up those tokens
 using \f(CW\*(C`\-\-wiki_token\*(C'\fR!
 .SS "Main Page and Title"
 .IX Subsection "Main Page and Title"
@@ -594,6 +598,7 @@ Here's my suggestion:
 \&    Disallow: do/all/changes*
 \&    Disallow: do/rss
 \&    Disallow: do/atom
+\&    Disallow: do/all/atom
 \&    Disallow: do/new
 \&    Disallow: do/more/*
 \&    Disallow: do/match

@@ -1,6 +1,6 @@
 # Phoebe
 
-This server serves a wiki as a Gemini site.
+Phoebe serves a wiki as a Gemini site.
 
 It does two and a half things:
 
@@ -151,8 +151,7 @@ user just to be safe.
 Now you're in your home directory, `/home/phoebe`. We're going to install
 things right here. First, get the source code:
 
-    curl --output phoebe \
-      https://alexschroeder.ch/cgit/phoebe/plain/phoebe?h=main
+    curl --output phoebe https://alexschroeder.ch/cgit/phoebe/plain/phoebe
 
 Since Phoebe traffic is encrypted, we need to generate a certificate and a key.
 These are both stored in PEM files. To create your own copies of these files
@@ -187,16 +186,16 @@ Let's create a new page using the Titan protocol, from the command line:
 
     echo "Welcome to the wiki!" > test.txt
     echo "Please be kind." >> test.txt
-    echo "titan://localhost/raw/"`date --iso-8601=date`";mime=text/plain;size="`wc --bytes < test.txt`";token=hello" \
+    echo "titan://localhost/raw/Welcome;mime=text/plain;size="`wc --bytes < test.txt`";token=hello" \
       | cat - test.txt | openssl s_client --quiet --connect localhost:1965 2>/dev/null
 
 You should get a nice redirect message, with an appropriate date.
 
-    30 gemini://localhost:1965/page/2020-06-27
+    30 gemini://localhost:1965/page/Welcome
 
 You can check the page, now (replacing the appropriate date):
 
-    echo gemini://localhost:1965/page/2020-06-27 \
+    echo gemini://localhost:1965/page/Welcome \
       | openssl s_client --quiet --connect localhost:1965 2>/dev/null
 
 You should get back a page that starts as follows:
@@ -225,7 +224,7 @@ one go:
 
 ## Wiki Directory
 
-You home directory should now also contain a wiki directory called `wiki`. In
+Your home directory should now also contain a wiki directory called `wiki`. In
 it, you'll find a few more files:
 
 - `page` is the directory with all the page files in it; each file has the
@@ -236,16 +235,16 @@ it, you'll find a few more files:
       is one page name (without the `.gmi` extension) per line, with lines
       separated from each other by a single `\n`
 - `keep` is the directory with all the old revisions of pages in it – if
-      you've only made one change, then it won't exist, yet; and if you don't
-      care about the older revisions, you can delete them; assuming you have a
-      page called `Welcome` and edit it once, you have the current revision as
+      you've only made one change, then it won't exist; if you don't care about
+      the older revisions, you can delete them; assuming you have a page called
+      `Welcome` and edit it once, you have the current revision as
       `page/Welcome.gmi`, and the old revision in `keep/Welcome/1.gmi` (the
       page name turns into a subdirectory and each revision gets an apropriate
       number)
 - `file` is the directory with all the uploaded files in it – if you
-      haven't uploaded any files, then it won't exist, yet; you must explicitly
-      allow MIME types for upload using the `--wiki_mime_type` option (see
-      _Options_ below)
+      haven't uploaded any files, then it won't exist; you must explicitly allow
+      MIME types for upload using the `--wiki_mime_type` option (see _Options_
+      below)
 - `meta` is the directory with all the meta data for uploaded files in it –
       there should be a file here for every file in the `file` directory; if
       you create new files in the `file` directory, you should create a
@@ -259,15 +258,16 @@ it, you'll find a few more files:
       line, with lines separated from each other by a single `\n`, and each
       line consisting of time stamp, pagename or filename, revision number if a
       page or 0 if a file, and the numeric code of the user making the edit (see
-      ["Privacy"](#privacy) below)
+      ["Privacy"](#privacy) below), all separated from each other with a `\x1f`
 - `config` probably doesn't exist, yet; it is an optional file containing
-      Perl code where you can mess with the code (see ["Configuration"](#configuration) below)
+      Perl code where you can add new features and change how Phoebe works (see
+      ["Configuration"](#configuration) below)
 
 ## Options
 
-Phoebe has a bunch of options, and it uses [Net::Server](https://metacpan.org/pod/Net%3A%3AServer) in the
-background, which has even more options. Let's try to focus on the options you
-might want to use right away.
+Phoebe has a bunch of options, and it uses [Net::Server](https://metacpan.org/pod/Net%3A%3AServer) in the background,
+which has even more options. Let's try to focus on the options you might want to
+use right away.
 
 Here's an example:
 
@@ -277,7 +277,7 @@ Here's an example:
       --wiki_page=Welcome \
       --wiki_page=About
 
-And here's some documentation:
+Here's the documentation for the most useful options:
 
 - `--wiki_token` is for the token that users editing pages have to provide;
       the default is "hello"; you can use this option multiple times and give
@@ -353,7 +353,11 @@ Save this as `phoebe.service`, and then link it:
 
     sudo ln -s /home/phoebe/phoebe.service /etc/systemd/system/
 
-Start it:
+Reload systemd:
+
+    sudo systemctl daemon-reload
+
+Start Phoebe:
 
     sudo systemctl start phoebe
 
@@ -369,10 +373,9 @@ with a username. You set them using the `--wiki_token` option. By default, the
 only password is "hello". That's why the Titan command above contained
 "token=hello". 😊
 
-If you're going to check up on your wiki often, looking at Changes on a daily
-basis, you could just tell people about the token on a page of your wiki.
-Spammers would at least have to read the instructions and in my experience the
-hardly ever do.
+If you're going to check up on your wiki often (daily!), you could just tell
+people about the token on a page of your wiki. Spammers would at least have to
+read the instructions and in my experience the hardly ever do.
 
 You could also create a separate password for every contributor and when they
 leave the project, you just remove the token from the options and restart
@@ -403,11 +406,11 @@ comply with the
 ## Files
 
 If you allow uploads of binary files, these are stored separately from the
-regular pages; the wiki also doesn't keep old revisions of files around. That
-also means that if somebody overwrites a file, the old revision is gone.
+regular pages; the wiki doesn't keep old revisions of files around. If somebody
+overwrites a file, the old revision is gone.
 
 You definitely don't want random people uploading all sorts of images, videos
-and binaries files to your server. Make sure you set up those [tokens](#security)
+and binaries to your server. Make sure you set up those [tokens](#security)
 using `--wiki_token`!
 
 ## Main Page and Title
@@ -447,6 +450,7 @@ Here's my suggestion:
     Disallow: do/all/changes*
     Disallow: do/rss
     Disallow: do/atom
+    Disallow: do/all/atom
     Disallow: do/new
     Disallow: do/more/*
     Disallow: do/match

@@ -1684,6 +1684,7 @@ sub serve_all_changes {
   elsif ($style eq "colour") { $self->print_link($host, undef, "Fancy changes", "do/all/changes/$n/fancy") }
   elsif ($style eq "fancy") { $self->print_link($host, undef, "Normal changes", "do/all/changes/$n") }
   # taking the head of the @$log to get new log entries
+  $self->print_link($host, undef, "Atom Feed", "do/all/atom");
   say "Showing up to $n changes.";
   return unless $self->changes(
     $n,
@@ -1714,6 +1715,9 @@ sub serve_all_changes_via_http {
   say "</head>";
   say "<body>";
   say "<h1>Changes for all spaces</h1>";
+  say "<ul>";
+  say "<li>" . $self->link_html($host, undef, "Atom feed", "do/all/atom");
+  say "</ul>";
   my $log = $self->all_logs($host, $n);
   if (not @$log) {
     say "<p>No changes.";
@@ -1978,7 +1982,23 @@ sub serve_atom {
   my $space = shift;
   $self->log(3, "Serving Gemini Atom");
   $self->success("application/atom+xml");
-  $self->atom($host, $space, 'gemini');
+  my $dir = $self->wiki_dir($host, $space);
+  my $log = "$dir/changes.log";
+  my $fh = File::ReadBackwards->new($log);
+  $self->atom(sub {
+    return unless $_ = decode_utf8($fh->readline);
+    chomp;
+    split(/\x1f/), $host, $space, 0
+  }, $host, $space, 'gemini');
+}
+
+sub serve_all_atom {
+  my $self = shift;
+  my $host = shift;
+  $self->log(3, "Serving Gemini Atom");
+  $self->success("application/atom+xml");
+  my $log = $self->all_logs($host, 30);
+  $self->atom(sub { @{shift(@$log) }, 1 if @$log }, $host, undef, 'gemini');
 }
 
 sub serve_atom_via_http {
@@ -1989,51 +2009,99 @@ sub serve_atom_via_http {
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: application/xml\r";
   say "\r";
-  $self->atom($host, $space, 'https');
+  my $dir = $self->wiki_dir($host, $space);
+  my $log = "$dir/changes.log";
+  my $fh = File::ReadBackwards->new($log);
+  $self->atom(sub {
+    return unless $_ = decode_utf8($fh->readline);
+    chomp;
+    split(/\x1f/), $host, $space, 0
+  }, $host, $space, 'https');
 }
 
+sub serve_all_atom_via_http {
+  my $self = shift;
+  my $host = shift;
+  $self->log(3, "Serving Atom via HTTP");
+  say "HTTP/1.1 200 OK\r";
+  say "Content-Type: application/xml\r";
+  say "\r";
+  my $log = $self->all_logs($host, 30);
+  $self->atom(sub { @{shift(@$log) }, 1 if @$log }, $host, undef, 'https');
+}
+
+# $next is a code reference that returns the list of attributes for the next
+# change, these attributes being: the timestamp (as returned by time); the page
+# or file name; the page revision or zero if a file; the code to represent the
+# person that made the change, represented as a string of octal digits that will
+# be fed to the colourize sub; the host, and the spaces, if any; and a boolean
+# if space and page or file name should both be shown (up to seven arguments).
+# $scheme is either 'gemini' or 'https'.
 sub atom {
   my $self = shift;
+  my $next = shift;
   my $host = shift;
   my $space = shift;
   my $scheme = shift;
+  my $first_host = shift;
   my $name = $self->{server}->{wiki_main_page} || "Gemini Wiki";
   my $port = $self->port();
   say "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
   say "<feed xmlns=\"http://www.w3.org/2005/Atom\">";
   say "<title>" . $self->quote_html($name) . "</title>";
-  say "<link href=\"$scheme://$host:$port/\"/>";
-  say "<link rel=\"self\" type=\"application/atom+xml\" href=\"$scheme://$host:$port/do/atom\"/>";
-  say "<id>$scheme://$host:$port/do/atom</id>";
-  my $dir = $self->wiki_dir($host, $space);
-  my $log = "$dir/changes.log";
-  my ($sec, $min, $hour, $mday, $mon, $year) = gmtime($self->modified($log)); # 2003-12-13T18:30:02Z
-  say "<updated>"
-      . sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", $year + 1900, $mon, $mday, $hour, $min, $sec)
-      . "</updated>";
+  my $link = $self->link($host, $space, "", $scheme);
+  say "<link href=\"$link\"/>";
+  $link = $self->link($host, $space, "do/atom", $scheme);
+  say "<link rel=\"self\" type=\"application/atom+xml\" href=\"$link\"/>";
+  say "<id>$link</id>";
+  my $feed_ts = "0001-01-01T00:00:00Z";
   say "<generator uri=\"https://alexschroeder.ch/cgit/gemini-wiki/about/\" version=\"1.0\">Gemini Wiki</generator>";
-  if (-e $log and my $fh = File::ReadBackwards->new($log)) {
-    my %seen;
-    for (1 .. 100) {
-      last unless $_ = decode_utf8($fh->readline);
-      chomp;
-      my ($ts, $id, $revision, $code) = split(/\x1f/);
-      next if $seen{$id};
-      $seen{$id} = 1;
+  my %seen;
+  for (1 .. 100) {
+    my ($ts, $id, $revision, $code, $host, $space, $show_space) = $next->();
+    last unless $ts and $id;
+    $feed_ts = $ts if $ts gt $feed_ts;
+    my $name = $self->name($id, $host, $space, $show_space);
+    if ($revision eq "🖹") {
+      next if $seen{$name};
+      # a deleted page
       say "<entry>";
-      say "<title>" . $self->quote_html($id) . "</title>";
+      say "<title>" . $self->quote_html($name) . " (deleted)</title>";
+      $seen{$name} = 1;
+    } elsif ($revision eq "🖻") {
+      # a deleted file
+      next if $seen{$name . "\x1c"};
+      say "<entry>";
+      say "<title>" . $self->quote_html($name) . " (deleted file)</title>";
+      $seen{$name . "\x1c"} = 1;
+    } elsif ($revision > 0) {
+      # a page
+      next if $seen{$name};
+      say "<entry>";
+      say "<title>" . $self->quote_html($name) . "</title>";
       my $link = $self->link($host, $space, "page/$id", $scheme);
       say "<link href=\"$link\"/>";
       say "<id>$link</id>";
       say "<content type=\"text\">" . $self->quote_html($self->text($host, $space, $id)) . "</content>";
-      ($sec, $min, $hour, $mday, $mon, $year) = gmtime($ts); # 2003-12-13T18:30:02Z
-      say "<updated>"
-	  . sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", $year + 1900, $mon, $mday, $hour, $min, $sec)
-	  . "</updated>";
-      say "<author><name>$code</name></author>";
-      say "</entry>";
+      $seen{$name} = 1;
+    } else {
+      # a file
+      next if $seen{$name . "\x1c"};
+      say "<entry>";
+      say "<title>" . $self->quote_html($name) . " (file)</title>";
+      my $link = $self->link($host, $space, "file/$id", $scheme);
+      say "<link href=\"$link\"/>";
+      say "<id>$link</id>";
+      $seen{$name . "\x1c"} = 1;
     }
+    my ($sec, $min, $hour, $mday, $mon, $year) = gmtime($ts); # 2003-12-13T18:30:02Z
+    say "<updated>"
+	. sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", $year + 1900, $mon + 1, $mday, $hour, $min, $sec)
+	. "</updated>";
+    say "<author><name>$code</name></author>";
+    say "</entry>";
   }
+  say "<updated>$feed_ts</updated>";
   say "</feed>";
 }
 
@@ -2448,6 +2516,7 @@ Disallow: do/changes*
 Disallow: do/all/changes*
 Disallow: do/rss
 Disallow: do/atom
+Disallow: do/all/atom
 Disallow: do/new
 Disallow: do/more
 Disallow: do/match
@@ -3038,6 +3107,8 @@ sub process_request {
       $self->serve_rss($host, $self->space($host, $space));
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/atom$!) {
       $self->serve_atom($host, $self->space($host, $space));
+    } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/all/atom$!) {
+      $self->serve_all_atom($host);
     } elsif ($url =~ m!^gemini://($host_regex)(?::$port)?/robots.txt$!) {
       $self->serve_raw($host, undef, "robots");
     } elsif (($host, $space, $id, $n, $style) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(\d+))?(?:/(colour|fancy))?$!) {
@@ -3097,6 +3168,9 @@ sub process_request {
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/atom HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_atom_via_http($host, $self->space($host, $space));
+    } elsif (($space, $n) = $url =~ m!^GET /do/all/atom HTTP/1\.[01]$!
+	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+      $self->serve_all_atom_via_http($host);
     } elsif ($url =~ m!^GET (?:/($spaces))?/do/source HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       say "HTTP/1.1 200 OK\r";

@@ -1806,22 +1806,7 @@ sub changes {
   for (1 .. $n) {
     my ($ts, $id, $revision, $code, $host, $space, $show_space) = $next->();
     return unless $ts and $id;
-    my $name;
-    if ($show_space) {
-      if (@{$self->{server}->{host}} > 1) {
-	if ($space) {
-	  $name = "[$host/$space] $id";
-	} else {
-	  $name = "[$host] $id";
-	}
-      } elsif ($space) {
-	$name = "[$space] $id";
-      } else {
-	$name = $id;
-      }
-    } else {
-      $name = $id;
-    }
+    my $name = $self->name($id, $host, $space, $show_space);
     my $day = $self->day($ts);
     if ($day ne $last_day) {
       $header->($day);
@@ -1858,6 +1843,26 @@ sub changes {
     }
   }
   return () = $next->(); # return something, if there's more
+}
+
+sub name {
+  my $self = shift;
+  my $id = shift;
+  my $host = shift;
+  my $space = shift;
+  my $show_space = shift;
+  if ($show_space) {
+    if (@{$self->{server}->{host}} > 1) {
+      if ($space) {
+	return "[$host/$space] $id";
+      } else {
+	return "[$host] $id";
+      }
+    } elsif ($space) {
+      return "[$space] $id";
+    }
+  }
+  return $id;
 }
 
 sub colourize {

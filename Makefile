@@ -85,6 +85,10 @@ cert:
 	-pkeyopt ec_paramgen_curve:prime256v1 \
 	-days 1825 -nodes -out cert.pem -keyout key.pem
 
+# Print all the info about the certificate.
+cert-info:
+	openssl x509 -in cert.pem -text
+
 # Generate client certificates for testing. These use eliptic
 # curves and are valid for five years.
 client-cert:

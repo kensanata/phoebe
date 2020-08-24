@@ -54,7 +54,7 @@ our $pid = fork();
 
 mkdir($dir);
 write_text("$dir/config", <<'EOT');
-package Gemini::Wiki;
+package App::Phoebe;
 use Modern::Perl;
 our (@init, @extensions, @main_menu);
 push(@main_menu, "=> gemini://localhost:1965/do/test Test");
@@ -87,7 +87,7 @@ if (!defined $pid) {
   say "This is the server...";
   use Config;
   my $secure_perl_path = $Config{perlpath};
-  my @args = ("./gemini-wiki",
+  my @args = ("./phoebe",
 	      (map { "--host=$_" } @hosts),
 	      "--port=$port",
 	      "--log_level=" . ($ENV{DEBUG}||0), # set to 4 for verbose logging

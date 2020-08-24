@@ -1,0 +1,12 @@
+[Unit]
+Description=Phoebe
+After=network.target
+[Service]
+Type=simple
+WorkingDirectory=/home/phoebe
+ExecStart=/home/phoebe/phoebe
+Restart=always
+User=phoebe
+Group=phoebe
+[Install]
+WantedBy=multi-user.target

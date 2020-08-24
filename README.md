@@ -1,4 +1,4 @@
-# Gemini Wiki
+# Phoebe
 
 This server serves a wiki as a Gemini site.
 
@@ -15,20 +15,20 @@ It does two and a half things:
 - People can also access it using a regular web browser. They'll get a very
       simple, read-only version of the site.
 
-    To take a look for yourself, check out the Gemini Test Wiki via the
-    [web](https://transjovian.org:1965/) or via
-    [Gemini](gemini://transjovian.org/).
+    To take a look for yourself, check out the test wiki via the
+    [web](https://transjovian.org:1965/test) or via
+    [Gemini](gemini://transjovian.org/test).
 
 **Table of Contents**
 
 - [What are pages written in?](#what-are-pages-written-in)
-- [How do you edit a Gemini Wiki?](#how-do-you-edit-a-gemini-wiki)
+- [How do you edit a Phoebe?](#how-do-you-edit-a-phoebe)
 - [What is Titan?](#what-is-titan)
 - [Dependencies](#dependencies)
 - [Quickstart](#quickstart)
 - [Wiki Directory](#wiki-directory)
 - [Options](#options)
-- [Running the Gemini Wiki as a Daemon](#running-the-gemini-wiki-as-a-daemon)
+- [Running Phoebe as a Daemon](#running-phoebe-as-a-daemon)
 - [Using systemd](#using-systemd)
 - [Security](#security)
 - [Privacy](#privacy)
@@ -55,17 +55,17 @@ A text line is a paragraph of text.
     This is a paragraph.
     This is another paragraph.
 
-A link line starts with "=>", a space, a URL, optionally followed by a space and some
-text; the URL can be absolute or relative.
+A link line starts with "=>", a space, a URL, optionally followed by whitespace
+and some text; the URL can be absolute or relative.
 
     => http://transjovian.org/ The Transjovian Council on the web
-    => Welcome Welcome to The Transjovian Council
+    => Welcome                 Welcome to The Transjovian Council
 
 A line starting with "\`\`\`" toggles preformatting on and off.
 
     Example:
     ```
-    ./gemini-wiki
+    ./phoebe
     ```
 
 A line starting with "#", "##", or "###", followed by a space and some text is a
@@ -84,14 +84,14 @@ A line starting with ">", followed by a space and some text is a quote.
     The monologue at the end is fantastic, with the city lights and the rain.
     > I've seen things you people wouldn't believe.
 
-## How do you edit a Gemini Wiki?
+## How do you edit a Phoebe?
 
 You need to use a Titan-enabled client.
 
 Known clients:
 
 - This repository comes with a Perl script called
-      [titan](https://alexschroeder.ch/cgit/gemini-wiki/plain/titan) to upload
+      [titan](https://alexschroeder.ch/cgit/phoebe/plain/titan) to upload
       files
 - [Gemini Write](https://alexschroeder.ch/cgit/gemini-write/) is an
       extension for the Emacs Gopher and Gemini client
@@ -102,7 +102,7 @@ Known clients:
 ## What is Titan?
 
 Titan is a companion protocol to Gemini: it allows clients to upload files to
-Gemini sites, if servers allow this. On the Gemini Wiki, you can edit "raw"
+Gemini sites, if servers allow this. On Phoebe, you can edit "raw"
 pages. That is, at the bottom of a page you'll see a link to the "raw" page. If
 you follow it, you'll see the page content as plain text. You can submit a
 changed version of this text to the same URL using Titan. There is more
@@ -111,7 +111,7 @@ information for developers available
 
 ## Dependencies
 
-Perl libraries you need to install if you want to run Gemini Wiki:
+Perl libraries you need to install if you want to run Phoebe:
 
 - [Algorithm::Diff](https://metacpan.org/pod/Algorithm%3A%3ADiff)
 - [File::ReadBackwards](https://metacpan.org/pod/File%3A%3AReadBackwards)
@@ -144,17 +144,17 @@ Right now there aren't any releases. You just get the latest version from the
 repository and that's it. I'm going to assume that you're going to create a new
 user just to be safe.
 
-    sudo adduser --disabled-login --disabled-password gemini
-    sudo su gemini
+    sudo adduser --disabled-login --disabled-password phoebe
+    sudo su phoebe
     cd
 
-Now you're in your home directory, `/home/gemini`. We're going to install
+Now you're in your home directory, `/home/phoebe`. We're going to install
 things right here. First, get the source code:
 
-    curl --output gemini-wiki \
-      https://alexschroeder.ch/cgit/gemini-wiki/plain/gemini-wiki?h=main
+    curl --output phoebe \
+      https://alexschroeder.ch/cgit/phoebe/plain/phoebe?h=main
 
-Since Gemini traffic is encrypted, we need to generate a certificate and a key.
+Since Phoebe traffic is encrypted, we need to generate a certificate and a key.
 These are both stored in PEM files. To create your own copies of these files
 (and you should!), use "make cert" if you have a copy of the Makefile. If you
 don't, use this:
@@ -166,10 +166,10 @@ don't, use this:
 This creates a certificate and a private key, both of them unencrypted, using
 eliptic curves of a particular kind, valid for five years.
 
-You should have three files, now: `gemini-wiki`, `cert.pem`, and
+You should have three files, now: `phoebe`, `cert.pem`, and
 `key.pem`. That's enough to get started! Start the server:
 
-    perl gemini-wiki
+    perl phoebe
 
 This starts the server in the foreground. Open a second terminal and test it:
 
@@ -179,7 +179,7 @@ This starts the server in the foreground. Open a second terminal and test it:
 You should see a Gemini page starting with the following:
 
     20 text/gemini; charset=UTF-8
-    Welcome to the Gemini version of this wiki.
+    Welcome to Phoebe!
 
 Success!! 😀 🚀🚀
 
@@ -265,13 +265,13 @@ it, you'll find a few more files:
 
 ## Options
 
-The Gemini Wiki has a bunch of options, and it uses [Net::Server](https://metacpan.org/pod/Net%3A%3AServer) in the
+Phoebe has a bunch of options, and it uses [Net::Server](https://metacpan.org/pod/Net%3A%3AServer) in the
 background, which has even more options. Let's try to focus on the options you
 might want to use right away.
 
 Here's an example:
 
-    perl gemini-wiki \
+    perl phoebe \
       --wiki_token=Elrond \
       --wiki_token=Thranduil \
       --wiki_page=Welcome \
@@ -299,7 +299,7 @@ And here's some documentation:
       space (see `--wiki_space` below)
 - `--port` is the port to use; the default is 1965
 - `--wiki_dir` is the wiki data directory to use; the default is either the
-      value of the `GEMINI_WIKI_DATA_DIR` environment variable, or the "./wiki"
+      value of the `PHOEBE_DATA_DIR` environment variable, or the "./wiki"
       subdirectory
 - `--wiki_space` adds an extra space that acts as its own wiki; a
       subdirectory with the same name gets created in your wiki data directory
@@ -314,18 +314,18 @@ And here's some documentation:
 - `--log_level` is the log level to use, 0 is quiet, 1 is errors, 2 is
       warnings, 3 is info, and 4 is debug; the default is 2
 
-## Running the Gemini Wiki as a Daemon
+## Running Phoebe as a Daemon
 
-If you want to start the Gemini Wiki as a daemon, the following options come in
+If you want to start Phoebe as a daemon, the following options come in
 handy:
 
-- `--setsid` makes sure the Gemini Wiki runs as a daemon in the background
+- `--setsid` makes sure Phoebe runs as a daemon in the background
 - `--pid_file` is the file where the process id (pid) gets written once the
       server starts up; this is useful if you run the server in the background
       and you need to kill it
 - `--log_file` is the file to write logs into; the default is to write log
       output to the standard error (stderr)
-- `--user` and `--group` might come in handy if you start the Gemini Wiki
+- `--user` and `--group` might come in handy if you start Phoebe
       using a different user
 
 ## Using systemd
@@ -337,29 +337,29 @@ online](https://www.freedesktop.org/software/systemd/man/systemd.service.html).
 Basically, this is the template for our service:
 
     [Unit]
-    Description=Gemini Wiki
+    Description=Phoebe
     After=network.target
     [Service]
     Type=simple
-    WorkingDirectory=/home/gemini
-    ExecStart=/home/gemini/gemini-wiki
+    WorkingDirectory=/home/phoebe
+    ExecStart=/home/phoebe/phoebe
     Restart=always
-    User=gemini
-    Group=gemini
+    User=phoebe
+    Group=phoebe
     [Install]
     WantedBy=multi-user.target
 
-Save this as `gemini-wiki.service`, and then link it:
+Save this as `phoebe.service`, and then link it:
 
-    sudo ln -s /home/gemini/gemini-wiki.service /etc/systemd/system/
+    sudo ln -s /home/phoebe/phoebe.service /etc/systemd/system/
 
 Start it:
 
-    sudo systemctl start gemini-wiki
+    sudo systemctl start phoebe
 
 Check the log output:
 
-    sudo journalctl --unit gemini-wiki
+    sudo journalctl --unit phoebe
 
 ## Security
 
@@ -375,8 +375,8 @@ Spammers would at least have to read the instructions and in my experience the
 hardly ever do.
 
 You could also create a separate password for every contributor and when they
-leave the project, you just remove the token from the options and restart Gemini
-Wiki. They will no longer be able to edit the site.
+leave the project, you just remove the token from the options and restart
+Phoebe. They will no longer be able to edit the site.
 
 ## Privacy
 
@@ -477,13 +477,13 @@ certificate from Let's Encrypt or the like. Anyway, it works in theory. If you
 went through the ["Quickstart"](#quickstart), visiting `https://localhost:1965/` should
 work!
 
-Notice that Gemini Wiki doesn't have to live behind another web server like
+Notice that Phoebe doesn't have to live behind another web server like
 Apache or nginx. It's a (simple) web server, too!
 
 Here's how you could serve the wiki both on Gemini, and the standard HTTPS port,
 443:
 
-    sudo ./gemini-wiki --port=443 --port=1965 \
+    sudo ./phoebe --port=443 --port=1965 \
       --user=$(id --user --name) --group=$(id --group  --name)
 
 We need to use `sudo` because all the ports below 1024 are priviledge ports and
@@ -491,8 +491,8 @@ that includes the standard HTTPS port. Since we don't want the server itself to
 run with all those priviledges, however, I'm using the `--user` and `--group`
 options to change effective and user and group ID. The `id` command is used to
 get your user and your group IDs instead. If you've followed the ["Quickstart"](#quickstart)
-and created a separate `gemini` user, you could simply use `--user=gemini` and
-`--group=gemini` instead. 👍
+and created a separate `phoebe` user, you could simply use `--user=phoebe` and
+`--group=phoebe` instead. 👍
 
 ## Configuration
 
@@ -501,32 +501,33 @@ This section describes some hooks you can use to customize your wiki using the
 server to make it read the config file. You can do that by sending it the HUP
 signal, if you know the pid, or if you have a pid file:
 
-    kill -s SIGHUP `cat gemini-wiki.pid`
+    kill -s SIGHUP `cat phoebe.pid`
 
-Here are the ways you can hook into the Gemini Wiki code:
+Here are the ways you can hook into Phoebe code:
 
 - `@init` is a list of code references allowing you to change the
       configuration of the server; it gets executed as the server starts, after
       regular configuration
 - `@extensions` is a list of code references allowing you to handle
       additional URLs; return 1 if you handle a URL; each code reference gets
-      called with the first line of the request (a Gemini URL, a Gopher
+      called with $self, the first line of the request (a Gemini URL, a Gopher
       selector, a finger user, a HTTP request line), and a hash reference for
       the headers (in the case of HTTP requests)
 - `@main_menu` adds more lines to the main menu, possibly links that aren't
       simply links to existing pages
 - `@footer` is a list of code references allowing you to add things like
       licenses or contact information to every page; each code reference gets
-      called with the $host, $space, $id and $revision used to serve the page;
-      return a string to append at the end; if you want to replace the Gemini
-      footer, overwrite the footer sub itself – the default implementation adds
-      History, Raw text and HTML link, and `@footer` to the bottom of every
-      page
+      called with $self, $host, $space, $id, $revision, and $format ('gemini' or
+      'html') used to serve the page; return a gemtext string to append at the
+      end; the alternative is to overwrite the `footer` or `html_footer` subs
+      – the default implementation for Gemini adds History, Raw text and HTML
+      link, and `@footer` to the bottom of every page; the default
+      implementatino for HTTP just adds `@footer` to the bottom of every page
 
 A very simple example to add a contact mail at the bottom of every page; this
 works for both Gemini and the web:
 
-    package Gemini::Wiki;
+    package App::Phoebe;
     use Modern::Perl;
     our (@footer);
     push(@footer, sub { '=> mailto:alex@alexschroeder.ch Mail' });
@@ -535,7 +536,7 @@ This prints a very simply footer instead of the usual footer for Gemini, as the
 `footer` sub is redefined. At the same time, the `@footer` array is still used
 for the web:
 
-    package Gemini::Wiki;
+    package App::Phoebe;
     use Modern::Perl;
     our (@footer); # HTML only
     push(@footer, sub { '=> https://alexschroeder.ch/wiki/Contact Contact' });
@@ -551,7 +552,7 @@ without the warning "Subroutine … redefined".
 Here's a more elaborate example to add a new action the main menu and a handler
 for it:
 
-    package Gemini::Wiki;
+    package App::Phoebe;
     use Modern::Perl;
     our (@extensions, @main_menu);
     push(@main_menu, "=> gemini://localhost/do/test Test");
@@ -573,7 +574,7 @@ for it:
 
 ## Wiki Spaces
 
-Wiki spaces are separate wikis managed by the same Gemini Wiki server, on the
+Wiki spaces are separate wikis managed by the same Phoebe server, on the
 same machine, but with data stored in a different directory. If you used
 `--wiki_space=alex` and `--wiki_space=berta`, for example, then you'd have
 three wikis in total:
@@ -593,7 +594,7 @@ just for their space, you can do that, too. Doing this is starting to strain the
 command line interface, however, and therefore the following illustrates how to
 do more advanced configuration using `@init` in the config file:
 
-    package Gemini::Wiki;
+    package App::Phoebe;
     use Modern::Perl;
     our (@init);
     push(@init, \&init_tokens);
@@ -611,7 +612,7 @@ code sets up the token `*secret*` for the `alex` wiki space.
 You can use the config file to change the values of other properties as well,
 even if these properties are set via the command line.
 
-    package Gemini::Wiki;
+    package App::Phoebe;
     use Modern::Perl;
     our (@init);
     push(@init, \&init_tokens);
@@ -624,20 +625,20 @@ This code simply deactivates the token list. No more tokens!
 
 ## Client Certificates
 
-Gemini Wiki serves a public wiki by default. In theory, limiting editing to
+Phoebe serves a public wiki by default. In theory, limiting editing to
 known users (that is, known client certificates) is possible. I say "in theory"
 because this requires a small change to [Net::Server::Proto::SSL](https://metacpan.org/pod/Net%3A%3AServer%3A%3AProto%3A%3ASSL). For your
 convenience, this repository comes with a patched version (based on
 [Net::Server](https://metacpan.org/pod/Net%3A%3AServer) 2.009). All this does is add `SSL_verify_callback` to the list of
-options for [IO::Socket::SSL](https://metacpan.org/pod/IO%3A%3ASocket%3A%3ASSL). Gemini Wiki includes the local `lib` directory
+options for [IO::Socket::SSL](https://metacpan.org/pod/IO%3A%3ASocket%3A%3ASSL). Phoebe includes the local `lib` directory
 in its library search path, so if you have the `lib/Net/Server/Proto/SSL.pm`
-file in the current directory where you start `gemini-wiki`, it should simply
+file in the current directory where you start `phoebe`, it should simply
 work.
 
 Here's a config file using client certificates to limit writing to a single,
 known fingerprint:
 
-    package Gemini::Wiki;
+    package App::Phoebe;
     use Modern::Perl;
     our (@init, @extensions);
     my @fingerprints = ('sha256$e4b871adf0d74d9ab61fbf0b6773d75a152594090916834278d416a769712570');
@@ -690,7 +691,7 @@ and this code checks for a known client certificate fingerprint.
 To be sure, it doesn't check anything else! It doesn't check whether the client
 certificate has expired, for example.
 
-You could, for example, install Gemini Wiki, use the code above for your config
+You could, for example, install Phoebe, use the code above for your config
 file, and replace the fingerprint with the fingerprint of your own client
 certificate. The `Makefile` allows you to easily create such a certificate:
 
@@ -712,10 +713,10 @@ this by using multiple `--host` options.
 
 Here's a simple, stand-alone setup that will work on your local machine. These
 are usually reachable using the IPv4 `127.0.0.1` or the name `localhost`. The
-following command tells Gemini Wiki to serve both `127.0.0.1` and `localhost`
+following command tells Phoebe to serve both `127.0.0.1` and `localhost`
 (the default is to just serve `localhost`).
 
-    perl gemini-wiki --host=127.0.0.1 --host=localhost
+    perl phoebe --host=127.0.0.1 --host=localhost
 
 Visit both at [gemini://localhost/](gemini://localhost/) and [gemini://127.0.0.1/](gemini://127.0.0.1/), and create a
 new page in each one, then examine the data directory `wiki`. You'll see both
@@ -724,7 +725,7 @@ new page in each one, then examine the data directory `wiki`. You'll see both
 If you're using more wiki spaces, you need to prefix them with the respective
 hostname if you use more than one:
 
-    perl gemini-wiki --host=127.0.0.1 --host=localhost \
+    perl phoebe --host=127.0.0.1 --host=localhost \
         --wiki_space=127.0.0.1/alex --wiki_space=localhost/berta
 
 In this situation, you can visit [gemini://127.0.0.1/](gemini://127.0.0.1/),
@@ -747,7 +748,7 @@ use for the hosts.
 
 For example:
 
-    perl gemini-wiki --host=transjovian.org \
+    perl phoebe --host=transjovian.org \
         --cert_file=/var/lib/dehydrated/certs/transjovian.org/cert.pem \
         --key_file=/var/lib/dehydrated/certs/transjovian.org/privkey.pem \
         --host=alexschroeder.ch \

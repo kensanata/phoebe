@@ -132,14 +132,14 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "GEMINI-WIKI 1"
-.TH GEMINI-WIKI 1 "2020-08-03" "perl v5.28.1" "User Contributed Perl Documentation"
+.IX Title "PHOEBE 1"
+.TH PHOEBE 1 "2020-08-24" "perl v5.28.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
-.SH "Gemini Wiki"
-.IX Header "Gemini Wiki"
+.SH "Phoebe"
+.IX Header "Phoebe"
 This server serves a wiki as a Gemini site.
 .PP
 It does two and a half things:
@@ -152,9 +152,9 @@ It does two and a half things:
 .IP "People can also access it using a regular web browser. They'll get a very simple, read-only version of the site." 4
 .IX Item "People can also access it using a regular web browser. They'll get a very simple, read-only version of the site."
 .PD
-To take a look for yourself, check out the Gemini Test Wiki via the
-web <https://transjovian.org:1965/> or via
-Gemini <gemini://transjovian.org/>.
+To take a look for yourself, check out the test wiki via the
+web <https://transjovian.org:1965/test> or via
+Gemini <gemini://transjovian.org/test>.
 .SS "What are pages written in?"
 .IX Subsection "What are pages written in?"
 Pages are written in gemtext, a lightweight hypertext format. You can use your
@@ -167,12 +167,12 @@ A text line is a paragraph of text.
 \&    This is another paragraph.
 .Ve
 .PP
-A link line starts with \*(L"=>\*(R", a space, a \s-1URL,\s0 optionally followed by a space and some
-text; the \s-1URL\s0 can be absolute or relative.
+A link line starts with \*(L"=>\*(R", a space, a \s-1URL,\s0 optionally followed by whitespace
+and some text; the \s-1URL\s0 can be absolute or relative.
 .PP
 .Vb 2
 \&    => http://transjovian.org/ The Transjovian Council on the web
-\&    => Welcome Welcome to The Transjovian Council
+\&    => Welcome                 Welcome to The Transjovian Council
 .Ve
 .PP
 A line starting with \*(L"```\*(R" toggles preformatting on and off.
@@ -180,7 +180,7 @@ A line starting with \*(L"```\*(R" toggles preformatting on and off.
 .Vb 4
 \&    Example:
 \&    \`\`\`
-\&    ./gemini\-wiki
+\&    ./phoebe
 \&    \`\`\`
 .Ve
 .PP
@@ -205,13 +205,13 @@ A line starting with \*(L">\*(R", followed by a space and some text is a quote.
 \&    The monologue at the end is fantastic, with the city lights and the rain.
 \&    > I\*(Aqve seen things you people wouldn\*(Aqt believe.
 .Ve
-.SS "How do you edit a Gemini Wiki?"
-.IX Subsection "How do you edit a Gemini Wiki?"
+.SS "How do you edit a Phoebe?"
+.IX Subsection "How do you edit a Phoebe?"
 You need to use a Titan-enabled client.
 .PP
 Known clients:
-.IP "This repository comes with a Perl script called titan <https://alexschroeder.ch/cgit/gemini-wiki/plain/titan> to upload files" 4
-.IX Item "This repository comes with a Perl script called titan <https://alexschroeder.ch/cgit/gemini-wiki/plain/titan> to upload files"
+.IP "This repository comes with a Perl script called titan <https://alexschroeder.ch/cgit/phoebe/plain/titan> to upload files" 4
+.IX Item "This repository comes with a Perl script called titan <https://alexschroeder.ch/cgit/phoebe/plain/titan> to upload files"
 .PD 0
 .IP "Gemini Write <https://alexschroeder.ch/cgit/gemini-write/> is an extension for the Emacs Gopher and Gemini client Elpher <https://thelambdalab.xyz/elpher/>" 4
 .IX Item "Gemini Write <https://alexschroeder.ch/cgit/gemini-write/> is an extension for the Emacs Gopher and Gemini client Elpher <https://thelambdalab.xyz/elpher/>"
@@ -221,7 +221,7 @@ Known clients:
 .SS "What is Titan?"
 .IX Subsection "What is Titan?"
 Titan is a companion protocol to Gemini: it allows clients to upload files to
-Gemini sites, if servers allow this. On the Gemini Wiki, you can edit \*(L"raw\*(R"
+Gemini sites, if servers allow this. On Phoebe, you can edit \*(L"raw\*(R"
 pages. That is, at the bottom of a page you'll see a link to the \*(L"raw\*(R" page. If
 you follow it, you'll see the page content as plain text. You can submit a
 changed version of this text to the same \s-1URL\s0 using Titan. There is more
@@ -229,7 +229,7 @@ information for developers available
 on Community Wiki <https://communitywiki.org/wiki/Titan>.
 .SS "Dependencies"
 .IX Subsection "Dependencies"
-Perl libraries you need to install if you want to run Gemini Wiki:
+Perl libraries you need to install if you want to run Phoebe:
 .IP "Algorithm::Diff" 4
 .IX Item "Algorithm::Diff"
 .PD 0
@@ -271,20 +271,20 @@ repository and that's it. I'm going to assume that you're going to create a new
 user just to be safe.
 .PP
 .Vb 3
-\&    sudo adduser \-\-disabled\-login \-\-disabled\-password gemini
-\&    sudo su gemini
+\&    sudo adduser \-\-disabled\-login \-\-disabled\-password phoebe
+\&    sudo su phoebe
 \&    cd
 .Ve
 .PP
-Now you're in your home directory, \fI/home/gemini\fR. We're going to install
+Now you're in your home directory, \fI/home/phoebe\fR. We're going to install
 things right here. First, get the source code:
 .PP
 .Vb 2
-\&    curl \-\-output gemini\-wiki \e
-\&      https://alexschroeder.ch/cgit/gemini\-wiki/plain/gemini\-wiki?h=main
+\&    curl \-\-output phoebe \e
+\&      https://alexschroeder.ch/cgit/phoebe/plain/phoebe?h=main
 .Ve
 .PP
-Since Gemini traffic is encrypted, we need to generate a certificate and a key.
+Since Phoebe traffic is encrypted, we need to generate a certificate and a key.
 These are both stored in \s-1PEM\s0 files. To create your own copies of these files
 (and you should!), use \*(L"make cert\*(R" if you have a copy of the Makefile. If you
 don't, use this:
@@ -298,11 +298,11 @@ don't, use this:
 This creates a certificate and a private key, both of them unencrypted, using
 eliptic curves of a particular kind, valid for five years.
 .PP
-You should have three files, now: \fIgemini-wiki\fR, \fIcert.pem\fR, and
+You should have three files, now: \fIphoebe\fR, \fIcert.pem\fR, and
 \&\fIkey.pem\fR. That's enough to get started! Start the server:
 .PP
 .Vb 1
-\&    perl gemini\-wiki
+\&    perl phoebe
 .Ve
 .PP
 This starts the server in the foreground. Open a second terminal and test it:
@@ -316,7 +316,7 @@ You should see a Gemini page starting with the following:
 .PP
 .Vb 2
 \&    20 text/gemini; charset=UTF\-8
-\&    Welcome to the Gemini version of this wiki.
+\&    Welcome to Phoebe!
 .Ve
 .PP
 Success!! X \s-1XX\s0
@@ -403,14 +403,14 @@ it, you'll find a few more files:
 .PD
 .SS "Options"
 .IX Subsection "Options"
-The Gemini Wiki has a bunch of options, and it uses Net::Server in the
+Phoebe has a bunch of options, and it uses Net::Server in the
 background, which has even more options. Let's try to focus on the options you
 might want to use right away.
 .PP
 Here's an example:
 .PP
 .Vb 5
-\&    perl gemini\-wiki \e
+\&    perl phoebe \e
 \&      \-\-wiki_token=Elrond \e
 \&      \-\-wiki_token=Thranduil \e
 \&      \-\-wiki_page=Welcome \e
@@ -437,9 +437,9 @@ And here's some documentation:
 .ie n .IP """\-\-port"" is the port to use; the default is 1965" 4
 .el .IP "\f(CW\-\-port\fR is the port to use; the default is 1965" 4
 .IX Item "--port is the port to use; the default is 1965"
-.ie n .IP """\-\-wiki_dir"" is the wiki data directory to use; the default is either the value of the ""GEMINI_WIKI_DATA_DIR"" environment variable, or the ""./wiki"" subdirectory" 4
-.el .IP "\f(CW\-\-wiki_dir\fR is the wiki data directory to use; the default is either the value of the \f(CWGEMINI_WIKI_DATA_DIR\fR environment variable, or the ``./wiki'' subdirectory" 4
-.IX Item "--wiki_dir is the wiki data directory to use; the default is either the value of the GEMINI_WIKI_DATA_DIR environment variable, or the ./wiki subdirectory"
+.ie n .IP """\-\-wiki_dir"" is the wiki data directory to use; the default is either the value of the ""PHOEBE_DATA_DIR"" environment variable, or the ""./wiki"" subdirectory" 4
+.el .IP "\f(CW\-\-wiki_dir\fR is the wiki data directory to use; the default is either the value of the \f(CWPHOEBE_DATA_DIR\fR environment variable, or the ``./wiki'' subdirectory" 4
+.IX Item "--wiki_dir is the wiki data directory to use; the default is either the value of the PHOEBE_DATA_DIR environment variable, or the ./wiki subdirectory"
 .ie n .IP """\-\-wiki_space"" adds an extra space that acts as its own wiki; a subdirectory with the same name gets created in your wiki data directory and thus you shouldn't name spaces like any of the files and directories already there (see ""Wiki Directory""); not that settings such as ""\-\-wiki_page"" and ""\-\-wiki_main_page"" apply to all spaces, but the page content will be different for every wiki space" 4
 .el .IP "\f(CW\-\-wiki_space\fR adds an extra space that acts as its own wiki; a subdirectory with the same name gets created in your wiki data directory and thus you shouldn't name spaces like any of the files and directories already there (see ``Wiki Directory''); not that settings such as \f(CW\-\-wiki_page\fR and \f(CW\-\-wiki_main_page\fR apply to all spaces, but the page content will be different for every wiki space" 4
 .IX Item "--wiki_space adds an extra space that acts as its own wiki; a subdirectory with the same name gets created in your wiki data directory and thus you shouldn't name spaces like any of the files and directories already there (see Wiki Directory); not that settings such as --wiki_page and --wiki_main_page apply to all spaces, but the page content will be different for every wiki space"
@@ -453,13 +453,13 @@ And here's some documentation:
 .el .IP "\f(CW\-\-log_level\fR is the log level to use, 0 is quiet, 1 is errors, 2 is warnings, 3 is info, and 4 is debug; the default is 2" 4
 .IX Item "--log_level is the log level to use, 0 is quiet, 1 is errors, 2 is warnings, 3 is info, and 4 is debug; the default is 2"
 .PD
-.SS "Running the Gemini Wiki as a Daemon"
-.IX Subsection "Running the Gemini Wiki as a Daemon"
-If you want to start the Gemini Wiki as a daemon, the following options come in
+.SS "Running Phoebe as a Daemon"
+.IX Subsection "Running Phoebe as a Daemon"
+If you want to start Phoebe as a daemon, the following options come in
 handy:
-.ie n .IP """\-\-setsid"" makes sure the Gemini Wiki runs as a daemon in the background" 4
-.el .IP "\f(CW\-\-setsid\fR makes sure the Gemini Wiki runs as a daemon in the background" 4
-.IX Item "--setsid makes sure the Gemini Wiki runs as a daemon in the background"
+.ie n .IP """\-\-setsid"" makes sure Phoebe runs as a daemon in the background" 4
+.el .IP "\f(CW\-\-setsid\fR makes sure Phoebe runs as a daemon in the background" 4
+.IX Item "--setsid makes sure Phoebe runs as a daemon in the background"
 .PD 0
 .ie n .IP """\-\-pid_file"" is the file where the process id (pid) gets written once the server starts up; this is useful if you run the server in the background and you need to kill it" 4
 .el .IP "\f(CW\-\-pid_file\fR is the file where the process id (pid) gets written once the server starts up; this is useful if you run the server in the background and you need to kill it" 4
@@ -467,9 +467,9 @@ handy:
 .ie n .IP """\-\-log_file"" is the file to write logs into; the default is to write log output to the standard error (stderr)" 4
 .el .IP "\f(CW\-\-log_file\fR is the file to write logs into; the default is to write log output to the standard error (stderr)" 4
 .IX Item "--log_file is the file to write logs into; the default is to write log output to the standard error (stderr)"
-.ie n .IP """\-\-user"" and ""\-\-group"" might come in handy if you start the Gemini Wiki using a different user" 4
-.el .IP "\f(CW\-\-user\fR and \f(CW\-\-group\fR might come in handy if you start the Gemini Wiki using a different user" 4
-.IX Item "--user and --group might come in handy if you start the Gemini Wiki using a different user"
+.ie n .IP """\-\-user"" and ""\-\-group"" might come in handy if you start Phoebe using a different user" 4
+.el .IP "\f(CW\-\-user\fR and \f(CW\-\-group\fR might come in handy if you start Phoebe using a different user" 4
+.IX Item "--user and --group might come in handy if you start Phoebe using a different user"
 .PD
 .SS "Using systemd"
 .IX Subsection "Using systemd"
@@ -481,35 +481,35 @@ Basically, this is the template for our service:
 .PP
 .Vb 12
 \&    [Unit]
-\&    Description=Gemini Wiki
+\&    Description=Phoebe
 \&    After=network.target
 \&    [Service]
 \&    Type=simple
-\&    WorkingDirectory=/home/gemini
-\&    ExecStart=/home/gemini/gemini\-wiki
+\&    WorkingDirectory=/home/phoebe
+\&    ExecStart=/home/phoebe/phoebe
 \&    Restart=always
-\&    User=gemini
-\&    Group=gemini
+\&    User=phoebe
+\&    Group=phoebe
 \&    [Install]
 \&    WantedBy=multi\-user.target
 .Ve
 .PP
-Save this as \fIgemini\-wiki.service\fR, and then link it:
+Save this as \fIphoebe.service\fR, and then link it:
 .PP
 .Vb 1
-\&    sudo ln \-s /home/gemini/gemini\-wiki.service /etc/systemd/system/
+\&    sudo ln \-s /home/phoebe/phoebe.service /etc/systemd/system/
 .Ve
 .PP
 Start it:
 .PP
 .Vb 1
-\&    sudo systemctl start gemini\-wiki
+\&    sudo systemctl start phoebe
 .Ve
 .PP
 Check the log output:
 .PP
 .Vb 1
-\&    sudo journalctl \-\-unit gemini\-wiki
+\&    sudo journalctl \-\-unit phoebe
 .Ve
 .SS "Security"
 .IX Subsection "Security"
@@ -525,8 +525,8 @@ Spammers would at least have to read the instructions and in my experience the
 hardly ever do.
 .PP
 You could also create a separate password for every contributor and when they
-leave the project, you just remove the token from the options and restart Gemini
-Wiki. They will no longer be able to edit the site.
+leave the project, you just remove the token from the options and restart
+Phoebe. They will no longer be able to edit the site.
 .SS "Privacy"
 .IX Subsection "Privacy"
 The server only actively logs changes to pages. It calculates a \*(L"code\*(R" for every
@@ -626,14 +626,14 @@ certificate from Let's Encrypt or the like. Anyway, it works in theory. If you
 went through the \*(L"Quickstart\*(R", visiting \f(CW\*(C`https://localhost:1965/\*(C'\fR should
 work!
 .PP
-Notice that Gemini Wiki doesn't have to live behind another web server like
+Notice that Phoebe doesn't have to live behind another web server like
 Apache or nginx. It's a (simple) web server, too!
 .PP
 Here's how you could serve the wiki both on Gemini, and the standard \s-1HTTPS\s0 port,
 443:
 .PP
 .Vb 2
-\&    sudo ./gemini\-wiki \-\-port=443 \-\-port=1965 \e
+\&    sudo ./phoebe \-\-port=443 \-\-port=1965 \e
 \&      \-\-user=$(id \-\-user \-\-name) \-\-group=$(id \-\-group  \-\-name)
 .Ve
 .PP
@@ -642,8 +642,8 @@ that includes the standard \s-1HTTPS\s0 port. Since we don't want the server its
 run with all those priviledges, however, I'm using the \f(CW\*(C`\-\-user\*(C'\fR and \f(CW\*(C`\-\-group\*(C'\fR
 options to change effective and user and group \s-1ID.\s0 The \fIid\fR command is used to
 get your user and your group IDs instead. If you've followed the \*(L"Quickstart\*(R"
-and created a separate \f(CW\*(C`gemini\*(C'\fR user, you could simply use \f(CW\*(C`\-\-user=gemini\*(C'\fR and
-\&\f(CW\*(C`\-\-group=gemini\*(C'\fR instead. X
+and created a separate \f(CW\*(C`phoebe\*(C'\fR user, you could simply use \f(CW\*(C`\-\-user=phoebe\*(C'\fR and
+\&\f(CW\*(C`\-\-group=phoebe\*(C'\fR instead. X
 .SS "Configuration"
 .IX Subsection "Configuration"
 This section describes some hooks you can use to customize your wiki using the
@@ -652,30 +652,30 @@ server to make it read the config file. You can do that by sending it the \s-1HU
 signal, if you know the pid, or if you have a pid file:
 .PP
 .Vb 1
-\&    kill \-s SIGHUP \`cat gemini\-wiki.pid\`
+\&    kill \-s SIGHUP \`cat phoebe.pid\`
 .Ve
 .PP
-Here are the ways you can hook into the Gemini Wiki code:
+Here are the ways you can hook into Phoebe code:
 .ie n .IP "@init is a list of code references allowing you to change the configuration of the server; it gets executed as the server starts, after regular configuration" 4
 .el .IP "\f(CW@init\fR is a list of code references allowing you to change the configuration of the server; it gets executed as the server starts, after regular configuration" 4
 .IX Item "@init is a list of code references allowing you to change the configuration of the server; it gets executed as the server starts, after regular configuration"
 .PD 0
-.ie n .IP "@extensions is a list of code references allowing you to handle additional URLs; return 1 if you handle a \s-1URL\s0; each code reference gets called with the first line of the request (a Gemini \s-1URL,\s0 a Gopher selector, a finger user, a \s-1HTTP\s0 request line), and a hash reference for the headers (in the case of \s-1HTTP\s0 requests)" 4
-.el .IP "\f(CW@extensions\fR is a list of code references allowing you to handle additional URLs; return 1 if you handle a \s-1URL\s0; each code reference gets called with the first line of the request (a Gemini \s-1URL,\s0 a Gopher selector, a finger user, a \s-1HTTP\s0 request line), and a hash reference for the headers (in the case of \s-1HTTP\s0 requests)" 4
-.IX Item "@extensions is a list of code references allowing you to handle additional URLs; return 1 if you handle a URL; each code reference gets called with the first line of the request (a Gemini URL, a Gopher selector, a finger user, a HTTP request line), and a hash reference for the headers (in the case of HTTP requests)"
+.ie n .IP "@extensions is a list of code references allowing you to handle additional URLs; return 1 if you handle a \s-1URL\s0; each code reference gets called with $self, the first line of the request (a Gemini \s-1URL,\s0 a Gopher selector, a finger user, a \s-1HTTP\s0 request line), and a hash reference for the headers (in the case of \s-1HTTP\s0 requests)" 4
+.el .IP "\f(CW@extensions\fR is a list of code references allowing you to handle additional URLs; return 1 if you handle a \s-1URL\s0; each code reference gets called with \f(CW$self\fR, the first line of the request (a Gemini \s-1URL,\s0 a Gopher selector, a finger user, a \s-1HTTP\s0 request line), and a hash reference for the headers (in the case of \s-1HTTP\s0 requests)" 4
+.IX Item "@extensions is a list of code references allowing you to handle additional URLs; return 1 if you handle a URL; each code reference gets called with $self, the first line of the request (a Gemini URL, a Gopher selector, a finger user, a HTTP request line), and a hash reference for the headers (in the case of HTTP requests)"
 .ie n .IP "@main_menu adds more lines to the main menu, possibly links that aren't simply links to existing pages" 4
 .el .IP "\f(CW@main_menu\fR adds more lines to the main menu, possibly links that aren't simply links to existing pages" 4
 .IX Item "@main_menu adds more lines to the main menu, possibly links that aren't simply links to existing pages"
-.ie n .IP "@footer is a list of code references allowing you to add things like licenses or contact information to every page; each code reference gets called with the $host, $space, $id and $revision used to serve the page; return a string to append at the end; if you want to replace the Gemini footer, overwrite the footer sub itself X the default implementation adds History, Raw text and \s-1HTML\s0 link, and @footer to the bottom of every page" 4
-.el .IP "\f(CW@footer\fR is a list of code references allowing you to add things like licenses or contact information to every page; each code reference gets called with the \f(CW$host\fR, \f(CW$space\fR, \f(CW$id\fR and \f(CW$revision\fR used to serve the page; return a string to append at the end; if you want to replace the Gemini footer, overwrite the footer sub itself X the default implementation adds History, Raw text and \s-1HTML\s0 link, and \f(CW@footer\fR to the bottom of every page" 4
-.IX Item "@footer is a list of code references allowing you to add things like licenses or contact information to every page; each code reference gets called with the $host, $space, $id and $revision used to serve the page; return a string to append at the end; if you want to replace the Gemini footer, overwrite the footer sub itself X the default implementation adds History, Raw text and HTML link, and @footer to the bottom of every page"
+.ie n .IP "@footer is a list of code references allowing you to add things like licenses or contact information to every page; each code reference gets called with $self, $host, $space, $id, $revision, and $format ('gemini' or 'html') used to serve the page; return a gemtext string to append at the end; the alternative is to overwrite the ""footer"" or ""html_footer"" subs X the default implementation for Gemini adds History, Raw text and \s-1HTML\s0 link, and @footer to the bottom of every page; the default implementatino for \s-1HTTP\s0 just adds @footer to the bottom of every page" 4
+.el .IP "\f(CW@footer\fR is a list of code references allowing you to add things like licenses or contact information to every page; each code reference gets called with \f(CW$self\fR, \f(CW$host\fR, \f(CW$space\fR, \f(CW$id\fR, \f(CW$revision\fR, and \f(CW$format\fR ('gemini' or 'html') used to serve the page; return a gemtext string to append at the end; the alternative is to overwrite the \f(CWfooter\fR or \f(CWhtml_footer\fR subs X the default implementation for Gemini adds History, Raw text and \s-1HTML\s0 link, and \f(CW@footer\fR to the bottom of every page; the default implementatino for \s-1HTTP\s0 just adds \f(CW@footer\fR to the bottom of every page" 4
+.IX Item "@footer is a list of code references allowing you to add things like licenses or contact information to every page; each code reference gets called with $self, $host, $space, $id, $revision, and $format ('gemini' or 'html') used to serve the page; return a gemtext string to append at the end; the alternative is to overwrite the footer or html_footer subs X the default implementation for Gemini adds History, Raw text and HTML link, and @footer to the bottom of every page; the default implementatino for HTTP just adds @footer to the bottom of every page"
 .PD
 .PP
 A very simple example to add a contact mail at the bottom of every page; this
 works for both Gemini and the web:
 .PP
 .Vb 4
-\&    package Gemini::Wiki;
+\&    package App::Phoebe;
 \&    use Modern::Perl;
 \&    our (@footer);
 \&    push(@footer, sub { \*(Aq=> mailto:alex@alexschroeder.ch Mail\*(Aq });
@@ -686,7 +686,7 @@ This prints a very simply footer instead of the usual footer for Gemini, as the
 for the web:
 .PP
 .Vb 9
-\&    package Gemini::Wiki;
+\&    package App::Phoebe;
 \&    use Modern::Perl;
 \&    our (@footer); # HTML only
 \&    push(@footer, sub { \*(Aq=> https://alexschroeder.ch/wiki/Contact Contact\*(Aq });
@@ -704,7 +704,7 @@ Here's a more elaborate example to add a new action the main menu and a handler
 for it:
 .PP
 .Vb 10
-\&    package Gemini::Wiki;
+\&    package App::Phoebe;
 \&    use Modern::Perl;
 \&    our (@extensions, @main_menu);
 \&    push(@main_menu, "=> gemini://localhost/do/test Test");
@@ -726,7 +726,7 @@ for it:
 .Ve
 .SS "Wiki Spaces"
 .IX Subsection "Wiki Spaces"
-Wiki spaces are separate wikis managed by the same Gemini Wiki server, on the
+Wiki spaces are separate wikis managed by the same Phoebe server, on the
 same machine, but with data stored in a different directory. If you used
 \&\f(CW\*(C`\-\-wiki_space=alex\*(C'\fR and \f(CW\*(C`\-\-wiki_space=berta\*(C'\fR, for example, then you'd have
 three wikis in total:
@@ -753,7 +753,7 @@ command line interface, however, and therefore the following illustrates how to
 do more advanced configuration using \f(CW@init\fR in the config file:
 .PP
 .Vb 8
-\&    package Gemini::Wiki;
+\&    package App::Phoebe;
 \&    use Modern::Perl;
 \&    our (@init);
 \&    push(@init, \e&init_tokens);
@@ -773,7 +773,7 @@ You can use the config file to change the values of other properties as well,
 even if these properties are set via the command line.
 .PP
 .Vb 8
-\&    package Gemini::Wiki;
+\&    package App::Phoebe;
 \&    use Modern::Perl;
 \&    our (@init);
 \&    push(@init, \e&init_tokens);
@@ -786,21 +786,21 @@ even if these properties are set via the command line.
 This code simply deactivates the token list. No more tokens!
 .SS "Client Certificates"
 .IX Subsection "Client Certificates"
-Gemini Wiki serves a public wiki by default. In theory, limiting editing to
+Phoebe serves a public wiki by default. In theory, limiting editing to
 known users (that is, known client certificates) is possible. I say \*(L"in theory\*(R"
 because this requires a small change to Net::Server::Proto::SSL. For your
 convenience, this repository comes with a patched version (based on
 Net::Server 2.009). All this does is add \f(CW\*(C`SSL_verify_callback\*(C'\fR to the list of
-options for IO::Socket::SSL. Gemini Wiki includes the local \fIlib\fR directory
+options for IO::Socket::SSL. Phoebe includes the local \fIlib\fR directory
 in its library search path, so if you have the \fIlib/Net/Server/Proto/SSL.pm\fR
-file in the current directory where you start \fIgemini-wiki\fR, it should simply
+file in the current directory where you start \fIphoebe\fR, it should simply
 work.
 .PP
 Here's a config file using client certificates to limit writing to a single,
 known fingerprint:
 .PP
 .Vb 10
-\&    package Gemini::Wiki;
+\&    package App::Phoebe;
 \&    use Modern::Perl;
 \&    our (@init, @extensions);
 \&    my @fingerprints = (\*(Aqsha256$e4b871adf0d74d9ab61fbf0b6773d75a152594090916834278d416a769712570\*(Aq);
@@ -858,7 +858,7 @@ and this code checks for a known client certificate fingerprint.
 To be sure, it doesn't check anything else! It doesn't check whether the client
 certificate has expired, for example.
 .PP
-You could, for example, install Gemini Wiki, use the code above for your config
+You could, for example, install Phoebe, use the code above for your config
 file, and replace the fingerprint with the fingerprint of your own client
 certificate. The \fIMakefile\fR allows you to easily create such a certificate:
 .PP
@@ -883,11 +883,11 @@ this by using multiple \f(CW\*(C`\-\-host\*(C'\fR options.
 .PP
 Here's a simple, stand-alone setup that will work on your local machine. These
 are usually reachable using the IPv4 \f(CW127.0.0.1\fR or the name \f(CW\*(C`localhost\*(C'\fR. The
-following command tells Gemini Wiki to serve both \f(CW127.0.0.1\fR and \f(CW\*(C`localhost\*(C'\fR
+following command tells Phoebe to serve both \f(CW127.0.0.1\fR and \f(CW\*(C`localhost\*(C'\fR
 (the default is to just serve \f(CW\*(C`localhost\*(C'\fR).
 .PP
 .Vb 1
-\&    perl gemini\-wiki \-\-host=127.0.0.1 \-\-host=localhost
+\&    perl phoebe \-\-host=127.0.0.1 \-\-host=localhost
 .Ve
 .PP
 Visit both at <gemini://localhost/> and <gemini://127.0.0.1/>, and create a
@@ -898,7 +898,7 @@ If you're using more wiki spaces, you need to prefix them with the respective
 hostname if you use more than one:
 .PP
 .Vb 2
-\&    perl gemini\-wiki \-\-host=127.0.0.1 \-\-host=localhost \e
+\&    perl phoebe \-\-host=127.0.0.1 \-\-host=localhost \e
 \&        \-\-wiki_space=127.0.0.1/alex \-\-wiki_space=localhost/berta
 .Ve
 .PP
@@ -922,7 +922,7 @@ use for the hosts.
 For example:
 .PP
 .Vb 6
-\&    perl gemini\-wiki \-\-host=transjovian.org \e
+\&    perl phoebe \-\-host=transjovian.org \e
 \&        \-\-cert_file=/var/lib/dehydrated/certs/transjovian.org/cert.pem \e
 \&        \-\-key_file=/var/lib/dehydrated/certs/transjovian.org/privkey.pem \e
 \&        \-\-host=alexschroeder.ch \e

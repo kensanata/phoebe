@@ -1,7 +1,7 @@
 # Start the wiki with the default options (using 'wiki' in the current
 # directory as the data directory).
 start:
-	./gemini-wiki
+	./phoebe
 
 # Start the wiki as a daemon with the default options, but also server
 # port 443 (HTTPS); since this is a port below 1024 itis priviledges
@@ -9,7 +9,7 @@ start:
 # sure that it drops priviledges to the current user as soon as it
 # started.
 web:
-	sudo ./gemini-wiki --port=443 --port=1965 --user=$(shell id -un) --group=$(shell id -gn)
+	sudo ./phoebe --port=443 --port=1965 --user=$(shell id -un) --group=$(shell id -gn)
 
 # Start the wiki on port 2020, with debug log level, two example
 # spaces, allowing the upload of JPEG files, and use 'morbo' (which is
@@ -17,8 +17,8 @@ web:
 # code: when it detects a change, the server is restarted
 # automatically.
 dev:
-	morbo --watch ./gemini-wiki --watch ./wiki/config -- \
-	  ./gemini-wiki --host localhost --host 127.0.0.1 --port=2020 \
+	morbo --watch ./phoebe --watch ./wiki/config -- \
+	  ./phoebe --host localhost --host 127.0.0.1 --port=2020 \
 	  --log_level=4 --wiki_space=127.0.0.1/alex --wiki_space=localhost/berta \
 	  --wiki_mime_type=image/jpeg --wiki_main_page=Welcome
 
@@ -27,22 +27,22 @@ doc: README.md man
 
 # Update the README file. The Perl script no only converts the POD
 # documentation to Markdown, it also adds a table of contents.
-README.md: gemini-wiki
+README.md: phoebe
 	./update-readme
 
 # Create man pages.
-man: gemini-wiki.1 gemini-wiki-ctl.1 titan.1 gemini.1
+man: phoebe.1 phoebe-ctl.1 titan.1 gemini.1
 
 %.1: %
 	pod2man $< $@
 
 # Install scripts and man pages in ~/.local
-install: ${HOME}/.local/bin/gemini-wiki \
-	${HOME}/.local/bin/gemini-wiki-ctl \
+install: ${HOME}/.local/bin/phoebe \
+	${HOME}/.local/bin/phoebe-ctl \
 	${HOME}/.local/bin/gemini \
 	${HOME}/.local/bin/titan \
-	${HOME}/.local/share/man/man1/gemini-wiki.1 \
-	${HOME}/.local/share/man/man1/gemini-wiki-ctl.1 \
+	${HOME}/.local/share/man/man1/phoebe.1 \
+	${HOME}/.local/share/man/man1/phoebe-ctl.1 \
 	${HOME}/.local/share/man/man1/gemini.1 \
 	${HOME}/.local/share/man/man1/titan.1
 
@@ -54,12 +54,12 @@ ${HOME}/.local/share/man/man1/%: %
 
 uninstall:
 	rm \
-	${HOME}/.local/bin/gemini-wiki \
-	${HOME}/.local/bin/gemini-wiki-ctl \
+	${HOME}/.local/bin/phoebe \
+	${HOME}/.local/bin/phoebe-ctl \
 	${HOME}/.local/bin/gemini \
 	${HOME}/.local/bin/titan \
-	${HOME}/.local/share/man/man1/gemini-wiki.1 \
-	${HOME}/.local/share/man/man1/gemini-wiki-ctl.1 \
+	${HOME}/.local/share/man/man1/phoebe.1 \
+	${HOME}/.local/share/man/man1/phoebe-ctl.1 \
 	${HOME}/.local/share/man/man1/gemini.1 \
 	${HOME}/.local/share/man/man1/titan.1
 

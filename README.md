@@ -22,7 +22,7 @@ It does two and a half things:
 **Table of Contents**
 
 - [What are pages written in?](#what-are-pages-written-in)
-- [How do you edit a Phoebe?](#how-do-you-edit-a-phoebe)
+- [How do you edit a Phoebe wiki?](#how-do-you-edit-a-phoebe-wiki)
 - [What is Titan?](#what-is-titan)
 - [Dependencies](#dependencies)
 - [Quickstart](#quickstart)
@@ -84,7 +84,7 @@ A line starting with ">", followed by a space and some text is a quote.
     The monologue at the end is fantastic, with the city lights and the rain.
     > I've seen things you people wouldn't believe.
 
-## How do you edit a Phoebe?
+## How do you edit a Phoebe wiki?
 
 You need to use a Titan-enabled client.
 
@@ -448,7 +448,7 @@ Here's my suggestion:
     Disallow: do/rss
     Disallow: do/atom
     Disallow: do/new
-    Disallow: do/more
+    Disallow: do/more/*
     Disallow: do/match
     Disallow: do/search
     # allowing do/index!

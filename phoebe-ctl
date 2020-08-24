@@ -46,7 +46,7 @@ the developer wanted to see as they were fixing bugs.
 
 This is what you're reading right now.
 
-=item C<update-change>
+=item C<update-changes>
 
 This command looks at all the pages in the F<page> directory and generates new
 entries for your changes log into F<changes.log>.
@@ -64,10 +64,13 @@ Use this if spammers and vandals created page names you want to eliminate.
 package Gemini::Wiki::Control;
 use Modern::Perl '2018';
 use File::Slurper qw(read_dir read_lines write_text);
+use Encode qw(encode_utf8 decode_utf8);
 use Getopt::Long;
 use Pod::Text;
 use File::Path qw(remove_tree);
 use utf8;
+
+binmode(STDOUT, ":utf8");
 
 my $log = 2;
 my $dir = "./wiki";
@@ -98,11 +101,11 @@ exit;
 sub update_changes {
   my %pages;
   my $now = time;
-  $pages{$_} = modified("$dir/page/$_.gmi") for map { s/\.gmi$//; $_ } grep /\.gmi$/, read_dir("$dir/page");
+  $pages{decode_utf8($_)} = modified("$dir/page/$_.gmi") for map { s/\.gmi$//; $_ } grep /\.gmi$/, read_dir("$dir/page");
   say "Read " . scalar(keys %pages) . " pages" if $log >= 3;
   say join("\n", map { $_ . "\t" . $pages{$_} } sort keys %pages) if $log >= 4;
   my %files;
-  $files{$_} = modified("$dir/file/$_") for read_dir("$dir/file");
+  $files{decode_utf8($_)} = modified("$dir/file/$_") for read_dir("$dir/file");
   say "Read " . scalar(keys %files) . " files" if $log >= 3;
   say join("\n", map { $_ . "\t" . $files{$_} } sort keys %files) if $log >= 4;
   my %revisions;
@@ -110,22 +113,28 @@ sub update_changes {
   for (read_lines("$dir/changes.log")) {
     my ($ts, $id, $revision) = split(/\x1f/);
     $revisions{$id} = $revision;
-    $changes{$id} = $ts;
+    if ($revision) {
+      $changes{$id} = $ts;
+    } else {
+      $changes{$id . "\x1c"} = $ts;
+    }
   };
   say "Read " . scalar(keys %changes) . " changes" if $log >= 3;
   say join("\n", map { $_ . "\t" . $changes{$_} } sort keys %changes) if $log >= 4;
   open(my $fh, ">>:encoding(UTF-8)", "$dir/changes.log") or die "Cannot write $dir/changes.log: $!";
   for (keys %pages) {
     if (not $changes{$_} or $pages{$_} > $changes{$_}) {
-      say "$_ is added to changes" if $log >= 4;
+      say "Page $_ is added to changes" if $log >= 4;
       my $revision = $revisions{$_} || 0;
       say $fh join("\x1f", $now, $_, 1 + $revision, "0000");
+      utime($now, $now, "$dir/page/$_.gmi") or warn "Could not set utime for $dir/page/$_.gmi\n";
     }
   }
   for (keys %files) {
-    if (not $changes{$_} or $files{$_} > $changes{$_}) {
-      say "$_ is added to changes" if $log >= 4;
+    if (not $changes{$_ . "\x1c"} or $files{$_} > $changes{$_ . "\x1c"}) {
+      say "File $_ is added to changes" if $log >= 4;
       say $fh join("\x1f", $now, $_, 0, "0000");
+      utime($now, $now, "$dir/file/$_") or warn "Could not set utime for $dir/file/$_\n";
     }
   }
   close($fh);

@@ -1821,7 +1821,7 @@ sub changes {
     } elsif ($revision eq "🖻") {
       # a deleted file
       $nolink->("$name (deleted file)");
-      $seen{$id . "\x1c"} = 1;
+      $seen{$name . "\x1c"} = 1;
     } elsif ($revision > 0) {
       # a page
       if ($seen{$name}) {
@@ -1834,11 +1834,11 @@ sub changes {
       }
     } else {
       # a file
-      if ($seen{$id . "\x1c"}) {
+      if ($seen{$name . "\x1c"}) {
 	$nolink->("$name (file)");
       } else {
 	$link->($host, $space, "$name (file)", "file/$id");
-	$seen{$id . "\x1c"} = 1;
+	$seen{$name . "\x1c"} = 1;
       }
     }
   }

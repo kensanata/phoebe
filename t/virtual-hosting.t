@@ -108,4 +108,29 @@ like($page, qr/^=> $base\/alex\/page\/Haiku \[127\.0\.0\.1\/alex\] Haiku \(curre
 like($page, qr/^=> gemini:\/\/localhost:$port\/page\/Haiku \[localhost\] Haiku \(current\)$/m,
      "localhost haiku listed");
 
+# Handling files with the same name in unified changes
+
+my $data = read_binary("t/alex.jpg");
+my $size = length($data);
+$page = query_gemini("titan://127.0.0.1:$port/raw/Alex;size=$size;mime=image/jpeg;token=hello", $data);
+like($page, qr/^30 $base\/file\/Alex\r/, "Upload image to one host");
+$page = query_gemini("titan://localhost:$port/raw/Alex;size=$size;mime=image/jpeg;token=hello", $data);
+like($page, qr/^30 gemini:\/\/localhost:$port\/file\/Alex\r/, "Upload image to the other host");
+
+$page = query_gemini("$base/do/all/changes");
+like($page, qr/^=> $base\/file\/Alex \[127\.0\.0\.1\] Alex \(file\)$/m,
+     "first image listed in Atom feed");
+like($page, qr/^=> gemini:\/\/localhost:$port\/file\/Alex \[localhost\] Alex \(file\)$/m,
+     "second image listed in Atom feed");
+
+$page = query_gemini("titan://127.0.0.1:$port/raw/Alex;size=0;mime=image/jpeg;token=hello", "");
+
+$page = query_gemini("$base/do/all/changes");
+like($page, qr/^\[127\.0\.0\.1\] Alex \(deleted file\)$/m,
+     "first image listed as deleted in Atom feed");
+like($page, qr/^\[127\.0\.0\.1\] Alex \(file\)$/m,
+     "first image listed as created in Atom feed (unlinked)");
+like($page, qr/^=> gemini:\/\/localhost:$port\/file\/Alex \[localhost\] Alex \(file\)$/m,
+     "second image listed in Atom feed");
+
 done_testing();

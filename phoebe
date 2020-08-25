@@ -1602,7 +1602,7 @@ sub serve_changes {
   if (not $style) { $self->print_link($host, undef, "Colour changes", "do/changes/$n/colour") }
   elsif ($style eq "colour") { $self->print_link($host, undef, "Fancy changes", "do/changes/$n/fancy") }
   elsif ($style eq "fancy") { $self->print_link($host, undef, "Normal changes", "do/changes/$n") }
-  $self->print_link($host, $space, "Changes for all spaces", "do/all/changes")
+  $self->print_link($host, undef, "Changes for all spaces", "do/all/changes")
       if @{$self->{server}->{wiki_space}};
   $self->print_link($host, $space, "Atom Feed", "do/atom");
   $self->print_link($host, $space, "RSS Feed", "do/rss");
@@ -1648,7 +1648,7 @@ sub serve_changes_via_http {
   say "<body>";
   say "<h1>Changes</h1>";
   say "<ul>";
-  say "<li>" . $self->link_html($host, $space, "Changes for all spaces", "do/all/changes")
+  say "<li>" . $self->link_html($host, undef, "Changes for all spaces", "do/all/changes")
       if @{$self->{server}->{wiki_space}};
   say "<li>" . $self->link_html($host, $space, "Atom feed", "do/atom");
   say "<li>" . $self->link_html($host, $space, "RSS feed", "do/rss");

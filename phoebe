@@ -1917,7 +1917,7 @@ sub colourize_html {
     3 => "255,199,6",
     4 => "0,111,184",
     5 => "118,38,113",
-    6 => "44,181,233 ",
+    6 => "44,181,233",
     7 => "204,204,204", );
   $code = join("", map {
     "<span style=\"color: rgb($rgb{$_}); background-color: rgb($rgb{$_})\">$_</span>";

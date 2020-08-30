@@ -90,6 +90,17 @@ like($page, qr/^=> gemini:\/\/localhost:$port\/berta\/raw\/Haiku Raw text/m, "Li
 $page = query_gemini("gemini://$base/berta/page/Haiku");
 unlike($page, qr/Spoons scrape over plates/, "Haiku for 127.0.0.1/berta namespace not found");
 
+# save second haiku revision in the berta space
+
+$haiku = <<EOT;
+Metal in my ears
+Dishes and plates in the sink
+Where is the music?
+EOT
+
+$page = query_gemini("titan://localhost:$port/berta/raw/Haiku;size=67;mime=text/plain;token=hello", $haiku);
+like($page, qr/^30 gemini:\/\/localhost:$port\/berta\/page\/Haiku\r$/, "Haiku saved for localhost, again/berta");
+
 # List of all spaces
 
 $page = query_gemini("$base/do/spaces");
@@ -98,14 +109,28 @@ like($page, qr/^=> gemini:\/\/localhost:$port\/ localhost$/m, "localhost space l
 like($page, qr/^=> $base\/alex\/ 127\.0\.0\.1\/alex$/m, "alex space listed");
 like($page, qr/^=> $base\/ 127\.0\.0\.1$/m, "127.0.0.1 space listed");
 
-# Unified changes
+# All changes ("unified changes")
 
 $page = query_gemini("$base/do/all/changes");
 like($page, qr/^=> gemini:\/\/localhost:$port\/berta\/page\/Haiku \[localhost\/berta\] Haiku \(current\)$/m,
      "berta haiku listed");
+like($page, qr/^=> gemini:\/\/localhost:$port\/berta\/page\/Haiku\/1 \[localhost\/berta\] Haiku \(1\)$/m,
+     "berta haiku first revision listed");
 like($page, qr/^=> $base\/alex\/page\/Haiku \[127\.0\.0\.1\/alex\] Haiku \(current\)$/m,
      "alex haiku listed");
 like($page, qr/^=> gemini:\/\/localhost:$port\/page\/Haiku \[localhost\] Haiku \(current\)$/m,
+     "localhost haiku listed");
+
+# Latest all changes
+
+$page = query_gemini("$base/do/all/latest/changes");
+like($page, qr/^=> gemini:\/\/localhost:$port\/berta\/page\/Haiku \[localhost\/berta\] Haiku$/m,
+     "berta haiku listed");
+unlike($page, qr/^=> gemini:\/\/localhost:$port\/berta\/page\/Haiku\/1 \[localhost\/berta\] Haiku \(1\)$/m,
+     "berta haiku first revision not listed");
+like($page, qr/^=> $base\/alex\/page\/Haiku \[127\.0\.0\.1\/alex\] Haiku$/m,
+     "alex haiku listed");
+like($page, qr/^=> gemini:\/\/localhost:$port\/page\/Haiku \[localhost\] Haiku$/m,
      "localhost haiku listed");
 
 # Handling files with the same name in unified changes

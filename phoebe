@@ -492,6 +492,7 @@ Here's my suggestion:
     Disallow: history/*
     Disallow: do/changes*
     Disallow: do/all/changes*
+    Disallow: do/all/latest/changes*
     Disallow: do/rss
     Disallow: do/atom
     Disallow: do/all/atom
@@ -1683,7 +1684,8 @@ sub serve_all_changes {
   my $host = shift;
   my $n = shift;
   my $style = shift;
-  $self->log(3, "Serving $n all changes");
+  my $filter = shift;
+  $self->log(3, $filter ? "Serving $n all $filter changes" :  "Serving $n all changes");
   $self->success();
   say "# Changes for all spaces";
   # merge all logs
@@ -1692,19 +1694,26 @@ sub serve_all_changes {
     say "No changes.";
     return;
   }
-  if (not $style) { $self->print_link($host, undef, "Colour changes", "do/all/changes/$n/colour") }
-  elsif ($style eq "colour") { $self->print_link($host, undef, "Fancy changes", "do/all/changes/$n/fancy") }
-  elsif ($style eq "fancy") { $self->print_link($host, undef, "Normal changes", "do/all/changes/$n") }
+  my $filter_segment = $filter ? "/$filter" : "";
+  my $style_segment = $style ? "/$style" : "";
+  if (not $style) { $self->print_link($host, undef, "Colour changes", "do/all$filter_segment/changes/$n/colour") }
+  elsif ($style eq "colour") { $self->print_link($host, undef, "Fancy changes", "do/all$filter_segment/changes/$n/fancy") }
+  elsif ($style eq "fancy") { $self->print_link($host, undef, "Normal changes", "do/all$filter_segment/changes/$n") }
+  if ($filter) { $self->print_link($host, undef, "All changes", "do/all/changes/$n$style_segment") }
+  else { $self->print_link($host, undef, "Latest changes", "do/all/latest/changes/$n$style_segment") }
   # taking the head of the @$log to get new log entries
   $self->print_link($host, undef, "Atom Feed", "do/all/atom");
-  say "Showing up to $n changes.";
+  my $filter_description = $filter ? " $filter" : "";
+  say "Showing up to $n$filter_description changes.";
   return unless $self->changes(
     $n,
     sub { say "## " . shift },
     sub { say shift . " by " . $self->colourize(shift, $style) },
     sub { $self->print_link(@_) },
     sub { say @_ },
-    sub { @{shift(@$log) }, 1 if @$log });
+    sub { @{shift(@$log) }, 1 if @$log },
+    undef,
+    $filter);
   say "";
   $self->print_link($host, undef, "More...", "do/all/changes/" . 10 * $n . ($style ? "/$style" : ""));
 }
@@ -1713,7 +1722,8 @@ sub serve_all_changes_via_http {
   my $self = shift;
   my $host = shift;
   my $n = shift;
-  $self->log(3, "Serving $n all changes via HTTP");
+  my $filter = shift;
+  $self->log(3, $filter ? "Serving $n all $filter changes via HTTP" : "Serving $n all changes via HTTP");
   say "HTTP/1.1 200 OK\r";
   say "Content-Type: text/html\r";
   say "\r";
@@ -1729,6 +1739,8 @@ sub serve_all_changes_via_http {
   say "<h1>Changes for all spaces</h1>";
   say "<ul>";
   say "<li>" . $self->link_html($host, undef, "Atom feed", "do/all/atom");
+  if ($filter) { say "<li>" . $self->link_html($host, undef, "All changes", "do/all/changes/$n") }
+  else { say "<li>" . $self->link_html($host, undef, "Latest changes", "do/all/latest/changes/$n") }
   say "</ul>";
   my $log = $self->all_logs($host, $n);
   if (not @$log) {
@@ -1736,14 +1748,16 @@ sub serve_all_changes_via_http {
     return;
   }
   # taking the head of the @$log to get new log entries
-  say "<p>Showing up to $n changes.";
+  say "<p>Showing up to $n $filter changes.";
   my $more = $self->changes(
     $n,
     sub { say "<h2>" . shift . "</h2>" },
     sub { say "<p>" . shift . " by " . $self->colourize_html(shift) },
     sub { say "<br> → " . $self->link_html(@_) },
     sub { say "<br> → $_[0]" },
-    sub { @{shift(@$log) }, 1 if @$log });
+    sub { @{shift(@$log) }, 1 if @$log },
+    undef,
+    $filter);
   return unless $more;
   say "<p>" . $self->link_html($host, undef, "More...", "do/all/changes/" . 10 * $n);
 }
@@ -1794,7 +1808,7 @@ sub read_log {
 # $n is the number of changes to show. $header is a code reference that prints a
 # header for the date (one argument). $change is a code reference that prints
 # the time and code of the person making the change (two arguments). $link is a
-# code reference that prints a link (four arguments). $link is a code reference
+# code reference that prints a link (four arguments). $nolink is a code reference
 # that prints a name that isn't linked (one argument). $next is a code reference
 # that returns the list of attributes for the next change, these attributes
 # being: the timestamp (as returned by time); the page or file name; the page
@@ -1804,7 +1818,10 @@ sub read_log {
 # page or file name should both be shown (up to seven arguments). Finally, the
 # optional argument $kept is a code reference to say whether an old revision
 # actually exists. If not, there's no point in showing a diff link. The default
-# implementation checks for the existence of the keep file.
+# implementation checks for the existence of the keep file. $filter describes
+# how changes are to be filtered: 'latest' means that only the latest change
+# will be shown, i.e. a link to current revision. The default is to show all
+# changes.
 sub changes {
   my $self = shift;
   my $n = shift;
@@ -1817,12 +1834,14 @@ sub changes {
     my ($host, $space, $id, $revision) = @_;
     -e $self->wiki_dir($host, $space) . "/keep/$id/$revision.gmi";
   };
+  my $filter = shift||'';
   my $last_day = '';
   my %seen;
   for (1 .. $n) {
     my ($ts, $id, $revision, $code, $host, $space, $show_space) = $next->();
     return unless $ts and $id;
     my $name = $self->name($id, $host, $space, $show_space);
+    next if $filter eq "latest" and $seen{$name};
     my $day = $self->day($ts);
     if ($day ne $last_day) {
       $header->($day);
@@ -1843,6 +1862,10 @@ sub changes {
       if ($seen{$name}) {
 	$link->($host, $space, "$name ($revision)", "page/$id/$revision");;
 	$link->($host, $space, "Differences", "diff/$id/$revision") if $kept->($host, $space, $id, $revision);
+      } elsif ($filter eq "latest") {
+	$link->($host, $space, "$name", "page/$id");
+	$link->($host, $space, "History", "history/$id");
+	$seen{$name} = 1;
       } else {
 	$link->($host, $space, "$name (current)", "page/$id");
 	$link->($host, $space, "History", "history/$id");
@@ -2526,6 +2549,7 @@ Disallow: diff/*
 Disallow: history/*
 Disallow: do/changes*
 Disallow: do/all/changes*
+Disallow: do/all/latest/changes*
 Disallow: do/rss
 Disallow: do/atom
 Disallow: do/all/atom
@@ -3065,7 +3089,7 @@ sub process_request {
     my $headers;
     $headers = $self->headers() if $url =~ m!^[a-z]+ .* HTTP/1\.[01]$!i;
     $self->log(3, "Looking at $url");
-    my ($host, $space, $id, $n, $style);
+    my ($host, $space, $id, $n, $style, $filter);
     if ($self->run_extensions($url, $headers)) {
       # config file goes first
     } elsif (($host) = $url =~ m!^titan://($host_regex)(?::$port)?!) {
@@ -3113,8 +3137,8 @@ sub process_request {
       }
     } elsif (($host, $space, $n, $style) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
       $self->serve_changes($host, $self->space($host, $space), $n||100, $style);
-    } elsif (($host, $n, $style) = $url =~ m!^gemini://($host_regex)(?::$port)?/do/all/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
-      $self->serve_all_changes($host, $n||100, $style);
+    } elsif (($host, $filter, $n, $style) = $url =~ m!^gemini://($host_regex)(?::$port)?/do/all(?:/(latest))?/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
+      $self->serve_all_changes($host, $n||100, $style||"", $filter||"");
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/rss$!) {
       $self->serve_rss($host, $self->space($host, $space));
     } elsif (($host, $space) = $url =~ m!^gemini://($host_regex)(?::$port)?(?:/($spaces))?/do/atom$!) {
@@ -3162,9 +3186,9 @@ sub process_request {
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/changes(?:/(\d+))? HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_changes_via_http($host, $self->space($host, $space), $n||100);
-    } elsif (($space, $n) = $url =~ m!^GET /do/all/changes(?:/(\d+))? HTTP/1\.[01]$!
+    } elsif (($filter, $n) = $url =~ m!^GET /do/all(?:/(latest))?/changes(?:/(\d+))? HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
-      $self->serve_all_changes_via_http($host, $n||100);
+      $self->serve_all_changes_via_http($host, $n||100, $filter||"");
     } elsif (($space, $id, $n) = $url =~ m!^GET (?:/($spaces))?/do/index HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
       $self->serve_index_via_http($host, $self->space($host, $space));

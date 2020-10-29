@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "PHOEBE 1"
-.TH PHOEBE 1 "2020-08-24" "perl v5.28.1" "User Contributed Perl Documentation"
+.TH PHOEBE 1 "2020-10-29" "perl v5.28.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -304,7 +304,9 @@ You should have three files, now: \fIphoebe\fR, \fIcert.pem\fR, and
 \&    perl phoebe
 .Ve
 .PP
-This starts the server in the foreground. Open a second terminal and test it:
+This starts the server in the foreground. If it aborts, see the
+\&\*(L"Troubleshooting\*(R" section below. If it runs, open a second terminal and test
+it:
 .PP
 .Vb 2
 \&    echo gemini://localhost \e
@@ -373,6 +375,20 @@ one go:
 .Vb 1
 \&    titan \-\-url=titan://localhost/ \-\-token=hello *.gmi
 .Ve
+.SS "Troubleshooting"
+.IX Subsection "Troubleshooting"
+X \fBCannot connect to \s-1SSL\s0 port 1965 on 127.0.0.1 [No such file or directory]\fR
+X Perhaps your Net::Server::Proto::SSL module is too old? Phoebe comes with
+a separate \fIlib\fR directory which contains a patched version of the module. Move
+this directory into your working directory where you want to run Phoebe and try
+again.
+.PP
+X \fBSSL_cert_file cert.pem can't be used: No such file or directory\fR X Perhaps
+you're missing the certificate (\fIcert.pem\fR) or key file (\fIkey.pem\fR). The git
+repo has the necessary files which you can use to do a quick test. Copy them
+into the installation directory where you want to run Phoebe and try again. Once
+it works, you should \fIgenerate your own\fR using the Makefile: \f(CW\*(C`make cert\*(C'\fR
+should do it.
 .SS "Wiki Directory"
 .IX Subsection "Wiki Directory"
 Your home directory should now also contain a wiki directory called \fIwiki\fR. In
@@ -596,6 +612,7 @@ Here's my suggestion:
 \&    Disallow: history/*
 \&    Disallow: do/changes*
 \&    Disallow: do/all/changes*
+\&    Disallow: do/all/latest/changes*
 \&    Disallow: do/rss
 \&    Disallow: do/atom
 \&    Disallow: do/all/atom

@@ -26,6 +26,7 @@ It does two and a half things:
 - [What is Titan?](#what-is-titan)
 - [Dependencies](#dependencies)
 - [Quickstart](#quickstart)
+- [Troubleshooting](#troubleshooting)
 - [Wiki Directory](#wiki-directory)
 - [Options](#options)
 - [Running Phoebe as a Daemon](#running-phoebe-as-a-daemon)
@@ -170,7 +171,9 @@ You should have three files, now: `phoebe`, `cert.pem`, and
 
     perl phoebe
 
-This starts the server in the foreground. Open a second terminal and test it:
+This starts the server in the foreground. If it aborts, see the
+["Troubleshooting"](#troubleshooting) section below. If it runs, open a second terminal and test
+it:
 
     echo gemini://localhost \
       | openssl s_client --quiet --connect localhost:1965 2>/dev/null
@@ -221,6 +224,21 @@ If you have a bunch of Gemtext files in a directory, you can upload them all in
 one go:
 
     titan --url=titan://localhost/ --token=hello *.gmi
+
+## Troubleshooting
+
+🔥 **Cannot connect to SSL port 1965 on 127.0.0.1 \[No such file or directory\]**
+🔥 Perhaps your [Net::Server::Proto::SSL](https://metacpan.org/pod/Net%3A%3AServer%3A%3AProto%3A%3ASSL) module is too old? Phoebe comes with
+a separate `lib` directory which contains a patched version of the module. Move
+this directory into your working directory where you want to run Phoebe and try
+again.
+
+🔥 **SSL\_cert\_file cert.pem can't be used: No such file or directory** 🔥 Perhaps
+you're missing the certificate (`cert.pem`) or key file (`key.pem`). The git
+repo has the necessary files which you can use to do a quick test. Copy them
+into the installation directory where you want to run Phoebe and try again. Once
+it works, you should _generate your own_ using the Makefile: `make cert`
+should do it.
 
 ## Wiki Directory
 
@@ -448,6 +466,7 @@ Here's my suggestion:
     Disallow: history/*
     Disallow: do/changes*
     Disallow: do/all/changes*
+    Disallow: do/all/latest/changes*
     Disallow: do/rss
     Disallow: do/atom
     Disallow: do/all/atom

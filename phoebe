@@ -183,7 +183,9 @@ F<key.pem>. That's enough to get started! Start the server:
 
     perl phoebe
 
-This starts the server in the foreground. Open a second terminal and test it:
+This starts the server in the foreground. If it aborts, see the
+L</Troubleshooting> section below. If it runs, open a second terminal and test
+it:
 
     echo gemini://localhost \
       | openssl s_client --quiet --connect localhost:1965 2>/dev/null
@@ -234,6 +236,21 @@ If you have a bunch of Gemtext files in a directory, you can upload them all in
 one go:
 
     titan --url=titan://localhost/ --token=hello *.gmi
+
+=head2 Troubleshooting
+
+🔥 B<Cannot connect to SSL port 1965 on 127.0.0.1 [No such file or directory]>
+🔥 Perhaps your L<Net::Server::Proto::SSL> module is too old? Phoebe comes with
+a separate F<lib> directory which contains a patched version of the module. Move
+this directory into your working directory where you want to run Phoebe and try
+again.
+
+🔥 B<SSL_cert_file cert.pem can't be used: No such file or directory> 🔥 Perhaps
+you're missing the certificate (F<cert.pem>) or key file (F<key.pem>). The git
+repo has the necessary files which you can use to do a quick test. Copy them
+into the installation directory where you want to run Phoebe and try again. Once
+it works, you should I<generate your own> using the Makefile: C<make cert>
+should do it.
 
 =head2 Wiki Directory
 
@@ -2766,7 +2783,6 @@ sub write {
     my $peeraddr = $self->{server}->{'peeraddr'};
     say $fh join("\x1f", scalar(time), $id, $revision + 1, $self->bogus_hash($peeraddr));
     close($fh);
-    $revision = 1;
   }
   mkdir "$dir/page" unless -d "$dir/page";
   eval { write_text($file, $text) };

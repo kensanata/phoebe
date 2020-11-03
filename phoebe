@@ -2822,14 +2822,7 @@ sub delete {
   if (-f $index) {
     # remove $id from the index
     my @pages = grep { $_ ne $id } read_lines $index;
-    if (not open(my $fh, ">:encoding(UTF-8)", $index)) {
-      $self->log(1, "Cannot write index $index: $!");
-      say "59 Unable to write index\r";
-      return;
-    } else {
-      say $fh @pages;
-      close($fh);
-    }
+    write_text($index, join("\n", @pages, ""));
   }
   my $log = "$dir/changes.log";
   if (not open(my $fh, ">>:encoding(UTF-8)", $log)) {

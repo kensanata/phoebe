@@ -197,6 +197,8 @@ $page = query_gemini("$base/do/changes");
 like($page, qr/^=> $base\/page\/Haiku Haiku \(deleted\)/m, "Current revision of Haiku was deleted");
 $page = query_gemini("$base/do/index");
 unlike($page, qr/Haiku/, "Haiku is no longer in the index");
+like($page, qr/2017-12-27\n.*2017-12-26\n.*2017-12-25\n/,
+     "index still has pages separated by newlines");
 
 # delete file
 $page = query_gemini("$titan/raw/Alex;size=0;mime=image/jpeg;token=hello", "");

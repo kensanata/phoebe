@@ -125,6 +125,8 @@ Perl libraries you need to install if you want to run Phoebe:
 
 =item L<File::Slurper>
 
+=item L<IO::Socket::SSL>
+
 =item L<Modern::Perl>
 
 =item L<Net::Server>

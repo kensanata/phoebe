@@ -125,6 +125,8 @@ Perl libraries you need to install if you want to run Phoebe:
 
 =item L<File::Slurper>
 
+=item L<IO::Socket::INET6>
+
 =item L<IO::Socket::SSL>
 
 =item L<Modern::Perl>
@@ -991,6 +993,7 @@ sub default_values {
   return {
     full_url_regex => "((?:$protocols):$chars+)",
     host => 'localhost',
+    ipv => '*',
     port => 1965,
     wiki_token => ['hello'],
     wiki_space => [],
@@ -3228,7 +3231,7 @@ sub process_request {
       print <DATA>;
     } else {
       $self->log(3, "Unknown $url");
-      say "40 Don't know how to handle $url\r";
+      say "59 Don't know how to handle $url\r";
     }
     $self->log(4, "Done");
   };

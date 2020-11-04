@@ -117,6 +117,7 @@ Perl libraries you need to install if you want to run Phoebe:
 - [Algorithm::Diff](https://metacpan.org/pod/Algorithm%3A%3ADiff)
 - [File::ReadBackwards](https://metacpan.org/pod/File%3A%3AReadBackwards)
 - [File::Slurper](https://metacpan.org/pod/File%3A%3ASlurper)
+- [IO::Socket::INET6](https://metacpan.org/pod/IO%3A%3ASocket%3A%3AINET6)
 - [IO::Socket::SSL](https://metacpan.org/pod/IO%3A%3ASocket%3A%3ASSL)
 - [Modern::Perl](https://metacpan.org/pod/Modern%3A%3APerl)
 - [Net::Server](https://metacpan.org/pod/Net%3A%3AServer)

@@ -209,7 +209,7 @@ $page = query_gemini("$base/do/changes");
 like($page, qr/^Alex \(deleted file\)/m, "Alex was deleted");
 
 # extension
-$page = query_gemini($base);
+$page = query_gemini("$base/");
 like($page, qr/^=> gemini:\/\/localhost:1965\/do\/test Test\n/m, "Extension installed Test menu");
 $page = query_gemini("$base/do/test");
 like($page, qr/^Test\n/m, "Extension runs");

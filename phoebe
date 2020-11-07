@@ -3243,9 +3243,6 @@ sub process_request {
     } elsif ($authority) {
       $self->log(3, "Unsupported proxy request for $url");
       say "53 Unsupported proxy request for $url\r";
-    } elsif ($authority) {
-      $self->log(3, "Unsupported proxy request for $url");
-      say "53 Unsupported proxy request for $url\r";
     } else {
       $self->log(3, "No handler for $url");
       say "59 Don't know how to handle $url\r";

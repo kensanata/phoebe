@@ -37,11 +37,11 @@ It does two and a half things:
 =item People can also access it using a regular web browser. They'll get a very
       simple, read-only version of the site.
 
+=back
+
 To take a look for yourself, check out the test wiki via the
 L<web|https://transjovian.org:1965/test> or via
 L<Gemini|gemini://transjovian.org/test>.
-
-=back
 
 =head2 What are pages written in?
 
@@ -912,6 +912,15 @@ Let me know if you need this and you are stuck.
     </svg>
     EOT
     }
+
+=head2 More
+
+As you might have guessed, the system is easy to tinker with, if you know some
+Perl. L<The Transjovian Council|https://transjovian.org:1965/> has L<a wiki
+space dedicated to Phoebe|https://transjovian.org:1965/phoebe/>, and it includes
+a section with more configuration examples, including simple comments
+(append-only via Gemini), complex comments (editing via Titan or the web),
+wholesale page editing via the web, user-agent blocking, and so on.
 
 =cut
 

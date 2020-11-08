@@ -15,9 +15,9 @@ It does two and a half things:
 - People can also access it using a regular web browser. They'll get a very
       simple, read-only version of the site.
 
-    To take a look for yourself, check out the test wiki via the
-    [web](https://transjovian.org:1965/test) or via
-    [Gemini](gemini://transjovian.org/test).
+To take a look for yourself, check out the test wiki via the
+[web](https://transjovian.org:1965/test) or via
+[Gemini](gemini://transjovian.org/test).
 
 **Table of Contents**
 
@@ -45,6 +45,7 @@ It does two and a half things:
 - [Multiple Certificates](#multiple-certificates)
 - [CSS for the Web](#css-for-the-web)
 - [Favicon for the Web](#favicon-for-the-web)
+- [More](#more)
 
 ## What are pages written in?
 
@@ -854,3 +855,12 @@ Let me know if you need this and you are stuck.
     </svg>
     EOT
     }
+
+## More
+
+As you might have guessed, the system is easy to tinker with, if you know some
+Perl. [The Transjovian Council](https://transjovian.org:1965/) has [a wiki
+space dedicated to Phoebe](https://transjovian.org:1965/phoebe/), and it includes
+a section with more configuration examples, including simple comments
+(append-only via Gemini), complex comments (editing via Titan or the web),
+wholesale page editing via the web, user-agent blocking, and so on.

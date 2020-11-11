@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "PHOEBE 1"
-.TH PHOEBE 1 "2020-11-08" "perl v5.30.0" "User Contributed Perl Documentation"
+.TH PHOEBE 1 "2020-11-11" "perl v5.30.0" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -380,6 +380,109 @@ one go:
 .Vb 1
 \&    titan \-\-url=titan://localhost/ \-\-token=hello *.gmi
 .Ve
+.SS "Image uploads"
+.IX Subsection "Image uploads"
+\&\s-1OK,\s0 how do image uploads work? First, we need to specify which \s-1MIME\s0 types Phoebe
+accepts. The files are going to be served back with that \s-1MIME\s0 type, so even if
+somebody uploads an executable and claim it's an image, other people's clients
+will treat it as an image instead of executing it (one hopes!) X so let's start
+with a list of common \s-1MIME\s0 types.
+.ie n .IP """image/jpeg"" is for photos (usually with the ""jpg"" extension)" 4
+.el .IP "\f(CWimage/jpeg\fR is for photos (usually with the \f(CWjpg\fR extension)" 4
+.IX Item "image/jpeg is for photos (usually with the jpg extension)"
+.PD 0
+.ie n .IP """image/png"" is for graphics (usually with the ""png"" extension)" 4
+.el .IP "\f(CWimage/png\fR is for graphics (usually with the \f(CWpng\fR extension)" 4
+.IX Item "image/png is for graphics (usually with the png extension)"
+.ie n .IP """audio/mpeg"" is for sound (usually with the ""mp3"" extension)" 4
+.el .IP "\f(CWaudio/mpeg\fR is for sound (usually with the \f(CWmp3\fR extension)" 4
+.IX Item "audio/mpeg is for sound (usually with the mp3 extension)"
+.PD
+.PP
+Let's continue using the setup we used for the \*(L"Quickstart\*(R" section. Restart
+the server and allow photos:
+.PP
+.Vb 1
+\&    perl phoebe \-\-wiki_mime_type=image/jpeg
+.Ve
+.PP
+Upload the image using the \f(CW\*(C`titan\*(C'\fR script:
+.PP
+.Vb 2
+\&    titan \-\-url=titan://localhost:1965/jupiter.jpg \e
+\&      \-\-token=hello Pictures/Planets/Juno.jpg
+.Ve
+.PP
+You should get back a redirect to the uploaded image:
+.PP
+.Vb 1
+\&    30 gemini://localhost:1965/file/jupiter.jpg
+.Ve
+.PP
+How did the \f(CW\*(C`titan\*(C'\fR script know the MIME-type to use for the upload? If you
+don't specify a MIME-type using \f(CW\*(C`\-\-mime\*(C'\fR, the \f(CW\*(C`file\*(C'\fR utility is called to
+guess the \s-1MIME\s0 type of the file.
+.PP
+Test it:
+.PP
+.Vb 1
+\&    file \-\-mime\-type \-\-brief Pictures/Planets/Juno.jpg
+.Ve
+.PP
+The result is the MIME-type we enabled for our wiki:
+.PP
+.Vb 1
+\&    image/jpeg
+.Ve
+.PP
+Here's what happens when you're trying to upload an unsupported MIME-type:
+.PP
+.Vb 2
+\&    titan \-\-url=titan://localhost:1965/earth.png \e
+\&      \-\-token=hello Pictures/Planets/Earth.png
+.Ve
+.PP
+What you get back explains the problem:
+.PP
+.Vb 1
+\&    59 This wiki does not allow image/png
+.Ve
+.PP
+In order to allow such graphics as well, you need to restart Phoebe:
+.PP
+.Vb 1
+\&    perl phoebe \-\-wiki_mime_type=image/jpeg \-\-wiki_mime_type=image/png
+.Ve
+.PP
+Except that in my case, the image is too big:
+.PP
+.Vb 1
+\&    59 This wiki does not allow more than 100000 bytes per page
+.Ve
+.PP
+I could scale it down before I upload the image, using \f(CW\*(C`convert\*(C'\fR (which is part
+of ImageMagick):
+.PP
+.Vb 1
+\&    convert \-scale 20% Pictures/Planets/Earth.png earth\-small.png
+.Ve
+.PP
+Try again:
+.PP
+.Vb 2
+\&    titan \-\-url=titan://localhost:1965/earth.png \e
+\&      \-\-token=hello earth\-small.png
+.Ve
+.PP
+Alternatively, you can increase the size limit using the
+\&\f(CW\*(C`\-\-wiki_page_size_limit\*(C'\fR option, but you need to restart Phoebe:
+.PP
+.Vb 2
+\&    perl phoebe \-\-wiki_page_size_limit=10000000 \e
+\&      \-\-wiki_mime_type=image/jpeg \-\-wiki_mime_type=image/png
+.Ve
+.PP
+Now you can upload about 10MBX
 .SS "Troubleshooting"
 .IX Subsection "Troubleshooting"
 X \fBCannot connect to \s-1SSL\s0 port 1965 on 127.0.0.1 [No such file or directory]\fR

@@ -26,6 +26,7 @@ To take a look for yourself, check out the test wiki via the
 - [What is Titan?](#what-is-titan)
 - [Dependencies](#dependencies)
 - [Quickstart](#quickstart)
+- [Image uploads](#image-uploads)
 - [Troubleshooting](#troubleshooting)
 - [Wiki Directory](#wiki-directory)
 - [Options](#options)
@@ -227,6 +228,79 @@ If you have a bunch of Gemtext files in a directory, you can upload them all in
 one go:
 
     titan --url=titan://localhost/ --token=hello *.gmi
+
+## Image uploads
+
+OK, how do image uploads work? First, we need to specify which MIME types Phoebe
+accepts. The files are going to be served back with that MIME type, so even if
+somebody uploads an executable and claim it's an image, other people's clients
+will treat it as an image instead of executing it (one hopes!) – so let's start
+with a list of common MIME types.
+
+- `image/jpeg` is for photos (usually with the `jpg` extension)
+- `image/png` is for graphics (usually with the `png` extension)
+- `audio/mpeg` is for sound (usually with the `mp3` extension)
+
+Let's continue using the setup we used for the ["Quickstart"](#quickstart) section. Restart
+the server and allow photos:
+
+    perl phoebe --wiki_mime_type=image/jpeg
+
+Upload the image using the `titan` script:
+
+    titan --url=titan://localhost:1965/jupiter.jpg \
+      --token=hello Pictures/Planets/Juno.jpg
+
+You should get back a redirect to the uploaded image:
+
+    30 gemini://localhost:1965/file/jupiter.jpg
+
+How did the `titan` script know the MIME-type to use for the upload? If you
+don't specify a MIME-type using `--mime`, the `file` utility is called to
+guess the MIME type of the file.
+
+Test it:
+
+    file --mime-type --brief Pictures/Planets/Juno.jpg
+
+The result is the MIME-type we enabled for our wiki:
+
+    image/jpeg
+
+Here's what happens when you're trying to upload an unsupported MIME-type:
+
+    titan --url=titan://localhost:1965/earth.png \
+      --token=hello Pictures/Planets/Earth.png
+
+What you get back explains the problem:
+
+    59 This wiki does not allow image/png
+
+In order to allow such graphics as well, you need to restart Phoebe:
+
+    perl phoebe --wiki_mime_type=image/jpeg --wiki_mime_type=image/png
+
+Except that in my case, the image is too big:
+
+    59 This wiki does not allow more than 100000 bytes per page
+
+I could scale it down before I upload the image, using `convert` (which is part
+of ImageMagick):
+
+    convert -scale 20% Pictures/Planets/Earth.png earth-small.png
+
+Try again:
+
+    titan --url=titan://localhost:1965/earth.png \
+      --token=hello earth-small.png
+
+Alternatively, you can increase the size limit using the
+`--wiki_page_size_limit` option, but you need to restart Phoebe:
+
+    perl phoebe --wiki_page_size_limit=10000000 \
+      --wiki_mime_type=image/jpeg --wiki_mime_type=image/png
+
+Now you can upload about 10MB…
 
 ## Troubleshooting
 

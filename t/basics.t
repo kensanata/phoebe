@@ -34,6 +34,10 @@ for (qw(raw/* html/* diff/* history/* do/changes* do/all/changes* do/all/latest/
   like($page, qr/^Disallow: $url/m, "Robots are disallowed from $url");
 }
 
+# redirect of reserved word
+$page = query_gemini("$base/do");
+is($page, "31 $base/\r\n", "Redirect reserved word");
+
 # main menu
 $page = query_gemini("$base/");
 

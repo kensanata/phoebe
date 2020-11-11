@@ -59,6 +59,10 @@ like($page, qr/^=> $base\/alex\/page\/Alex Alex/m, "main menu contains Alex");
 $page = query_gemini("$base/alex/page/Alex");
 like($page, qr/^This page does not yet exist/m, "Alex page is empty in the alex space");
 
+# redirect of reserved word
+$page = query_gemini("$base/alex/do");
+is($page, "31 $base/alex\r\n", "Redirect reserved word");
+
 # upload
 
 my $titan = "titan://$host:$port";

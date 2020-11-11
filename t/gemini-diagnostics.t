@@ -18,11 +18,15 @@ use Test::More;
 use Encode qw(decode_utf8);
 use utf8; # tests contain UTF-8 characters and it matters
 
+our $host = 'localhost';
+our $port;
+
 require './t/test.pl';
 
-say "Starting ../gemini-diagnostics/gemini-diagnostics";
-open(my $fh, "-|:utf8", "../gemini-diagnostics/gemini-diagnostics localhost 1965")
+say "Running ../gemini-diagnostics/gemini-diagnostics $host $port";
+open(my $fh, "-|:utf8", "../gemini-diagnostics/gemini-diagnostics $host $port")
     or die "Cannot run ../gemini-diagnostics/gemini-diagnostics";
+diag "A lot of errors at the beginning are OK!";
 
 my $test;
 while (<$fh>) {

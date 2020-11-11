@@ -3083,6 +3083,15 @@ sub space_regex {
   return join("|", map { quotemeta } @spaces);
 }
 
+# A regular expression matching parts of reserved paths in URLs. When looking at
+# gemini://localhost:1965/page/test or gemini://localhost:1965/do/index and
+# using a client that has an "up" command, you'd end up at
+# gemini://localhost:1965/page – but what should happen in this case? We should
+# redirect these requests to gemini://localhost:1965/, I think.
+sub reserved_regex {
+  return join("|", qw(do page raw file html history diff));
+}
+
 sub process_request {
   my $self = shift;
   eval {
@@ -3100,10 +3109,11 @@ sub process_request {
     my $host_regex = $self->host_regex();
     my $port = $self->port();
     my $spaces = $self->space_regex();
+    my $reserved = $self->reserved_regex();
     $self->log(4, "Serving ($host_regex)(?::$port)?");
     $self->log(4, "Spaces $spaces");
     $url = <STDIN>; # no loop
-    return if $url !~ /\r\n$/; # CR LF is mandatory
+    return unless $url and $url =~ /\r\n$/; # CR LF is mandatory
     $url =~ s/\s+$//g; # no trailing whitespace
     # $url =~ s!^([^/:]+://[^/:]+)(/.*|)$!$1:$port$2!; # add port
     # $url .= '/' if $url =~ m!^[^/]+://[^/]+$!; # add missing trailing slash
@@ -3130,8 +3140,11 @@ sub process_request {
 	$self->log(4, "The path $path is malformed");
 	say "59 The path $path is malformed\r";
       }
-    } elsif (($host, $n) = $url =~ m!^(?:gemini:)?//($host_regex)(:$port)?$!) {
-      say "31 gemini://$host" . ($n ? ":$port" : "") . "/\r" ; # enforce trailing slash
+    } elsif (($host, $n, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(:$port)?(?:(?:/($spaces))?/(?:$reserved))?$!) {
+      # redirect gemini://localhost:2020 or gemini://localhost:2020/do  to gemini://localhost:2020/
+      # redirect gemini://localhost:2020/space/do to gemini://localhost:2020/space
+      $space = $self->space($host, $space) || "";
+      say "31 gemini://$host" . ($n ? ":$port" : "") . "/$space\r" ; # enforce trailing slash, and support "up"
     } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/?$!) {
       $self->serve_main_menu($host, $self->space($host, $space));
     } elsif (($host, $space, $n) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/more(?:/(\d+))?$!) {

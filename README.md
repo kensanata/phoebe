@@ -388,6 +388,8 @@ Here's the documentation for the most useful options:
       type without a subtype, eg. `image` will allow all sorts of images (make
       sure random people can't use your server to exchange images – set a
       password using `--wiki_token`)
+- `--wiki_page_size_limit` is the number of bytes to allow for uploads,
+      both for pages and for files; the default is 10000 (10kB)
 - `--host` is the hostname to serve; the default is `localhost` – you
       probably want to pick the name of your machine, if it is reachable from
       the Internet; if you use it multiple times, each host gets its own wiki

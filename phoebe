@@ -422,6 +422,9 @@ Here's the documentation for the most useful options:
       sure random people can't use your server to exchange images – set a
       password using C<--wiki_token>)
 
+=item C<--wiki_page_size_limit> is the number of bytes to allow for uploads,
+      both for pages and for files; the default is 10000 (10kB)
+
 =item C<--host> is the hostname to serve; the default is C<localhost> – you
       probably want to pick the name of your machine, if it is reachable from
       the Internet; if you use it multiple times, each host gets its own wiki

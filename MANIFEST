@@ -1,5 +1,4 @@
 Changes
-contrib/Net/Server/Proto/SSL.pm
 lib/App/phoebe.pm
 LICENSE
 Makefile.PL

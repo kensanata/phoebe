@@ -1,4 +1,5 @@
 Changes
+contrib/Net/Server/Proto/SSL.pm
 lib/App/phoebe.pm
 LICENSE
 Makefile.PL
@@ -8,3 +9,17 @@ script/gemini
 script/phoebe
 script/phoebe-ctl
 script/titan
+t/alex.jpg
+t/archive-spaces.t
+t/archive.t
+t/basics.t
+t/cert.pem
+t/encoding.t
+t/gemini-diagnostics.t
+t/html-spaces.t
+t/html.t
+t/key.pem
+t/locks.t
+t/spaces.t
+t/test.pl
+t/virtual-hosting.t

@@ -1,6 +1,6 @@
 # What to do for a release?
 
-Run `make doc` to update the `README.md`.
+Run `make README.md`.
 
 Update `Changes` with user-visible changes.
 
@@ -19,5 +19,5 @@ David Farrell (2016):
 
 ```
 perl Makefile.PL && make && make dist
-cpan-upload -u SCHROEDER App-phoebe-1.1.tar.gz
+cpan-upload -u SCHROEDER App-phoebe-v1.1.1.tar.gz
 ```

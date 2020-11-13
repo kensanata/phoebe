@@ -23,16 +23,18 @@ our $port;
 
 require './t/test.pl';
 
-say "Running ../gemini-diagnostics/gemini-diagnostics $host $port";
-open(my $fh, "-|:utf8", "../gemini-diagnostics/gemini-diagnostics $host $port")
-    or die "Cannot run ../gemini-diagnostics/gemini-diagnostics";
-diag "A lot of errors at the beginning are OK!";
+ SKIP: {
+   say "Running gemini-diagnostics $host $port";
+   open(my $fh, "-|:utf8", "gemini-diagnostics $host $port")
+       or skip "Cannot run gemini-diagnostics";
+   diag "A lot of errors at the beginning are OK!";
 
-my $test;
-while (<$fh>) {
-  $test = $1 if /\[(\w+)\]/;
-  next unless m/^ *(x|✓)/;
-  ok($1 eq "✓", $test);
+   my $test;
+   while (<$fh>) {
+     $test = $1 if /\[(\w+)\]/;
+     next unless m/^ *(x|✓)/;
+     ok($1 eq "✓", $test);
+   }
 }
 
 done_testing();

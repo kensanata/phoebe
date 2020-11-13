@@ -24,6 +24,8 @@ To take a look for yourself, check out the test wiki via the
 - [What are pages written in?](#what-are-pages-written-in)
 - [How do you edit a Phoebe wiki?](#how-do-you-edit-a-phoebe-wiki)
 - [What is Titan?](#what-is-titan)
+- [License](#license)
+- [Installation](#installation)
 - [Dependencies](#dependencies)
 - [Quickstart](#quickstart)
 - [Image uploads](#image-uploads)
@@ -111,6 +113,22 @@ you follow it, you'll see the page content as plain text. You can submit a
 changed version of this text to the same URL using Titan. There is more
 information for developers available
 [on Community Wiki](https://communitywiki.org/wiki/Titan).
+
+## License
+
+GNU Affero General Public License
+
+## Installation
+
+Using `cpan`:
+
+    $ cpan App::phoebe
+
+Manual install:
+
+    $ perl Makefile.PL
+    $ make
+    $ make install
 
 ## Dependencies
 

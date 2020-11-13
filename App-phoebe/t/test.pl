@@ -87,10 +87,12 @@ if (!defined $pid) {
   say "This is the server...";
   use Config;
   my $secure_perl_path = $Config{perlpath};
-  my @args = ("./phoebe",
+  my @args = ("blib/script/phoebe",
 	      (map { "--host=$_" } @hosts),
 	      "--port=$port",
 	      "--log_level=" . ($ENV{DEBUG}||0), # set to 4 for verbose logging
+	      "--cert_file=t/cert.pem",
+	      "--key_file=t/key.pem",
 	      "--wiki_dir=$dir",
 	      "--wiki_mime_type=image/jpeg",
 	      (map { "--wiki_page=$_" } @pages),

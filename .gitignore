@@ -1,3 +1,10 @@
 /wiki/
-/test-[0-9][0-9][0-9][0-9]/
-/.prove
+App-phoebe/.prove
+App-phoebe/blib
+App-phoebe/MANIFEST*
+App-phoebe/MYMETA*
+App-phoebe/Makefile
+App-phoebe/Makefile.old
+App-phoebe/pm_to_blib
+App-phoebe/*.gz
+App-phoebe/test-[0-9][0-9][0-9][0-9]/

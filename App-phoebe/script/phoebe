@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 # Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
@@ -112,6 +112,22 @@ you follow it, you'll see the page content as plain text. You can submit a
 changed version of this text to the same URL using Titan. There is more
 information for developers available
 L<on Community Wiki|https://communitywiki.org/wiki/Titan>.
+
+=head2 License
+
+GNU Affero General Public License
+
+=head2 Installation
+
+Using C<cpan>:
+
+    $ cpan App::phoebe
+
+Manual install:
+
+    $ perl Makefile.PL
+    $ make
+    $ make install
 
 =head2 Dependencies
 

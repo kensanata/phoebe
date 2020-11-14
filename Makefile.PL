@@ -21,6 +21,7 @@ WriteMakefile(
     'File::ReadBackwards' => 0,
     'IO::Socket::INET6' => 0,
     'IO::Socket::SSL' => 0,
+    'File::Slurper' => 0,
     'Modern::Perl' => 0,
     'Net::Server' => 0,
     'URI::Escape' => 0,

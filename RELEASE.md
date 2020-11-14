@@ -19,5 +19,5 @@ David Farrell (2016):
 
 ```
 perl Makefile.PL && make && make dist
-cpan-upload -u SCHROEDER App-phoebe-v1.1.1.tar.gz
+cpan-upload -u SCHROEDER App-phoebe-1.21.tar.gz
 ```

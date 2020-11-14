@@ -375,6 +375,11 @@ it, you'll find a few more files:
 - `config` probably doesn't exist, yet; it is an optional file containing
       Perl code where you can add new features and change how Phoebe works (see
       ["Configuration"](#configuration) below)
+- `conf.d` probably doesn't exist, either; it is an optional directory
+      containing even more Perl files where you can add new features and change
+      how Phoebe works (see ["Configuration"](#configuration) below); the idea is that people
+      can share stand-alone configurations that you can copy into this directory
+      without having to edit your own `config` file.
 
 ## Options
 
@@ -617,7 +622,8 @@ and created a separate `phoebe` user, you could simply use `--user=phoebe` and
 ## Configuration
 
 This section describes some hooks you can use to customize your wiki using the
-`config` file. Once you're happy with the changes you've made, reload the
+`config` file, or using a Perl file (ending in `*.pl` or `*.pm`) in the
+`conf.d` directory. Once you're happy with the changes you've made, reload the
 server to make it read the config file. You can do that by sending it the HUP
 signal, if you know the pid, or if you have a pid file:
 

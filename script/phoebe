@@ -400,6 +400,12 @@ it, you'll find a few more files:
       Perl code where you can add new features and change how Phoebe works (see
       L</Configuration> below)
 
+=item F<conf.d> probably doesn't exist, either; it is an optional directory
+      containing even more Perl files where you can add new features and change
+      how Phoebe works (see L</Configuration> below); the idea is that people
+      can share stand-alone configurations that you can copy into this directory
+      without having to edit your own F<config> file.
+
 =back
 
 =head2 Options
@@ -665,7 +671,8 @@ C<--group=phoebe> instead. 👍
 =head2 Configuration
 
 This section describes some hooks you can use to customize your wiki using the
-F<config> file. Once you're happy with the changes you've made, reload the
+F<config> file, or using a Perl file (ending in F<*.pl> or F<*.pm>) in the
+F<conf.d> directory. Once you're happy with the changes you've made, reload the
 server to make it read the config file. You can do that by sending it the HUP
 signal, if you know the pid, or if you have a pid file:
 
@@ -1168,10 +1175,15 @@ sub post_configure_hook {
   my $self = shift;
   $self->{server}->{wiki_dir} = $ENV{PHOEBE_DATA_DIR} if $ENV{PHOEBE_DATA_DIR};
   # config file with extra code; restart server if you change it
-  my $config = $self->{server}->{wiki_dir} . "/config";
-  $self->log(3, "Running $config");
-  do $config if -r $config;
-  $self->log(1, "$@") if $@;
+  my $dir = $self->{server}->{wiki_dir};
+  my @config;
+  push(@config, "$dir/config") if -f "$dir/config";
+  push(@config, map { "$dir/conf.d/$_" } grep(/\.p[lm]$/, read_dir("$dir/conf.d"))) if -d "$dir/conf.d";
+  for my $config (@config) {
+    $self->log(3, "Running $config");
+    do $config if -r $config;
+    $self->log(1, "$@") if $@;
+  }
   # summarize config results
   $self->log(3, "PID $$");
   $self->log(3, "Port @{$self->{server}->{port}}");

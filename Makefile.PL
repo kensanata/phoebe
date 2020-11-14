@@ -36,7 +36,7 @@ WriteMakefile(
     },
   },
   clean => {
-    FILES => "test-[0-9][0-9][0-9][0-9]",
+    FILES => "test-[0-9][0-9][0-9][0-9] t/*.pem",
   },
 );
 

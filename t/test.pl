@@ -85,6 +85,12 @@ if (!defined $pid) {
   die "Cannot fork: $!";
 } elsif ($pid == 0) {
   say "This is the server...";
+  if (not -f "t/cert.pem" or not -f "t/key.pem") {
+    # create certificates for the test if we don't have them
+    my $cmd = qq(openssl req -new -x509 -newkey ec -subj "/CN=localhost" )
+	. qq(-pkeyopt ec_paramgen_curve:prime256v1 -days 1825 -nodes -out t/cert.pem -keyout t/key.pem);
+    system($cmd) == 0 or die "openssl failed to create t/cert.pem and t/key.pem: $?";
+  }
   use Config;
   my $secure_perl_path = $Config{perlpath};
   my @args = ("blib/script/phoebe",

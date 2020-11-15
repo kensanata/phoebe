@@ -1,0 +1,30 @@
+# this file
+^MANIFEST\.SKIP
+
+# files for developers
+^TODO
+^RELEASE
+^update-readme
+
+# generated files
+^pm_to_blib
+^MYMETA
+^Makefile$
+
+# hidden files, backup files
+^\.
+~$
+\.bak$
+\.old$
+
+# certificates, keys, archives
+\.pem$
+\.tar\.gz$
+
+# directories
+^test-\d\d\d\d\/
+^contrib/
+^debian/
+^wiki/
+^blib/
+^\.git/

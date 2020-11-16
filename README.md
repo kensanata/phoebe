@@ -335,6 +335,14 @@ into the installation directory where you want to run Phoebe and try again. Once
 it works, you should _generate your own_ using the Makefile: `make cert`
 should do it.
 
+🔥 **1408A0C1:SSL routines:ssl3\_get\_client\_hello:no shared cipher** 🔥 If you
+created a new certificate and key using elliptic curves using an older OpenSSL,
+you might run into this. Try to create a RSA key instead. It is larger, but at
+least it'll work.
+
+    openssl req -new -x509 -newkey rsa \
+    -days 1825 -nodes -out cert.pem -keyout key.pem
+
 ## Wiki Directory
 
 Your home directory should now also contain a wiki directory called `wiki`. In

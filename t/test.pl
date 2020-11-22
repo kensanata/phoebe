@@ -60,13 +60,13 @@ our (@init, @extensions, @main_menu);
 push(@main_menu, "=> gemini://localhost:1965/do/test Test");
 push(@extensions, \&serve_test);
 sub serve_test {
-  my $self = shift;
+  my $stream = shift;
   my $url = shift;
-  my $host = $self->host_regex();
-  my $port = $self->port();
+  my $host = host_regex();
+  my $port = port($stream);
   if ($url =~ m!^gemini://($host):$port/do/test$!) {
-    say "20 text/plain\r";
-    say "Test";
+    $stream->write("20 text/plain\r\n");
+    $stream->write("Test\n");
     return 1;
   }
   return;
@@ -88,7 +88,7 @@ if (!defined $pid) {
   if (not -f "t/cert.pem" or not -f "t/key.pem") {
     my $version = qx(openssl version)
 	or die "Cannot invoke openssl to create certificates\n";
-    print $version;
+    diag "Creating certificates using $version";
     if ($version =~ /^OpenSSL 1\.0\./) {
       my $cmd = qq(openssl req -new -x509 -newkey rsa -subj /CN=localhost )
 	  . qq( -days 1825 -nodes -out t/cert.pem -keyout t/key.pem);
@@ -104,7 +104,7 @@ if (!defined $pid) {
   my @args = ("blib/script/phoebe",
 	      (map { "--host=$_" } @hosts),
 	      "--port=$port",
-	      "--log_level=" . ($ENV{DEBUG}||0), # set to 4 for verbose logging
+	      "--log_level=warn", # set to debug if you are bug hunting?
 	      "--cert_file=t/cert.pem",
 	      "--key_file=t/key.pem",
 	      "--wiki_dir=$dir",

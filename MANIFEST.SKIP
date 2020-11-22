@@ -23,7 +23,6 @@
 
 # directories
 ^test-\d\d\d\d\/
-^contrib/
 ^debian/
 ^wiki/
 ^blib/

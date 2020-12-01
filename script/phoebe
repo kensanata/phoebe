@@ -2959,8 +2959,8 @@ sub write_file {
     $stream->write("59 Unable to write log\r\n");
     return;
   } else {
-    my $peeraddr = $stream->handle->peeraddr;
-    say $fh join("\x1f", scalar(time), $id, 0, bogus_hash($peeraddr));
+    my $peerhost = $stream->handle->peerhost;
+    say $fh join("\x1f", scalar(time), $id, 0, bogus_hash($peerhost));
     close($fh);
   }
   mkdir "$dir/file" unless -d "$dir/file";
@@ -2993,8 +2993,8 @@ sub delete_file {
     $stream->write("59 Unable to write log\r\n");
     return;
   } else {
-    my $peeraddr = $stream->handle->peeraddr;
-    say $fh join("\x1f", scalar(time), $id, "🖻", bogus_hash($peeraddr));
+    my $peerhost = $stream->handle->peerhost;
+    say $fh join("\x1f", scalar(time), $id, "🖻", bogus_hash($peerhost));
     close($fh);
   }
   success($stream);
@@ -3047,8 +3047,8 @@ sub write_page {
     $stream->write("59 Unable to write log\r\n");
     return;
   } else {
-    my $peeraddr = $stream->handle->peeraddr;
-    say $fh join("\x1f", scalar(time), $id, $revision + 1, bogus_hash($peeraddr));
+    my $peerhost = $stream->handle->peerhost;
+    say $fh join("\x1f", scalar(time), $id, $revision + 1, bogus_hash($peerhost));
     close($fh);
   }
   mkdir "$dir/page" unless -d "$dir/page";
@@ -3097,8 +3097,8 @@ sub delete_page {
     $stream->write("59 Unable to write log\r\n");
     return;
   } else {
-    my $peeraddr = $stream->handle->peeraddr;
-    say $fh join("\x1f", scalar(time), $id, "🖹", bogus_hash($peeraddr));
+    my $peerhost = $stream->handle->peerhost;
+    say $fh join("\x1f", scalar(time), $id, "🖹", bogus_hash($peerhost));
     close($fh);
   }
   $log->info("Deleted page $id");

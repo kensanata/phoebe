@@ -87,7 +87,7 @@ sub oddmuse_new_save_page {
   my $ua = Mojo::UserAgent->new;
   my $tx = $ua->post(
     $oddmuse_wikis{$host}
-    => {'X-Forwarded-For' => $stream->handle->peeraddr}
+    => {'X-Forwarded-For' => $stream->handle->peerhost}
     => form => {
       title => $id,
       text => $data,
@@ -236,7 +236,7 @@ sub oddmuse_get_raw {
   my $url = shift;
   $log->debug("Requesting $url");
   my $ua = Mojo::UserAgent->new;
-  my $res = $ua->get($url => {'X-Forwarded-For' => $stream->handle->peeraddr})->result;
+  my $res = $ua->get($url => {'X-Forwarded-For' => $stream->handle->peerhost})->result;
   if ($res->is_success or $res->code == 404) {
     return $res->text;
   }
@@ -829,7 +829,7 @@ sub oddmuse_comment {
   my $ua = Mojo::UserAgent->new;
   my $tx = $ua->post(
     $oddmuse_wikis{$host}
-    => {'X-Forwarded-For' => $stream->handle->peeraddr}
+    => {'X-Forwarded-For' => $stream->handle->peerhost}
     => form => {
       title => $id,
       aftertext => $query,

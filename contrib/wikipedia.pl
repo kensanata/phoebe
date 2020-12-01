@@ -16,8 +16,10 @@
 
 package App::Phoebe;
 use Modern::Perl;
+use MediaWiki::API;
+use List::Util qw(sum min max);
 
-our (@extensions, $server, $log);
+our (@extensions, $server, $full_url_regex, $log);
 
 # Wikipedia
 
@@ -87,9 +89,10 @@ sub wikipedia_serve_search {
     pssearch => $term, });
   if (not $articles) {
     $stream->write("43 Wikipedia says $mw->{error}->{code}: $mw->{error}->{details}\r\n");
+    $stream->close_gracefully();
     return;
   }
-  print "20 text/gemini;lang=$lang\r\n";
+  $stream->write("20 text/gemini;lang=$lang\r\n");
   $stream->write("# Searching for " . uri_unescape($term) . "\n");
   foreach (@$articles) {
     wikipedia_print_link($stream, $lang, $_->{title}, 'text', $_->{title});
@@ -119,11 +122,11 @@ sub wikipedia_serve_text {
     prop => 'wikitext',
     formatversion => '2',
     page => $term, });
-  print "20 text/gemini;lang=$lang\r\n";
+  $stream->write("20 text/gemini;lang=$lang\r\n");
   my $title = $result->{parse}->{title};
   my $text = wikipedia_extract($stream, $lang, $result->{parse}->{wikitext});
-  $stream->write("# $title\n");
-  $stream->write("$text\n\n");
+  $stream->write(encode_utf8 "# $title\n");
+  $stream->write(encode_utf8 "$text\n\n");
   wikipedia_print_link($stream, $lang, $term, 'full', "Full text");
   $stream->write("=> https://$lang.wikipedia.org/wiki/" . uri_escape_utf8($term) . " Source\n");
 }
@@ -249,7 +252,7 @@ sub wikipedia_format {
   $text =~ s/(={1,6})(.+?)\1 */("#" x length($1)) . " $2\n\n"/ge;
   $text =~ s/'''([^'\n]+)'''/**$1**/g;
   $text =~ s/''([^'\n]+)''/*$1*/g;
-  $text =~ s/\[$server->{full_url_regex} ([^]]+)\]/$2/g;
+  $text =~ s/\[$full_url_regex ([^]]+)\]/$2/g;
   $text =~ s/\[\[$link_regex\|([^\]|]+)\]\]/$2/g;
   $text =~ s/\[\[$link_regex\]\]/$1/g;
   $text =~ s/\[\[(?:File|Image|Category):.*?\]\] *//g;
@@ -269,11 +272,11 @@ sub wikipedia_serve_full {
     prop => 'wikitext',
     formatversion => '2',
     page => $term, });
-  print "20 text/gemini;lang=$lang\r\n";
+  $stream->write("20 text/gemini;lang=$lang\r\n");
   my $title = $result->{parse}->{title};
   my $text = wikipedia_text($stream, $lang, $result->{parse}->{wikitext});
-  $stream->write("# $title\n");
-  $stream->write("$text\n\n");
+  $stream->write(encode_utf8 "# $title\n");
+  $stream->write(encode_utf8 "$text\n\n");
   wikipedia_print_link($stream, $lang, $term, 'text', "Short text");
   $stream->write("=> https://$lang.wikipedia.org/wiki/" . uri_escape_utf8($term) . " Source\n");
 }

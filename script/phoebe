@@ -1123,6 +1123,7 @@ our @request_handlers = (
   '^titan://' => \&handle_titan,
   '^gemini://' => \&handle_gemini,
   '^GET .* HTTP/1\.[01]$' => \&handle_http_header,
+  '^[^:/?#]+://([^/?#]*)([^?#]*)(?:\?([^#]*))?(?:#(.*))?$' => \&handle_url,
 );
 
 configure();
@@ -1220,10 +1221,22 @@ sub handle_request {
       }
     }
     $log->error("No handler found for $data->{request}");
+    $stream->write("59 Cannot handle this request\r\n");
     $stream->close_gracefully();
   } else {
     $log->debug("Waiting for more bytes...");
   }
+}
+
+# special generic URL error handling to satisfy gemini-diagnostics
+sub handle_url {
+  my $stream = shift;
+  my $data = shift;
+  $log->info("Unhandled proxy request");
+  $log->debug("Discarding " . length($data->{buffer}) . " bytes")
+      if $data->{buffer};
+  $stream->write("53 No proxying for $data->{request}\r\n");
+  $stream->close_gracefully();
 }
 
 sub handle_gemini {
@@ -3495,11 +3508,11 @@ sub process_gemini {
     } elsif (length($url) > 1024) {
       $log->debug("The URL is too long");
       $stream->write("59 The URL is too long\r\n");
-    } elsif (($host, $n, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(:$port)?(?:(?:/($spaces))?/(?:$reserved))?$!) {
-      # redirect gemini://localhost:2020 or gemini://localhost:2020/do  to gemini://localhost:2020/
+    } elsif (($host, $n, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(:$port)?(?:/($spaces))?/(?:$reserved)$!) {
+      # redirect gemini://localhost:2020/do to gemini://localhost:2020/
       # redirect gemini://localhost:2020/space/do to gemini://localhost:2020/space
       $space = space($stream, $host, $space) || "";
-      $stream->write("31 gemini://$host" . ($n ? ":$port" : "") . "/$space\r\n"); # enforce trailing slash, and support "up"
+      $stream->write("31 gemini://$host" . ($n ? ":$port" : "") . "/$space\r\n"); # this supports "up"
     } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/?$!) {
       serve_main_menu($stream, $host, space($stream, $host, $space));
     } elsif (($host, $space, $n) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/more(?:/(\d+))?$!) {

@@ -132,6 +132,11 @@ sub query_gemini {
   return <$socket>;
 }
 
+sub query_web {
+  my $query = shift;
+  return query_gemini("$query\r\n"); # add empty line
+}
+
 say "This is the client waiting for the server to start...";
 sleep 1;
 

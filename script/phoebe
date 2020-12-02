@@ -1220,7 +1220,7 @@ sub handle_request {
 	return;
       }
     }
-    $log->error("No handler found for $data->{request}");
+    $log->debug("No handler found for $data->{request}");
     $stream->write("59 Cannot handle this request\r\n");
     $stream->close_gracefully();
   } else {
@@ -1232,7 +1232,7 @@ sub handle_request {
 sub handle_url {
   my $stream = shift;
   my $data = shift;
-  $log->info("Unhandled proxy request");
+  $log->debug("Unhandled proxy request");
   $log->debug("Discarding " . length($data->{buffer}) . " bytes")
       if $data->{buffer};
   $stream->write("53 No proxying for $data->{request}\r\n");

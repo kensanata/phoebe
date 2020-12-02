@@ -17,6 +17,7 @@
 package App::Phoebe;
 use Modern::Perl;
 use MediaWiki::API;
+use Text::SpanningTable;
 use List::Util qw(sum min max);
 
 our (@extensions, $server, $full_url_regex, $log);
@@ -39,6 +40,8 @@ sub wikipedia {
     wikipedia_serve_text($stream, $1, decode_utf8(uri_unescape($2)));
   } elsif ($url =~ m!^gemini://$host(?::$port)?/full/([a-z]+)/([^?;]+)!) {
     wikipedia_serve_full($stream, $1, decode_utf8(uri_unescape($2)));
+  } elsif ($url =~ m!^gemini://$host(?::$port)?/raw/([a-z]+)/([^?;]+)!) {
+    wikipedia_serve_raw($stream, $1, decode_utf8(uri_unescape($2)));
   } elsif ($url =~ m!^gemini://$host(?::$port)?/?$!) {
     $log->info("Asking for a language");
     $stream->write("10 Search in which language? (ar, cn, en, fr, ru, es, etc.)\r\n");
@@ -101,6 +104,22 @@ sub wikipedia_serve_search {
   $stream->write("=> https://$lang.wikipedia.org/wiki/" . uri_escape_utf8($term) . " Source\n");
 }
 
+sub wikipedia_serve_raw {
+  my $stream = shift;
+  my $lang = shift;
+  my $term = shift;
+  $log->info("Getting $lang/$term");
+  my $mw = MediaWiki::API->new();
+  $mw->{config}->{api_url} = "https://$lang.wikipedia.org/w/api.php";
+  my $result = $mw->api({
+    action => 'parse',
+    prop => 'wikitext',
+    formatversion => '2',
+    page => $term, });
+  $stream->write("20 text/plain\r\n");
+  $stream->write(encode_utf8 $result->{parse}->{wikitext});
+}
+
 sub wikipedia_print_link {
   my $stream = shift;
   my $lang = shift;
@@ -128,6 +147,7 @@ sub wikipedia_serve_text {
   $stream->write(encode_utf8 "# $title\n");
   $stream->write(encode_utf8 "$text\n\n");
   wikipedia_print_link($stream, $lang, $term, 'full', "Full text");
+  wikipedia_print_link($stream, $lang, $term, 'raw', "Raw text");
   $stream->write("=> https://$lang.wikipedia.org/wiki/" . uri_escape_utf8($term) . " Source\n");
 }
 
@@ -156,8 +176,10 @@ sub wikipedia_text {
   $text =~ s/\{\{\s*quote\s*\|(?:text=)?(.+?)\}\}/｢$1｣/sig;
   # strip all other templates
   do {} while $text =~ s/\{\{[^{}]+\}\}//g;
+  # strip remaining empty brackets
+  $text =~ s/\(\s*\)//g;
   # handle tables
-  $text =~ s/^(\{\|.+?\|\})\n?/push(@escaped, wikipedia_table($stream, $1)); "\x03" . $ref++ . "\x04"/mesg;
+  $text =~ s/^(\{\|.+?\|\})\n?/push(@escaped, wikipedia_table($1)); "\x03" . $ref++ . "\x04"/mesg;
   my @blocks = split(/\n\n+|\n(?=[*#=])|<br\s+\/>/, $text);
     for my $block (@blocks) {
     $block =~ s/\s+/ /g; # unwrap lines

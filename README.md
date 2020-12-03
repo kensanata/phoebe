@@ -512,20 +512,20 @@ always work.
 Here's my suggestion:
 
     User-agent: *
-    Disallow: raw/*
-    Disallow: html/*
-    Disallow: diff/*
-    Disallow: history/*
-    Disallow: do/changes*
-    Disallow: do/all/changes*
-    Disallow: do/all/latest/changes*
-    Disallow: do/rss
-    Disallow: do/atom
-    Disallow: do/all/atom
-    Disallow: do/new
-    Disallow: do/more/*
-    Disallow: do/match
-    Disallow: do/search
+    Disallow: /raw/*
+    Disallow: /html/*
+    Disallow: /diff/*
+    Disallow: /history/*
+    Disallow: /do/changes*
+    Disallow: /do/all/changes*
+    Disallow: /do/all/latest/changes*
+    Disallow: /do/rss
+    Disallow: /do/atom
+    Disallow: /do/all/atom
+    Disallow: /do/new
+    Disallow: /do/more/*
+    Disallow: /do/match
+    Disallow: /do/search
     # allowing do/index!
     Crawl-delay: 10
 
@@ -585,7 +585,8 @@ Here are the ways you can hook into Phoebe code:
       additional URLs; return 1 if you handle a URL; each code reference gets
       called with $stream ([Mojo::IOLoop::Stream](https://metacpan.org/pod/Mojo%3A%3AIOLoop%3A%3AStream)), the first line of the
       request (a Gemini URL, a Gopher selector, a finger user, a HTTP request
-      line), and a hash reference for the headers (in the case of HTTP requests)
+      line), a hash reference for the headers (in the case of HTTP requests),
+      and a buffer of bytes (e.g. for Titan or HTTP PUT or POST requests)
 - `@main_menu` adds more lines to the main menu, possibly links that aren't
       simply links to existing pages
 - `@footer` is a list of code references allowing you to add things like

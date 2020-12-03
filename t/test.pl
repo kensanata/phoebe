@@ -17,40 +17,16 @@ use Modern::Perl;
 use Test::More;
 use IO::Socket::SSL;
 use File::Slurper qw(write_text);
+use Mojo::IOLoop::Server;
 
 our $host //= "127.0.0.1";
 our @hosts;
 @hosts = ($host) unless @hosts;
 our @pages;
 our @spaces;
-our $port = random_port();
+our $port = Mojo::IOLoop::Server->generate_port;
 our $base = "gemini://$host:$port";
 our $dir = "./" . sprintf("test-%04d", int(rand(10000)));
-
-sub random_port {
-  use Errno qw(EADDRINUSE);
-  use Socket;
-
-  my $family = PF_INET;
-  my $type   = SOCK_STREAM;
-  my $proto  = getprotobyname('tcp')  or die "getprotobyname: $!";
-  my $host   = INADDR_ANY;  # Use inet_aton for a specific interface
-
-  for my $i (1..3) {
-    my $port   = 1024 + int(rand(65535 - 1024));
-    socket(my $sock, $family, $type, $proto) or die "socket: $!";
-    my $name = sockaddr_in($port, $host)     or die "sockaddr_in: $!";
-    setsockopt($sock, SOL_SOCKET, SO_REUSEADDR, 1);
-    bind($sock, $name)
-	and close($sock)
-	and return $port;
-    die "bind: $!" if $! != EADDRINUSE;
-    print "Port $port in use, retrying...\n";
-  }
-  die "Tried 3 random ports and failed.\n"
-}
-
-our $pid = fork();
 
 mkdir($dir);
 write_text("$dir/config", <<'EOT');
@@ -74,6 +50,8 @@ sub serve_test {
 1;
 EOT
 
+our $pid = fork();
+
 END {
   # kill server
   if ($pid) {
@@ -84,7 +62,7 @@ END {
 if (!defined $pid) {
   die "Cannot fork: $!";
 } elsif ($pid == 0) {
-  say "This is the server...";
+  say "This is the server listening on port $port...";
   if (not -f "t/cert.pem" or not -f "t/key.pem") {
     my $version = qx(openssl version)
 	or die "Cannot invoke openssl to create certificates\n";
@@ -123,7 +101,7 @@ sub query_gemini {
     PeerHost => "127.0.0.1",
     PeerService => $port,
     SSL_verify_mode => SSL_VERIFY_NONE)
-      or die "Cannot construct client socket: $@";
+      or die "Cannot construct client socket to $port: $@";
 
   print $socket "$query\r\n";
   print $socket $text if defined $text;
@@ -137,7 +115,7 @@ sub query_web {
   return query_gemini("$query\r\n"); # add empty line
 }
 
-say "This is the client waiting for the server to start...";
+say "This is the client waiting for the server to start on port $port...";
 sleep 1;
 
 1;

@@ -636,7 +636,8 @@ Here are the ways you can hook into Phoebe code:
       additional URLs; return 1 if you handle a URL; each code reference gets
       called with $stream (L<Mojo::IOLoop::Stream>), the first line of the
       request (a Gemini URL, a Gopher selector, a finger user, a HTTP request
-      line), and a hash reference for the headers (in the case of HTTP requests)
+      line), a hash reference for the headers (in the case of HTTP requests),
+      and a buffer of bytes (e.g. for Titan or HTTP PUT or POST requests)
 
 =item C<@main_menu> adds more lines to the main menu, possibly links that aren't
       simply links to existing pages
@@ -3165,11 +3166,8 @@ sub allow_deny_hook {
 }
 
 sub run_extensions {
-  my $stream = shift;
-  my $url = shift;
-  my $headers = shift;
   foreach my $sub (@extensions) {
-    return 1 if $sub->($stream, $url, $headers);
+    return 1 if $sub->(@_);
   }
   return;
 }
@@ -3250,7 +3248,6 @@ sub space_links {
 # and it's space($stream, 'localhost', 'alex') that will check whether 'alex' is a
 # legal space for localhost.
 sub space_regex {
-  my $stream = shift;
   my @spaces;
   if (keys %{$server->{host}} > 1) {
     for (@{$server->{wiki_space}}) {
@@ -3276,7 +3273,7 @@ sub process_http {
   my $stream = shift;
   my $request = shift;
   my $headers = shift;
-  # ignore buffer
+  my $buffer = shift;
   eval {
     local $SIG{'ALRM'} = sub {
       $log->error("Timeout processing $request");
@@ -3284,10 +3281,10 @@ sub process_http {
     alarm(10); # timeout
     my $host_regex = host_regex();
     my $port = port($stream);
-    my $spaces = space_regex($stream);
+    my $spaces = space_regex();
     $log->info("Looking at $request");
     my ($host, $space, $id, $n, $filter);
-    if (run_extensions($stream, $request, $headers)) {
+    if (run_extensions($stream, $request, $headers, $buffer)) {
       # config file goes first
     } elsif ($request =~ m!^GET /default.css HTTP/1\.[01]$!
 	and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
@@ -3345,11 +3342,15 @@ sub process_http {
       seek DATA, 0, 0;
       local $/ = undef; # slurp
       $stream->write(<DATA>);
+    } else {
+      $log->debug("No http handler for $request");
+      http_error("Don't know how to handle $request");
     }
     $log->debug("Done");
   };
   $log->error("Error: $@") if $@;
   alarm(0);
+  $stream->close_gracefully();
 }
 
 sub is_upload {
@@ -3357,7 +3358,7 @@ sub is_upload {
   my $request = shift;
   $log->info("Looking at $request");
   my $host_regex = host_regex();
-  my $spaces_regex = space_regex($stream);
+  my $spaces_regex = space_regex();
   my $port = port($stream);
   if ($request =~ m!^titan://($host_regex)(?::$port)?!) {
     my $host = $1;
@@ -3492,7 +3493,7 @@ sub process_gemini {
     alarm(10); # timeout
     my $host_regex = host_regex();
     my $port = port($stream);
-    my $spaces = space_regex($stream);
+    my $spaces = space_regex();
     my $reserved = reserved_regex($stream);
     $log->debug("Serving ($host_regex)(?::$port)?");
     $log->debug("Spaces $spaces");

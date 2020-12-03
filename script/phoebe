@@ -2489,9 +2489,9 @@ sub serve_diff {
 	 sub { "｢$_[0]｣" });
   } else {
     diff($old, $new,
-	 sub { $stream->write("$_\n") for @_ },
-	 sub { $stream->write("> \033[31m$_\033[0m\n") for map { $_||"⏎" } @_ },
-	 sub { $stream->write("> \033[32m$_\033[0m\n") for map { $_||"⏎" } @_ },
+	 sub { $stream->write(encode_utf8 "$_\n") for @_ },
+	 sub { $stream->write(encode_utf8 "> \033[31m$_\033[0m\n") for map { $_||"⏎" } @_ },
+	 sub { $stream->write(encode_utf8 "> \033[32m$_\033[0m\n") for map { $_||"⏎" } @_ },
 	 sub { "\033[1m$_[0]\033[22m" });
   }
 }

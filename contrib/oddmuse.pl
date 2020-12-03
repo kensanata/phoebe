@@ -34,28 +34,28 @@ sub oddmuse_print_link {
   return print_link($stream, $host, undef, $title, $id);
 }
 
-my %oddmuse_wikis = (
+our %oddmuse_wikis = (
   "alexschroeder.ch" => "http://localhost:4023/wiki",
   "communitywiki.org" => "http://localhost:4019/wiki",
   "emacswiki.org" => "http://localhost:4002/wiki" );
 
-my %oddmuse_wiki_names = (
+our %oddmuse_wiki_names = (
   "alexschroeder.ch" => "Alex Schroeder",
   "communitywiki.org" => "Community Wiki",
   "emacswiki.org" => "Emacs Wiki" );
 
-my %oddmuse_wiki_dirs = (
+our %oddmuse_wiki_dirs = (
   "alexschroeder.ch" => "/home/alex/alexschroeder",
   "communitywiki.org" => "/home/alex/communitywiki",
   "emacswiki.org" => "/home/alex/emacswiki" );
 
 # The Oddmuse wiki uses WikiLinks
-my %oddmuse_wiki_links = ("communitywiki.org" => 1);
+our %oddmuse_wiki_links = ("communitywiki.org" => 1);
 
 # The Oddmuse wiki uses a different token as the answer to a security question
 # (i.e. not the Phoebe server token). This only works if the Oddmuse wiki has
 # just one security question (or accepts the same answer for all questions).
-my %oddmuse_wiki_tokens = (
+our %oddmuse_wiki_tokens = (
   "emacswiki.org" => "emacs" );
 
 *oddmuse_old_save_page = \&save_page;

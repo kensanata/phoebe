@@ -2980,13 +2980,13 @@ sub write_file {
   mkdir "$dir/file" unless -d "$dir/file";
   eval { write_binary($file, $data) };
   if ($@) {
-    $stream->write("59 Unable to save $id: $@\r\n");
+    $stream->write("59 Unable to save $id\r\n");
     return;
   }
   mkdir "$dir/meta" unless -d "$dir/meta";
   eval { write_text($meta, "content-type: $type\n") };
   if ($@) {
-    $stream->write("59 Unable to save metadata for $id: $@\r\n");
+    $stream->write("59 Unable to save metadata for $id\r\n");
     return;
   }
   $log->info("Wrote $id");
@@ -3069,7 +3069,7 @@ sub write_page {
   eval { write_text($file, $text) };
   if ($@) {
     $log->error("Unable to save $id: $@");
-    $stream->write("59 Unable to save $id: $@\r\n");
+    $stream->write("59 Unable to save $id\r\n");
   } else {
     $log->info("Wrote $id");
     $stream->write("30 " . to_url($stream, $host, $space, "page/$id") . "\r\n");
@@ -3197,7 +3197,7 @@ sub space {
     return $space if grep { $_ eq "$host/$space" } @{$server->{wiki_space}};
     # else it's an error and we jump out to the eval {} in handle_url
     $stream->write("40 $host doesn't know about $space\r\n");
-    die "unknown space: $host/$space\n";
+    die "unknown space: $host/$space\n"; # is caught in the eval
   }
   # Without wildcards, just return the space. We already know that the space
   # matched the regular expression of spaces.

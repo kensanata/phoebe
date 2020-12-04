@@ -85,7 +85,7 @@ sub chat_register {
   } else {
     $stream->write("You are the only one.\n");
   }
-  $stream->write("Open the following link in orer to say anything:\n");
+  $stream->write("Open the following link in order to say anything:\n");
   $stream->write("=> gemini://$host:$port" . ($space ? "/$space" : "") . "/do/chat/say\n");
   $log->debug("Added $name to the chat");
 }

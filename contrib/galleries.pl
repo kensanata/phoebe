@@ -80,23 +80,23 @@ sub galleries {
       $log->info("Parsed index.html");
       my $title = $dom->at('*[itemprop="name"]');
       $title = $title ? $title->text : gallery_title($dir);
-      $stream->write("# $title\n");
+      $stream->write(encode_utf8 "# $title\n");
       my $description = $dom->at('*[itemprop="description"]');
-      $stream->write($description->text . "\n") if $description;
+      $stream->write(encode_utf8 $description->text . "\n") if $description;
       $stream->write("## Images\n");
     } else {
-      $stream->write("# " . gallery_title($dir) . "\n");
+      $stream->write(encode_utf8 "# " . gallery_title($dir) . "\n");
     }
     for my $image (@{$data->{data}}) {
       $stream->write("\n");
-      $stream->write(join("\n", grep /\S/, @{$image->{caption}}) . "\n") if $image->{caption};
+      $stream->write(encode_utf8 join("\n", grep /\S/, @{$image->{caption}}) . "\n") if $image->{caption};
       gallery_print_link($stream, "alexschroeder.ch", "Thumbnail", "do/gallery/$dir/" . $image->{thumb}->[0]);
       gallery_print_link($stream, "alexschroeder.ch", "Image", "do/gallery/$dir/" . $image->{img}->[0]);
     }
     return 1;
   } elsif (my ($file, $extension) = $url =~ m!^gemini://$host(?::$port)?/do/gallery/([^/?]*/(?:thumbs|imgs)/[^/?]*\.(jpe?g|png))$!i) {
     if (not -r "$parent/$file") {
-      $stream->write("40 Cannot read $file\r\n");
+      $stream->write(encode_utf8 "40 Cannot read $file\r\n");
     } else {
       success($stream, $extension =~ /^png$/i ? "image/png" : "image/jpg");
       $log->info("Serving image $file");

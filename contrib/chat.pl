@@ -15,11 +15,13 @@
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
 package App::Phoebe;
+use utf8;
 
 our (@extensions, @request_handlers, $log);
 
 # Each chat member is {stream => $stream, host => $host, space => $space, name => $name}
-my (@chat_members);
+my (@chat_members, @chat_lines);
+my $chat_line_limit = 50;
 
 # needs a special handler because the stream never closes
 my $spaces = space_regex();
@@ -66,7 +68,7 @@ sub chat_register {
     @chat_members = grep { $stream ne $_->{stream} } @chat_members;
     for (@chat_members) {
       next unless $host eq $_->{host} and $space eq $_->{space} and $name ne $_->{name};
-      $_->{stream}->write("$name left\n");
+      $_->{stream}->write(encode_utf8 "$name left\n");
     }});
   # add myself
   push(@chat_members, { host => $host, space => $space, name => $name, stream => $stream });
@@ -75,18 +77,24 @@ sub chat_register {
   for (@chat_members) {
     next unless $host eq $_->{host} and $space eq $_->{space} and $name ne $_->{name};
     push(@names, $_->{name});
-    $_->{stream}->write("$name joined\n");
+    $_->{stream}->write(encode_utf8 "$name joined\n");
   }
   # and get a welcome message
   success($stream);
-  $stream->write("# Welcome to $host" . ($space ? "/$space" : "") . "\n");
+  $stream->write(encode_utf8 "# Welcome to $host" . ($space ? "/$space" : "") . "\n");
   if (@names) {
-    $stream->write("Other chat members: @names\n");
+    $stream->write(encode_utf8 "Other chat members: @names\n");
   } else {
     $stream->write("You are the only one.\n");
   }
-  $stream->write("Open the following link in order to say anything:\n");
+  $stream->write("Open the following link in order to say something:\n");
   $stream->write("=> gemini://$host:$port" . ($space ? "/$space" : "") . "/do/chat/say\n");
+  my @lines = grep { $host eq $_->{host} and $space eq $_->{space} } reverse @chat_lines;
+  if (@lines) {
+    $stream->write("Replaying some recent messages:\n");
+    $stream->write(encode_utf8 "$_->{name}: $_->{text}\n") for @lines;
+    $stream->write(encode_utf8 "Welcome! 🥳🚀🚀\n");
+  }
   $log->debug("Added $name to the chat");
 }
 
@@ -121,14 +129,16 @@ sub process_chat_say {
     return 1;
   }
   if (not $text) {
-    $stream->write("10 Post to the channel as $name:\r\n");
+    $stream->write(encode_utf8 "10 Post to the channel as $name:\r\n");
     return 1;
   }
   $text = decode_utf8(uri_unescape($text));
+  unshift(@chat_lines, { host => $host, space => $space, name => $name, text => $text });
+  splice(@chat_lines, $chat_line_limit); # trim length of history
   # send message
   for (@chat_members) {
     next unless $host eq $_->{host} and $space eq $_->{space};
-    $_->{stream}->write("$name: $text\n");
+    $_->{stream}->write(encode_utf8 "$name: $text\n");
   }
   # and ask to send another one
   $stream->write("31 gemini://$host:$port" . ($space ? "/$space" : "") . "/do/chat/say\r\n");

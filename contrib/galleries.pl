@@ -100,7 +100,7 @@ sub galleries {
     } else {
       success($stream, $extension =~ /^png$/i ? "image/png" : "image/jpg");
       $log->info("Serving image $file");
-      print(read_binary("$parent/$file"));
+      $stream->write(read_binary("$parent/$file"));
     }
     return 1;
   }

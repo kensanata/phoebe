@@ -55,9 +55,8 @@ output in the filename indicated by the URL.
 =cut
 
 use Modern::Perl '2018';
+use Mojo::IOLoop;
 use Pod::Text;
-use IO::Socket::IP;
-use IO::Socket::SSL;
 use Getopt::Long;
 
 my $cert;
@@ -92,20 +91,20 @@ my ($host, $port) = split(/:/, $authority, 2);
 $port //= 1965;
 
 # create client
-my $socket = IO::Socket::SSL->new(
-  PeerHost => $host,
-  PeerService => $port,
-  SSL_cert_file => $cert,
-  SSL_key_file => $key,
-  SSL_verify_mode => SSL_VERIFY_NONE)
-    or die "Cannot construct client socket: $@";
+Mojo::IOLoop->client({
+  address => $host,
+  port => $port,
+  tls => 1,
+  tls_cert => $cert,
+  tls_key => $key,
+  tls_verify => 0x00, } => sub {
+    my ($loop, $err, $stream) = @_;
+    $stream->on(read => sub {
+      my ($stream, $bytes) = @_;
+      # Process input
+      print $bytes});
+    # Write request
+    $stream->write("$url\r\n")});
 
-warn $socket->get_fingerprint . "\n";
-
-# send data in one go
-print $socket "$url\r\n";
-
-# header
-while (<$socket>) {
-  print;
-}
+# Start event loop if necessary
+Mojo::IOLoop->start unless Mojo::IOLoop->is_running;

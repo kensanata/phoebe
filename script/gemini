@@ -99,6 +99,8 @@ Mojo::IOLoop->client({
   tls_key => $key,
   tls_verify => 0x00, } => sub {
     my ($loop, $err, $stream) = @_;
+    # 1h timeout (for chat)
+    $stream->timeout(3600);
     $stream->on(read => sub {
       my ($stream, $bytes) = @_;
       # Process input

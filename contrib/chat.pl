@@ -85,6 +85,8 @@ sub chat_register {
   } else {
     $stream->write("You are the only one.\n");
   }
+  $stream->write("Open the following link in orer to say anything:\n");
+  $stream->write("=> gemini://$host:$port" . ($space ? "/$space" : "") . "/do/chat/say\n");
   $log->debug("Added $name to the chat");
 }
 
@@ -125,7 +127,7 @@ sub process_chat_say {
   $text = decode_utf8(uri_unescape($text));
   # send message
   for (@chat_members) {
-    next unless $host eq $_->{host} and $space eq $_->{space} and $name ne $_->{name};
+    next unless $host eq $_->{host} and $space eq $_->{space};
     $_->{stream}->write("$name: $text\n");
   }
   # and ask to send another one

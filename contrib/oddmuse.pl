@@ -17,6 +17,7 @@
 package App::Phoebe;
 use Mojo::UserAgent;
 use Modern::Perl;
+use MIME::Base64;
 use List::Util qw(uniq);
 use Encode qw(encode_utf8);
 use DateTime::Format::ISO8601;

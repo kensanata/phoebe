@@ -12,6 +12,7 @@ WriteMakefile(
     'script/phoebe',
     'script/phoebe-ctl',
     'script/gemini',
+    'script/gemini-chat',
     'script/titan',
   ],
   PREREQ_PM => {

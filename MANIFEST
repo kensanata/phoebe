@@ -1,5 +1,6 @@
 Changes
 contrib/block-fediverse.pl
+contrib/chat.pl
 contrib/debug-ip-numbers.pl
 contrib/favicon.pl
 contrib/galleries.pl
@@ -16,6 +17,7 @@ Makefile.PL
 MANIFEST			This list of files
 README.md
 script/gemini
+script/gemini-chat
 script/phoebe
 script/phoebe-ctl
 script/titan

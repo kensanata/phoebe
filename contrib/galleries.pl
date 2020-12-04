@@ -16,6 +16,7 @@
 
 package App::Phoebe;
 use Modern::Perl;
+use JSON;
 
 our (@extensions, $log);
 

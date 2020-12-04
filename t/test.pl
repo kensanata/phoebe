@@ -108,8 +108,13 @@ sub query_web {
   return query_gemini("$query\r\n"); # add empty line
 }
 
-say "This is the client waiting for the server to start on port $port...";
-sleep 1;
+say "This is the client waiting 1s for the server to start on port $port...";
+sleep 1; eval { query_gemini('/') };
+if ($@) { say "One more second..."; sleep 1; eval { query_gemini('/') }}
+if ($@) { say "Just one more second..."; sleep 1; eval { query_gemini('/') }}
+if ($@) { say "Another second..."; sleep 1; eval { query_gemini('/') }}
+if ($@) { say "One last second..."; sleep 1; eval { query_gemini('/') }}
+if ($@) { say "Still getting an error: $@" }
 
 1;
 

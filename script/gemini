@@ -56,10 +56,22 @@ output in the filename indicated by the URL.
 
 use Modern::Perl '2018';
 use Pod::Text;
+use IO::Socket::IP;
 use IO::Socket::SSL;
+use Getopt::Long;
+
+my $cert;
+my $key;
+my $help;
+
+GetOptions(
+  'help' => \$help,
+  'cert_file=s' => \$cert,
+  'key_file=s' => \$key)
+    or die("Error in command line arguments\n");
 
 # Help
-if ($ARGV[0] and $ARGV[0] eq '--help') {
+if ($help) {
   my $parser = Pod::Text->new();
   $parser->parse_file($0);
   exit;
@@ -83,6 +95,8 @@ $port //= 1965;
 my $socket = IO::Socket::SSL->new(
   PeerHost => $host,
   PeerService => $port,
+  SSL_cert_file => $cert,
+  SSL_key_file => $key,
   SSL_verify_mode => SSL_VERIFY_NONE)
     or die "Cannot construct client socket: $@";
 
@@ -91,8 +105,7 @@ warn $socket->get_fingerprint . "\n";
 # send data in one go
 print $socket "$url\r\n";
 
-# read response
-undef $/;
-my ($header, $response) = split(/\r\n/, <$socket>, 2);
-warn "$header\n";
-print $response;
+# header
+while (<$socket>) {
+  print;
+}

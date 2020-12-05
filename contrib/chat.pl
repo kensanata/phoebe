@@ -56,6 +56,11 @@ sub chat_register {
     $stream->close_gracefully();
     return;
   }
+  if (grep { $host eq $_->{host} and $space eq $_->{space} and $name eq $_->{name} } @chat_members) {
+    $stream->write("40 '$name' is already taken\r\n");
+    $stream->close_gracefully();
+    return;
+  }
   # 1h timeout
   $stream->timeout(3600);
   # remove from channel members if an error happens

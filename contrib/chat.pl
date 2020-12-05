@@ -15,6 +15,7 @@
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
 package App::Phoebe;
+use Modern::Perl '2018';
 use Encode qw(encode_utf8);
 use utf8;
 
@@ -35,11 +36,13 @@ sub chat_listen {
   $log->debug("Discarding " . length($data->{buffer}) . " bytes")
       if $data->{buffer};
   my $url = $data->{request};
-  my $host_regex = host_regex();
+  my $hosts = host_regex();
+  my $spaces = space_regex();
   my $port = port($stream);
+  my ($host, $space);
   if (($host, $space) =
-      $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/chat/listen$!) {
-    chat_register($stream, $host, space($stream, $host, $space));
+      $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/chat/listen$!) {
+    chat_register($stream, $host, $port, space($stream, $host, $space));
     # don't lose the stream!
   } else {
     $stream->write("59 Don't know how to handle $url\r\n");
@@ -50,6 +53,7 @@ sub chat_listen {
 sub chat_register {
   my $stream = shift;
   my $host = shift;
+  my $port = shift;
   my $space = shift;
   my $name = $stream->handle->peer_certificate('cn');
   if (not $name) {
@@ -111,34 +115,57 @@ push(@extensions, \&handle_chat_say);
 sub handle_chat_say {
   my $stream = shift;
   my $url = shift;
-  my $host_regex = host_regex();
+  my $hosts = host_regex();
+  my $spaces = space_regex();
   my $port = port($stream);
-  my $text;
-  if (($host, $spacem, $text) =
-      $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/chat/say(?:\?([^#]*))?$!) {
-    return process_chat_say($stream, $host, $space, $text);
+  my ($host, $space, $text);
+  if (($host, $space, $text) =
+      $url =~ m!^gemini://($hosts)(?::$port)?(?:/($spaces))?/do/chat/say(?:\?([^#]*))?$!) {
+    process_chat_say($stream, $host, $port, $space, $text);
+    return 1;
+  } elsif ($url =~ m!^gemini://(?:$hosts)(?::$port)?(?:/$spaces)?/do/chat$!) {
+    serve_chat_explanation($stream, $url);
+    return 1;
   }
   return 0;
+}
+
+sub serve_chat_explanation {
+  my $stream = shift;
+  my $url = shift;
+  success($stream);
+  $stream->write("# Chat\n");
+  $stream->write(
+    encode_utf8
+    "This server supports a Gemini-based chat. "
+    . "If you don't have a dedicated client, you can use two windows of a regular Gemini client. "
+    . "Visit the following two URLs. "
+    . "The first one allows you “listen” to the channel and the second one allows you to “say” things. "
+    . "The connection to the “listen” channel needs a streaming client. "
+    . "Use a client certificate with the same common name for both connections.\n");
+  $stream->write("=> $url/listen\r\n");
+  $stream->write("=> $url/say\r\n");
 }
 
 sub process_chat_say {
   my $stream = shift;
   my $host = shift;
+  my $port = shift;
   my $space = shift;
   my $text = shift;
   my $name = $stream->handle->peer_certificate('cn');
   if (not $name) {
     $stream->write("60 You need a client certificate with a common name to talk on this chat\r\n");
-    return 1;
+    return;
   }
   my @found = grep { $host eq $_->{host} and $space eq $_->{space} and $name eq $_->{name} } @chat_members;
   if (not @found) {
     $stream->write("40 You need to join the chat before you can say anything\r\n");
-    return 1;
+    return;
   }
   if (not $text) {
     $stream->write(encode_utf8 "10 Post to the channel as $name:\r\n");
-    return 1;
+    return;
   }
   $text = decode_utf8(uri_unescape($text));
   unshift(@chat_lines, { host => $host, space => $space, name => $name, text => $text });
@@ -150,7 +177,7 @@ sub process_chat_say {
   }
   # and ask to send another one
   $stream->write("31 gemini://$host:$port" . ($space ? "/$space" : "") . "/do/chat/say\r\n");
-  return 1;
+  return;
 }
 
 # run every minute and print a timestamp every 5 minutes

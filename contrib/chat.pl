@@ -15,6 +15,7 @@
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
 package App::Phoebe;
+use Encode qw(encode_utf8);
 use utf8;
 
 our (@extensions, @request_handlers, $log);
@@ -151,3 +152,14 @@ sub process_chat_say {
   $stream->write("31 gemini://$host:$port" . ($space ? "/$space" : "") . "/do/chat/say\r\n");
   return 1;
 }
+
+# run every minute and print a timestamp every 5 minutes
+Mojo::IOLoop->recurring(60 => sub {
+  my $loop = shift;
+  my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
+  return unless $min % 5 == 0;
+  $log->debug("Chat ping");
+  my $ts = sprintf("%02d:%02d UTC\n", $hour, $min);
+  for (@chat_members) {
+      $_->{stream}->write($ts);
+  }});

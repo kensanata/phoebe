@@ -112,10 +112,15 @@ if (!defined $pid) {
       $stream->timeout(3600);
       $stream->on(read => sub {
 	my ($stream, $bytes) = @_;
-	print "\e7"; # save cursor position
+	print "\es"; # save cursor position
 	print "\e[1G"; # column 1
+	print "\n";
+	print "\e[1F"; # previous line (on the empty line, now)
 	print encode_utf8 $bytes;
-	print "\e8" }); # restore cursor position
+	print "\eu" }); # restore cursor position
+      $stream->on(close => sub {
+	say "\e[31mConnection closed\e[0m"; # red
+	exit });
       # Write request to the server
       $stream->write("$listen_url\r\n")});
   # Start event loop if necessary

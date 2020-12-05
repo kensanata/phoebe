@@ -65,8 +65,8 @@ sub chat_register {
   # 1h timeout
   $stream->timeout(3600);
   # remove from channel members if an error happens
-  $stream->on(close => sub { chat_leave(@_, $host, $space, $name) });
-  $stream->on(error => sub { chat_leave(@_, $host, $space, $name) });
+  $stream->on(close => sub { chat_leave($host, $space, $name) });
+  $stream->on(error => sub { chat_leave($host, $space, $name) });
   # add myself
   push(@chat_members, { host => $host, space => $space, name => $name, stream => $stream });
   # announce myself
@@ -90,14 +90,14 @@ sub chat_register {
   if (@lines) {
     $stream->write("Replaying some recent messages:\n");
     $stream->write(encode_utf8 "$_->{name}: $_->{text}\n") for @lines;
-    $stream->write(encode_utf8 "Welcome! 🥳🚀🚀\n");
+    $stream->write("Welcome! 🥳🚀🚀\n"); # don't UTF-8 encode, as it is already encoded!
   }
   $log->debug("Added $name to the chat");
 }
 
 sub chat_leave {
-  my ($stream, $err, $host, $space, $name) = @_;
-  $log->debug("Disconnected $name: $err");
+  my ($host, $space, $name) = @_;
+  $log->debug("Disconnected $name");
   # remove the chat member from their particular chat
   @chat_members = grep { not ($host eq $_->{host} and $space eq $_->{space} and $name eq $_->{name}) } @chat_members;
   for (@chat_members) { # for members of the same chat

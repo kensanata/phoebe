@@ -42,7 +42,7 @@ sub chat_listen {
   my ($host, $space);
   if (($host, $space) =
       $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/chat/listen$!) {
-    chat_register($stream, $host, $port, space($stream, $host, $space));
+    chat_register($stream, $host, $port, space($stream, $host, $space) || '');
     # don't lose the stream!
   } else {
     $stream->write("59 Don't know how to handle $url\r\n");
@@ -121,7 +121,7 @@ sub handle_chat_say {
   my ($host, $space, $text);
   if (($host, $space, $text) =
       $url =~ m!^gemini://($hosts)(?::$port)?(?:/($spaces))?/do/chat/say(?:\?([^#]*))?$!) {
-    process_chat_say($stream, $host, $port, $space, $text);
+    process_chat_say($stream, $host, $port, $space || "", $text);
     return 1;
   } elsif ($url =~ m!^gemini://(?:$hosts)(?::$port)?(?:/$spaces)?/do/chat$!) {
     serve_chat_explanation($stream, $url);

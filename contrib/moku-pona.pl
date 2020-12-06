@@ -21,7 +21,7 @@ our (@extensions);
 
 # moku pona
 
-my $moku_pona_dir = "/home/alex/.moku-pona";
+our $moku_pona_dir = "/home/alex/.moku-pona";
 
 push(@extensions, \&mokupona);
 

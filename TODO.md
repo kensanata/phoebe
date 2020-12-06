@@ -2,6 +2,7 @@
 
 - fix documentation
 - go through all the code examples on Transjovian again
+- support IRIs: gemini://gémeaux.bortzmeyer.org/
 - diff with previous version
 - print instructions on how to generate certificates if they are missing
 - or better: generate certificates if they are missing!

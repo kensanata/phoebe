@@ -27,8 +27,10 @@ sub add_comment_link_to_footer {
   my ($stream, $host, $space, $id, $revision, $scheme) = @_;
   # only leave comments on current comment pages
   return "" if $revision;
-  return "=> " . uri_escape_utf8("Comments on $id") . " Comments" if $id !~ /^Comments on /;
-  return gemini_link($stream, $host, $space, "Leave a short comment", "do/comment/$id") if $scheme eq "gemini";
+  $space = "/" . uri_escape_utf8($space) if $space;
+  $space //= "";
+  return "=> $space/page/" . uri_escape_utf8("Comments on $id") . " Comments" if $id !~ /^Comments on /;
+  return "=> $space/do/comment/" . uri_escape_utf8($id) . " Leave a short comment" if $scheme eq "gemini";
 }
 
 push(@extensions, \&process_comment_requests);

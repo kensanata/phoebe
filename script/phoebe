@@ -3343,7 +3343,7 @@ sub process_http {
       $stream->write(<DATA>);
     } else {
       $log->debug("No http handler for $request");
-      http_error("Don't know how to handle $request");
+      http_error($stream, "Don't know how to handle $request");
     }
     $log->debug("Done");
   };

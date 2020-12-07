@@ -2686,7 +2686,7 @@ sub html_footer {
   my $revision = shift||"";
   my @links;
   push(@links, $_->($stream, $host, $space, $id, $revision, "html")) for @footer;
-  my $html = join("\n", @links);
+  my $html = join("\n", grep /\S/, @links);
   return "\n\nMore:\n$html" if $html =~ /\S/;
   return "";
 }
@@ -2806,7 +2806,7 @@ sub footer {
   push(@links, gemini_link($stream, $host, $space, "Raw text", "raw/$id/$revision"));
   push(@links, gemini_link($stream, $host, $space, "HTML", "html/$id/$revision"));
   push(@links, $_->($stream, $host, $space, $id, $revision, "gemini")) for @footer;
-  return join("\n", "\n\nMore:", @links, ""); # includes a trailing newline
+  return join("\n", "\n\nMore:", (grep /\S/, @links), ""); # includes a trailing newline
 }
 
 sub serve_page {

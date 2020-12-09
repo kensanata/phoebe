@@ -1,6 +1,5 @@
 # TODO
 
-- fix documentation
 - go through all the code examples on Transjovian again
 - support IRIs: gemini://gémeaux.bortzmeyer.org/
 - diff with previous version

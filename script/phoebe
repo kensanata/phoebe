@@ -16,34 +16,54 @@
 
 =encoding utf8
 
-=head1 Phoebe
+=head1 NAME
 
-Phoebe serves a wiki as a Gemini site.
+Phoebe - serve a wiki as a Gemini site
 
-It does two and a half things:
+=head1 SYNOPSIS
+
+B<phoebe>
+  [B<--host=I<hostname> ...]
+  [B<--port=I<port>]
+  [B<--cert_file=I<filename>]
+  [B<--log_level=B<error>|B<warn>|B<info>|B<debug>]
+  [B<--log_file=I<filename>]
+  [B<--key_file=I<filename>]
+  [B<--wiki_dir=I<directory>]
+  [B<--wiki_token=I<token> ...]
+  [B<--wiki_page=I<pagename> ...]
+  [B<--wiki_main_page=I<pagename>]
+  [B<--wiki_mime_type=I<mimetype> ...]
+  [B<--wiki_page_size_limit=I<n>]
+  [B<--wiki_space=I<space> ...]
+
+=head1 DESCRIPTION
+
+Phoebe does two and a half things:
+
+It's a program that you run on a computer and other people connect to it using
+their Gemini client in order to read the pages on it.
+
+It's a wiki, which means that people can edit the pages without needing an
+account. All they need is a client that speaks both Gemini and Titan, and the
+password. The default password is "hello". 😃
+
+People can also access it using a regular web browser. They'll get a very
+simple, read-only version of the site.
+
+To take a look for yourself, check out the test wiki via the web or via the web.
 
 =over
 
-=item It's a program that you run on a computer and other people connect to it
-      using their L<Gemini client|https://gemini.circumlunar.space/clients.html>
-      in order to read the pages on it.
+=item L<https://gemini.circumlunar.space/clients.html>
 
-=item It's a wiki, which means that people can edit the pages without needing an
-      account. All they need is a client that speaks both
-      L<Gemini|https://gemini.circumlunar.space/> and
-      L<Titan|https://communitywiki.org/wiki/Titan>, and the password. The
-      default password is "hello". 😃
+=item L<https://transjovian.org:1965/test>
 
-=item People can also access it using a regular web browser. They'll get a very
-      simple, read-only version of the site.
+=item L<gemini://transjovian.org/test>
 
 =back
 
-To take a look for yourself, check out the test wiki via the
-L<web|https://transjovian.org:1965/test> or via
-L<Gemini|gemini://transjovian.org/test>.
-
-=head2 What are pages written in?
+=head1 GEMTEXT
 
 Pages are written in gemtext, a lightweight hypertext format. You can use your
 favourite text editor to write them.
@@ -82,42 +102,36 @@ A line starting with ">", followed by a space and some text is a quote.
     The monologue at the end is fantastic, with the city lights and the rain.
     > I've seen things you people wouldn't believe.
 
-=head2 How do you edit a Phoebe wiki?
+=head1 EDITING THE WIKI
 
-You need to use a Titan-enabled client.
+How do you edit a Phoebe wiki? You need to use a Titan-enabled client.
 
 Known clients:
 
-=over
+This repository comes with a Perl script called F<titan> to upload files.
+L<https://alexschroeder.ch/cgit/phoebe/plain/titan>
 
-=item This repository comes with a Perl script called
-      L<titan|https://alexschroeder.ch/cgit/phoebe/plain/titan> to upload
-      files
+I<Gemini Write> is an extension for the Emacs Gopher and Gemini client
+I<Elpher>. L<https://alexschroeder.ch/cgit/gemini-write/>
+L<Elpher|https://thelambdalab.xyz/elpher/>
 
-=item L<Gemini Write|https://alexschroeder.ch/cgit/gemini-write/> is an
-      extension for the Emacs Gopher and Gemini client
-      L<Elpher|https://thelambdalab.xyz/elpher/>
-
-=item L<Gemini & Titan for Bash|https://alexschroeder.ch/cgit/gemini-titan/about/>
-      are two shell functions that allow you to download and upload files
-
-=back
+Gemini & Titan for Bash are two shell functions that allow you to download and
+upload files. L<https://alexschroeder.ch/cgit/gemini-titan/about/>
 
 =head2 What is Titan?
 
 Titan is a companion protocol to Gemini: it allows clients to upload files to
-Gemini sites, if servers allow this. On Phoebe, you can edit "raw"
-pages. That is, at the bottom of a page you'll see a link to the "raw" page. If
-you follow it, you'll see the page content as plain text. You can submit a
-changed version of this text to the same URL using Titan. There is more
-information for developers available
-L<on Community Wiki|https://communitywiki.org/wiki/Titan>.
+Gemini sites, if servers allow this. On Phoebe, you can edit "raw" pages. That
+is, at the bottom of a page you'll see a link to the "raw" page. If you follow
+it, you'll see the page content as plain text. You can submit a changed version
+of this text to the same URL using Titan. There is more information for
+developers available on Community Wiki. L<https://communitywiki.org/wiki/Titan>
 
-=head2 License
+=head1 LICENSE
 
 GNU Affero General Public License
 
-=head2 Installation
+=head1 INSTALLATION
 
 Using C<cpan>:
 
@@ -191,8 +205,8 @@ This starts the server in the foreground. If it aborts, see the
 L</Troubleshooting> section below. If it runs, open a second terminal and test
 it:
 
-
     perl5/bin/gemini gemini://localhost/
+
 You should see a Gemini page starting with the following:
 
     20 text/gemini; charset=UTF-8
@@ -306,6 +320,43 @@ C<--wiki_page_size_limit> option, but you need to restart Phoebe:
 
 Now you can upload about 10MB…
 
+=head2 Using systemd
+
+Systemd is going to handle daemonisation for us. There's more documentation
+available online.
+L<https://www.freedesktop.org/software/systemd/man/systemd.service.html>.
+
+Basically, this is the template for our service:
+
+    [Unit]
+    Description=Phoebe
+    After=network.target
+    [Service]
+    Type=simple
+    WorkingDirectory=/home/phoebe
+    ExecStart=/home/phoebe/phoebe
+    Restart=always
+    User=phoebe
+    Group=phoebe
+    [Install]
+    WantedBy=multi-user.target
+
+Save this as F<phoebe.service>, and then link it:
+
+    sudo ln -s /home/phoebe/phoebe.service /etc/systemd/system/
+
+Reload systemd:
+
+    sudo systemctl daemon-reload
+
+Start Phoebe:
+
+    sudo systemctl start phoebe
+
+Check the log output:
+
+    sudo journalctl --unit phoebe
+
 =head2 Troubleshooting
 
 🔥 B<SSL_cert_file cert.pem can't be used: No such file or directory> 🔥 Perhaps
@@ -323,74 +374,58 @@ least it'll work.
     openssl req -new -x509 -newkey rsa \
     -days 1825 -nodes -out cert.pem -keyout key.pem
 
-=head2 Wiki Directory
+=head1 FILES
 
-Your home directory should now also contain a wiki directory called F<wiki>. In
-it, you'll find a few more files:
+Your home directory should now also contain a wiki directory called F<wiki>,
+your wiki directory. In it, you'll find a few more files:
 
-=over
+F<page> is the directory with all the page files in it; each file has the C<gmi>
+extension and should be written in Gemtext format
 
-=item F<page> is the directory with all the page files in it; each file has the
-      C<gmi> extension and should be written in Gemtext format
+F<index> is a file containing all the files in your F<page> directory for quick
+access; if you create new files in the F<page> directory, you should delete the
+F<index> file – it will get regenerated when needed; the format is one page name
+(without the C<.gmi> extension) per line, with lines separated from each other
+by a single C<\n>
 
-=item F<index> is a file containing all the files in your F<page> directory for
-      quick access; if you create new files in the F<page> directory, you should
-      delete the F<index> file – it will get regenerated when needed; the format
-      is one page name (without the C<.gmi> extension) per line, with lines
-      separated from each other by a single C<\n>
+F<keep> is the directory with all the old revisions of pages in it – if you've
+only made one change, then it won't exist; if you don't care about the older
+revisions, you can delete them; assuming you have a page called C<Welcome> and
+edit it once, you have the current revision as F<page/Welcome.gmi>, and the old
+revision in F<keep/Welcome/1.gmi> (the page name turns into a subdirectory and
+each revision gets an apropriate number)
 
-=item F<keep> is the directory with all the old revisions of pages in it – if
-      you've only made one change, then it won't exist; if you don't care about
-      the older revisions, you can delete them; assuming you have a page called
-      C<Welcome> and edit it once, you have the current revision as
-      F<page/Welcome.gmi>, and the old revision in F<keep/Welcome/1.gmi> (the
-      page name turns into a subdirectory and each revision gets an apropriate
-      number)
+F<file> is the directory with all the uploaded files in it – if you haven't
+uploaded any files, then it won't exist; you must explicitly allow MIME types
+for upload using the C<--wiki_mime_type> option (see I<Options> below)
 
-=item F<file> is the directory with all the uploaded files in it – if you
-      haven't uploaded any files, then it won't exist; you must explicitly allow
-      MIME types for upload using the C<--wiki_mime_type> option (see I<Options>
-      below)
+F<meta> is the directory with all the meta data for uploaded files in it – there
+should be a file here for every file in the F<file> directory; if you create new
+files in the F<file> directory, you should create a matching file here; if you
+have a file F<file/alex.jpg> you want to create a file F<meta/alex.jpg>
+containing the line C<content-type: image/jpeg>
 
-=item F<meta> is the directory with all the meta data for uploaded files in it –
-      there should be a file here for every file in the F<file> directory; if
-      you create new files in the F<file> directory, you should create a
-      matching file here; if you have a file F<file/alex.jpg> you want to create
-      a file F<meta/alex.jpg> containing the line C<content-type: image/jpeg>
+F<changes.log> is a file listing all the pages made to the wiki; if you make
+changes to the files in the F<page> or F<file> directory, they aren't going to
+be listed in this file and thus people will be confused by the changes you made
+– your call (but in all fairness, if you're collaborating with others you
+probably shouldn't do this); the format is one change per line, with lines
+separated from each other by a single C<\n>, and each line consisting of time
+stamp, pagename or filename, revision number if a page or 0 if a file, and the
+numeric code of the user making the edit (see L</Privacy> below), all separated
+from each other with a C<\x1f>
 
-=item F<changes.log> is a file listing all the pages made to the wiki; if you
-      make changes to the files in the F<page> or F<file> directory, they aren't
-      going to be listed in this file and thus people will be confused by the
-      changes you made – your call (but in all fairness, if you're collaborating
-      with others you probably shouldn't do this); the format is one change per
-      line, with lines separated from each other by a single C<\n>, and each
-      line consisting of time stamp, pagename or filename, revision number if a
-      page or 0 if a file, and the numeric code of the user making the edit (see
-      L</Privacy> below), all separated from each other with a C<\x1f>
+F<config> probably doesn't exist, yet; it is an optional file containing Perl
+code where you can add new features and change how Phoebe works (see
+L</Configuration> below)
 
-=item F<config> probably doesn't exist, yet; it is an optional file containing
-      Perl code where you can add new features and change how Phoebe works (see
-      L</Configuration> below)
+F<conf.d> probably doesn't exist, either; it is an optional directory containing
+even more Perl files where you can add new features and change how Phoebe works
+(see L</Configuration> below); the idea is that people can share stand-alone
+configurations that you can copy into this directory without having to edit your
+own F<config> file.
 
-=item F<conf.d> probably doesn't exist, either; it is an optional directory
-      containing even more Perl files where you can add new features and change
-      how Phoebe works (see L</Configuration> below); the idea is that people
-      can share stand-alone configurations that you can copy into this directory
-      without having to edit your own F<config> file.
-
-=back
-
-=head2 Options
-
-Here's an example:
-
-    perl phoebe \
-      --wiki_token=Elrond \
-      --wiki_token=Thranduil \
-      --wiki_page=Welcome \
-      --wiki_page=About
-
-Here's the documentation for the most useful options:
+=head1 OPTIONS
 
 =over
 
@@ -447,42 +482,17 @@ Here's the documentation for the most useful options:
 
 =back
 
-=head2 Using systemd
+=head2 FILES
 
-Systemd is going to handle daemonisation for us. There's more documentation
-L<available
-online|https://www.freedesktop.org/software/systemd/man/systemd.service.html>.
+If you allow uploads of binary files, these are stored separately from the
+regular pages; the wiki doesn't keep old revisions of files around. If somebody
+overwrites a file, the old revision is gone.
 
-Basically, this is the template for our service:
+You definitely don't want random people uploading all sorts of images, videos
+and binaries to your server. Make sure you set up those L<tokens|/Security>
+using C<--wiki_token>!
 
-    [Unit]
-    Description=Phoebe
-    After=network.target
-    [Service]
-    Type=simple
-    WorkingDirectory=/home/phoebe
-    ExecStart=/home/phoebe/phoebe
-    Restart=always
-    User=phoebe
-    Group=phoebe
-    [Install]
-    WantedBy=multi-user.target
-
-Save this as F<phoebe.service>, and then link it:
-
-    sudo ln -s /home/phoebe/phoebe.service /etc/systemd/system/
-
-Reload systemd:
-
-    sudo systemctl daemon-reload
-
-Start Phoebe:
-
-    sudo systemctl start phoebe
-
-Check the log output:
-
-    sudo journalctl --unit phoebe
+=head1 NOTES
 
 =head2 Security
 
@@ -522,15 +532,18 @@ IP numbers, in which case you will need to tell them about it using in order to
 comply with the
 L<GDPR|https://en.wikipedia.org/wiki/General_Data_Protection_Regulation>.
 
-=head2 Files
+=head1 EXAMPLE
 
-If you allow uploads of binary files, these are stored separately from the
-regular pages; the wiki doesn't keep old revisions of files around. If somebody
-overwrites a file, the old revision is gone.
+Here's an example for how to start Phoebe. It listens on C<localhost> port 1965,
+adds the "Welcome" and the "About" page to the main menu, and allows editing
+using one of two tokens.
 
-You definitely don't want random people uploading all sorts of images, videos
-and binaries to your server. Make sure you set up those L<tokens|/Security>
-using C<--wiki_token>!
+    perl phoebe \
+      --wiki_token=Elrond \
+      --wiki_token=Thranduil \
+      --wiki_page=Welcome \
+      --wiki_page=About
+
 
 =head2 Main Page and Title
 
@@ -553,10 +566,9 @@ shown on your front page.
 There are search machines out there that will index your site. Ideally, these
 wouldn't index the history pages and all that: they would only get the list of
 all pages, and all the pages. I'm not even sure that we need them to look at all
-the files. The L<robots exclusion
-standard|https://en.wikipedia.org/wiki/Robots_exclusion_standard> lets you
-control what the bots ought to index and what they ought to skip. It doesn't
-always work.
+the files. The Robots Exclusion Standard lets you control what the bots ought to
+index and what they ought to skip. It doesn't always work.
+L<https://en.wikipedia.org/wiki/Robots_exclusion_standard>
 
 Here's my suggestion:
 
@@ -630,27 +642,31 @@ signal, if you know the pid, or if you have a pid file:
 
 Here are the ways you can hook into Phoebe code:
 
-=over
+C<@extensions> is a list of code references allowing you to handle additional
+URLs; return 1 if you handle a URL; each code reference gets called with $stream
+(L<Mojo::IOLoop::Stream>), the first line of the request (a Gemini URL, a Gopher
+selector, a finger user, a HTTP request line), a hash reference for the headers
+(in the case of HTTP requests), and a buffer of bytes (e.g. for Titan or HTTP
+PUT or POST requests)
 
-=item C<@extensions> is a list of code references allowing you to handle
-      additional URLs; return 1 if you handle a URL; each code reference gets
-      called with $stream (L<Mojo::IOLoop::Stream>), the first line of the
-      request (a Gemini URL, a Gopher selector, a finger user, a HTTP request
-      line), a hash reference for the headers (in the case of HTTP requests),
-      and a buffer of bytes (e.g. for Titan or HTTP PUT or POST requests)
+C<@main_menu> adds more lines to the main menu, possibly links that aren't
+simply links to existing pages
 
-=item C<@main_menu> adds more lines to the main menu, possibly links that aren't
-      simply links to existing pages
+C<@footer> is a list of code references allowing you to add things like licenses
+or contact information to every page; each code reference gets called with
+$stream (L<Mojo::IOLoop::Stream>), $host, $space, $id, $revision, and $format
+('gemini' or 'html') used to serve the page; return a gemtext string to append
+at the end; the alternative is to overwrite the C<footer> or C<html_footer> subs
+– the default implementation for Gemini adds History, Raw text and HTML link,
+and C<@footer> to the bottom of every page; the default implementation for HTTP
+just adds C<@footer> to the bottom of every page
 
-=item C<@footer> is a list of code references allowing you to add things like
-      licenses or contact information to every page; each code reference gets
-      called with $stream (L<Mojo::IOLoop::Stream>), $host, $space, $id,
-      $revision, and $format ('gemini' or 'html') used to serve the page; return
-      a gemtext string to append at the end; the alternative is to overwrite the
-      C<footer> or C<html_footer> subs – the default implementation for Gemini
-      adds History, Raw text and HTML link, and C<@footer> to the bottom of
-      every page; the default implementation for HTTP just adds C<@footer> to
-      the bottom of every page
+If you do hook into Phoebe's code, you probably want to make use of the
+following variables:
+
+C<$server> stores the command line options provided by the user.
+
+C<$log> is how you log things.
 
 =back
 
@@ -663,8 +679,8 @@ works for both Gemini and the web:
     push(@footer, sub { '=> mailto:alex@alexschroeder.ch Mail' });
 
 This prints a very simply footer instead of the usual footer for Gemini, as the
-C<footer> sub is redefined. At the same time, the C<@footer> array is still used
-for the web:
+C<footer> function is redefined. At the same time, the C<@footer> array is still
+used for the web:
 
     package App::Phoebe;
     use Modern::Perl;
@@ -880,10 +896,11 @@ The wiki can also answer web requests. By default, it only does that on port
 1965. The web pages refer to a CSS file at C</default.css>, and the response to
 a request for this CSS is served by a function that you can override in your
 config file. The following would be the beginning of a CSS that supports a dark
-theme, for example. The
-L<Cache-Control|https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control>
-header makes sure browsers don't keep trying to revalidate the CSS more than
-once a day.
+theme, for example. The Cache-Control header makes sure browsers don't keep
+trying to revalidate the CSS more than once a day.
+L<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control>
+
+    our ($log);
 
     sub serve_css_via_http {
       my $stream = shift;
@@ -914,6 +931,8 @@ for all hosts. You could, of course, accept the C<$headers> as an additional
 argument to C<favicon>, match hostnames, pass the C<$host> to
 C<serve_favicon_via_http>, and return different images depending on the host.
 Let me know if you need this and you are stuck.
+
+    our (@extensions, $log);
 
     push(@extensions, \&favicon);
 
@@ -949,14 +968,14 @@ Let me know if you need this and you are stuck.
     EOT
     }
 
-=head2 More
+=head1 SEE ALSO
 
 As you might have guessed, the system is easy to tinker with, if you know some
-Perl. L<The Transjovian Council|https://transjovian.org:1965/> has L<a wiki
-space dedicated to Phoebe|https://transjovian.org:1965/phoebe/>, and it includes
-a section with more configuration examples, including simple comments
+Perl. The Transjovian Council has a wiki space dedicated to Phoebe, and it
+includes a section with more configuration examples, including simple comments
 (append-only via Gemini), complex comments (editing via Titan or the web),
 wholesale page editing via the web, user-agent blocking, and so on.
+L<gemini://transjovian.org/> L<https://transjovian.org:1965/>
 
 =cut
 

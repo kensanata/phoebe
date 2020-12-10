@@ -1171,8 +1171,9 @@ sub configure {
   # config file with extra code; restart server if you change it
   my $dir = $server->{wiki_dir};
   my @config;
-  push(@config, "$dir/config") if -f "$dir/config";
   push(@config, map { "$dir/conf.d/$_" } grep(/\.p[lm]$/, read_dir("$dir/conf.d"))) if -d "$dir/conf.d";
+  # allow override of config files in conf.d
+  push(@config, "$dir/config") if -f "$dir/config";
   for my $config (@config) {
     $log->info("Running $config");
     do $config if -r $config;

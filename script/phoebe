@@ -3348,7 +3348,7 @@ sub process_http {
       $stream->write("\r\n");
       seek DATA, 0, 0;
       local $/ = undef; # slurp
-      $stream->write(<DATA>);
+      $stream->write(encode_utf8 <DATA>);
     } else {
       $log->debug("No http handler for $request");
       http_error($stream, "Don't know how to handle $request");
@@ -3537,7 +3537,7 @@ sub process_gemini {
       success($stream, 'text/plain; charset=UTF-8');
       seek DATA, 0, 0;
       local $/ = undef; # slurp
-      $stream->write(<DATA>);
+      $stream->write(encode_utf8 <DATA>);
     } elsif ($url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/match$!) {
       $stream->write("10 Find page by name (Perl regex)\r\n");
     } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/match\?!) {

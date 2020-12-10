@@ -481,7 +481,7 @@ sub oddmuse_serve_main_menu {
   success($stream);
   my $page = $server->{wiki_main_page};
   if ($page) {
-    $stream->write(encode_utf8 text($stream, $host, undef, $page) . "\n");
+    $stream->write(encode_utf8 text($host, undef, $page) . "\n");
   } else {
     $stream->write("# Welcome!\n");
     $stream->write("\n");

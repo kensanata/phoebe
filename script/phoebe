@@ -1467,7 +1467,6 @@ sub print_link {
 }
 
 sub pages {
-  my $stream = shift;
   my $host = shift;
   my $space = shift;
   my $re = shift;
@@ -1484,10 +1483,9 @@ sub pages {
 }
 
 sub blog_pages {
-  my $stream = shift;
   my $host = shift;
   my $space = shift;
-  return sort { $b cmp $a } pages($stream, $host, $space, '^\d\d\d\d-\d\d-\d\d');
+  return sort { $b cmp $a } pages($host, $space, '^\d\d\d\d-\d\d-\d\d');
 }
 
 sub blog {
@@ -1495,7 +1493,7 @@ sub blog {
   my $host = shift;
   my $space = shift;
   my $n = shift || 10;
-  my @blog = blog_pages($stream, $host, $space);
+  my @blog = blog_pages($host, $space);
   return unless @blog;
   $stream->write("Blog:\n");
   # we should check for pages marked for deletion!
@@ -1511,7 +1509,7 @@ sub blog_html {
   my $host = shift;
   my $space = shift;
   my $n = shift || 10;
-  my @blog = blog_pages($stream, $host, $space);
+  my @blog = blog_pages($host, $space);
   return unless @blog;
   $stream->write("<p>Blog:\n");
   $stream->write("<ul>\n");
@@ -1530,7 +1528,7 @@ sub serve_main_menu {
   success($stream);
   my $page = $server->{wiki_main_page};
   if ($page) {
-    $stream->write(encode_utf8 text($stream, $host, $space, $page) . "\n");
+    $stream->write(encode_utf8 text($host, $space, $page) . "\n");
   } else {
     $stream->write("# Welcome to Phoebe!\n");
     $stream->write("\n");
@@ -1580,7 +1578,7 @@ sub serve_main_menu_via_http {
   $stream->write("</head>\n");
   $stream->write("<body>\n");
   if ($page) {
-    $stream->write(encode_utf8 to_html($stream, text($stream, $host, $space, $page)) . "\n");
+    $stream->write(encode_utf8 to_html($stream, text($host, $space, $page)) . "\n");
   } else {
     $stream->write("<h1>Welcome to Phoebe!</h1>\n");
   }
@@ -1631,7 +1629,7 @@ sub serve_blog {
   success($stream);
   $log->info("Serving blog");
   $stream->write("# Blog\n");
-  my @blog = blog_pages($stream, $host, $space);
+  my @blog = blog_pages($host, $space);
   if (not @blog) {
     $stream->write("The are no blog pages.\n");
     return;
@@ -1650,7 +1648,7 @@ sub serve_index {
   success($stream);
   $log->info("Serving index of all pages");
   $stream->write("# All Pages\n");
-  my @pages = pages($stream, $host, $space);
+  my @pages = pages($host, $space);
   $stream->write("The are no pages.\n") unless @pages;
   for my $id (sort { newest_first($stream, $a, $b) } @pages) {
     print_link($stream, $host, $space, $id);
@@ -1675,7 +1673,7 @@ sub serve_index_via_http {
   $stream->write("</head>\n");
   $stream->write("<body>\n");
   $stream->write("<h1>All Pages</h1>\n");
-  my @pages = pages($stream, $host, $space);
+  my @pages = pages($host, $space);
   if (@pages) {
     $stream->write("<ul>\n");
     for my $id (sort { newest_first($stream, $a, $b) } @pages) {
@@ -1826,7 +1824,7 @@ sub serve_match {
   $log->info("Serving pages matching $match");
   $stream->write(encode_utf8 "# Search page titles for $match\n");
   $stream->write("Use a Perl regular expression to match page titles.\n");
-  my @pages = pages($stream, $host, $space, $match);
+  my @pages = pages($host, $space, $match);
   $stream->write("No matching page names found.\n") unless @pages;
   for my $id (sort { newest_first($stream, $a, $b) } @pages) {
     print_link($stream, $host, $space, $id);
@@ -1857,11 +1855,11 @@ sub search {
   my $space = shift;
   my $str = shift;
   my $func = shift;
-  my @pages = sort { newest_first($stream, $a, $b) } pages($stream, $host, $space);
+  my @pages = sort { newest_first($stream, $a, $b) } pages($host, $space);
   return unless @pages;
   my $found = 0;
   for my $id (@pages) {
-    my $text = text($stream, $host, $space, $id);
+    my $text = text($host, $space, $id);
     if ($id =~ /$str/ or $text =~ /$str/) {
       $func->($host, $space, $id, $text, $str);
       $found++;
@@ -2309,7 +2307,7 @@ sub rss {
       my $link = to_url($stream, $host, $space, "page/$id", $scheme);
       $stream->write("<link>$link</link>\n");
       $stream->write("<guid>$link</guid>\n");
-      $stream->write(encode_utf8 "<description>" . quote_html(text($stream, $host, $space, $id)) . "</description>\n");
+      $stream->write(encode_utf8 "<description>" . quote_html(text($host, $space, $id)) . "</description>\n");
       my ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($ts); # Sat, 07 Sep 2002 00:00:01 GMT
       $stream->write("<pubDate>"
 		     . sprintf("%s, %02d %s %04d %02d:%02d:%02d GMT", qw(Sun Mon Tue Wed Thu Fri Sat)[$wday], $mday,
@@ -2428,7 +2426,7 @@ sub atom {
       my $link = to_url($stream, $host, $space, "page/$id", $scheme);
       $stream->write("<link href=\"$link\"/>\n");
       $stream->write("<id>$link</id>\n");
-      $stream->write(encode_utf8 "<content type=\"text\">" . quote_html(text($stream, $host, $space, $id)) . "</content>\n");
+      $stream->write(encode_utf8 "<content type=\"text\">" . quote_html(text($host, $space, $id)) . "</content>\n");
       $seen{$name} = 1;
     } else {
       # a file
@@ -2459,7 +2457,7 @@ sub serve_raw {
   my $revision = shift;
   $log->info("Serving raw $id");
   success($stream, 'text/plain; charset=UTF-8');
-  $stream->write(encode_utf8 text($stream, $host, $space, $id, $revision));
+  $stream->write(encode_utf8 text($host, $space, $id, $revision));
 }
 
 sub serve_raw_via_http {
@@ -2472,7 +2470,7 @@ sub serve_raw_via_http {
   $stream->write("HTTP/1.1 200 OK\r\n");
   $stream->write("Content-Type: text/plain; charset=UTF-8\r\n");
   $stream->write("\r\n");
-  $stream->write(encode_utf8 text($stream, $host, $space, $id, $revision));
+  $stream->write(encode_utf8 text($host, $space, $id, $revision));
 }
 
 sub serve_diff {
@@ -2488,8 +2486,8 @@ sub serve_diff {
   if (not $style) { print_link($stream, $host, $space, "Colour diff", "diff/$id/$revision/colour") }
   else { print_link($stream, $host, $space, "Normal diff", "diff/$id/$revision") }
   $stream->write("Showing the differences between revision $revision and the current revision.\n");
-  my $new = text($stream, $host, $space, $id);
-  my $old = text($stream, $host, $space, $id, $revision);
+  my $new = text($host, $space, $id);
+  my $old = text($host, $space, $id, $revision);
   if (not $style) {
     diff($old, $new,
 	 sub { $stream->write(encode_utf8 "$_\n") for @_ },
@@ -2526,8 +2524,8 @@ sub serve_diff_via_http {
   $stream->write("<body>\n");
   $stream->write(encode_utf8 "<h1>Differences for " . quote_html($id) . "</h1>\n");
   $stream->write("<p>Showing the differences between revision $revision and the current revision.\n");
-  my $new = text($stream, $host, $space, $id);
-  my $old = text($stream, $host, $space, $id, $revision);
+  my $new = text($host, $space, $id);
+  my $old = text($host, $space, $id, $revision);
   diff($old, $new,
        sub { $stream->write(encode_utf8 "<p>$_\n") for @_ },
        sub { $stream->write(encode_utf8 "<p style=\"color: rgb(222,56,43)\">" . join("<br>", map { $_||"⏎" } @_) . "\n") },
@@ -2631,7 +2629,7 @@ sub html_page {
   $stream->write("</head>\n");
   $stream->write("<body>\n");
   $stream->write(encode_utf8 "<h1>" . quote_html($id) . "</h1>\n");
-  $stream->write(encode_utf8 to_html($stream, text($stream, $host, $space, $id, $revision)) . "\n");
+  $stream->write(encode_utf8 to_html($stream, text($host, $space, $id, $revision)) . "\n");
   $stream->write(encode_utf8 to_html($stream, html_footer($stream, $host, $space, $id, $revision)) . "\n");
   $stream->write("</body>\n");
   $stream->write("</html>\n");
@@ -2827,12 +2825,11 @@ sub serve_page {
   $log->info("Serve Gemini page $id");
   success($stream);
   $stream->write(encode_utf8 "# $id\n");
-  $stream->write(encode_utf8 text($stream, $host, $space, $id, $revision));
+  $stream->write(encode_utf8 text($host, $space, $id, $revision));
   $stream->write(encode_utf8 footer($stream, $host, $space, $id, $revision));
 }
 
 sub text {
-  my $stream = shift;
   my $host = shift;
   my $space = shift;
   my $id = shift;
@@ -2840,13 +2837,12 @@ sub text {
   my $dir = wiki_dir($host, $space);
   return read_text "$dir/keep/$id/$revision.gmi" if $revision and -f "$dir/keep/$id/$revision.gmi";
   return read_text "$dir/page/$id.gmi" if -f "$dir/page/$id.gmi";
-  return robots($stream) if $id eq "robots" and not $space;
+  return robots() if $id eq "robots" and not $space;
   return "This this revision is no longer available." if $revision;
   return "This page does not yet exist.";
 }
 
 sub robots () {
-  my $stream = shift;
   my $ban = << 'EOT';
 User-agent: *
 Disallow: /raw/*

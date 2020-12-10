@@ -696,7 +696,7 @@ for it:
       my $stream = shift;
       my $url = shift;
       my $headers = shift;
-      my $host = $host_regex();
+      my $host = host_regex();
       my $port = port($stream);
       if ($url =~ m!^gemini://($host)(?::$port)?/do/test$!) {
 	$stream->write("20 text/plain\r\n");

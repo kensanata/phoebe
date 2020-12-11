@@ -3459,10 +3459,12 @@ sub valid_mime_type {
   if (not $type) {
     $log->debug("Uploads require a MIME type");
     $stream->write("59 Uploads require a MIME type\r\n");
+    $stream->close_gracefully();
     return;
   } elsif ($type ne "text/plain" and not grep(/^$type$/, @types) and not grep(/^$main_type$/, @types)) {
     $log->debug("This wiki does not allow $type");
     $stream->write("59 This wiki does not allow $type\r\n");
+    $stream->close_gracefully();
     return;
   }
   return 1;
@@ -3478,6 +3480,7 @@ sub valid_size {
   if ($size !~ /^\d+$/) {
     $log->debug("You need to send along the number of bytes, not '$size'");
     $stream->write("59 You need to send along the number of bytes, not '$size'\r\n");
+    $stream->close_gracefully();
     return;
   } elsif ($size > $server->{wiki_page_size_limit}) {
     $log->debug("This wiki does not allow more than $server->{wiki_page_size_limit} bytes per page");

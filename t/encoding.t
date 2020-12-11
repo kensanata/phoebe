@@ -42,7 +42,7 @@ my $length = length($encoded_text);
 my $page = query_gemini("$titan/raw/$encoded_name;size=$length;mime=text/plain;token=hello", $encoded_text);
 like($page, qr/^30 $base\/page\/$encoded_name\r$/, "Titan Text");
 
-$page = decode_utf8(query_gemini("$base/page/$encoded_name"));
+$page = query_gemini("$base/page/$encoded_name");
 like($page, qr/^20 text\/gemini; charset=UTF-8\r\n# $name\n$text/, "Text saved");
 
 done_testing();

@@ -770,11 +770,11 @@ certificates to limit writing to a single, known fingerprint:
     sub protected_wiki {
       my $stream = shift;
       my $url = shift;
-      my $host_regex = host_regex();
+      my $hosts = host_regex();
       my $port = port($stream);
       my $spaces = space_regex($stream);
       my $fingerprint = $server->{client}->get_fingerprint();
-      if (my ($host, $path) = $url =~ m!^titan://($host_regex)(?::$port)?([^?#]*)!) {
+      if (my ($host, $path) = $url =~ m!^titan://($hosts)(?::$port)?([^?#]*)!) {
 	my ($space, $resource) = $path =~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!;
 	if (not $resource) {
 	  $log->debug("The Titan URL is malformed: $path $spaces");
@@ -1185,8 +1185,8 @@ sub configure {
   $log->info("Port: @{$server->{port}}");
     $log->info("Space: @{$server->{wiki_space}}");
   if (keys %{$server->{host}} > 1) {
-    my $host_regex = host_regex();
-    for (grep(!/^$host_regex\//, @{$server->{wiki_space}})) {
+    my $hosts = host_regex();
+    for (grep(!/^$hosts\//, @{$server->{wiki_space}})) {
       $log->warn("Space $_ is not prefixed with a known host");
     }
   } else {
@@ -3283,7 +3283,7 @@ sub process_http {
       $log->error("Timeout processing $request");
     };
     alarm(10); # timeout
-    my $host_regex = host_regex();
+    my $hosts = host_regex();
     my $port = port($stream);
     my $spaces = space_regex();
     $log->info("Looking at $request");
@@ -3291,55 +3291,55 @@ sub process_http {
     if (run_extensions($stream, $request, $headers, $buffer)) {
       # config file goes first
     } elsif ($request =~ m!^GET /default.css HTTP/1\.[01]$!
-	and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_css_via_http($stream, $host);
     } elsif (($space) = $request =~ m!^GET (?:(?:/($spaces)/?)?|/) HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_main_menu_via_http($stream, $host, space($stream, $host, $space));
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/page/([^/]*)(?:/(\d+))? HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_page_via_http($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/file/([^/]*)(?:/(\d+))? HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_file_via_http($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/history/([^/]*)(?:/(\d+))? HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_history_via_http($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n||10);
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/diff/([^/]*)(?:/(\d+))? HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_diff_via_http($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n||10);
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/raw/([^/]*)(?:/(\d+))? HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_raw_via_http($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif ($request =~ m!^GET /robots.txt HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_raw_via_http($stream, $host, undef, 'robots');
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/do/changes(?:/(\d+))? HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_changes_via_http($stream, $host, space($stream, $host, $space), $n||100);
     } elsif (($filter, $n) = $request =~ m!^GET /do/all(?:/(latest))?/changes(?:/(\d+))? HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_all_changes_via_http($stream, $host, $n||100, $filter||"");
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/do/index HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_index_via_http($stream, $host, space($stream, $host, $space));
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/do/files HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_files_via_http($stream, $host, space($stream, $host, $space));
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/do/spaces HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_spaces_via_http($stream, $host, $port);
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/do/rss HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_rss_via_http($stream, $host, space($stream, $host, $space));
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/do/atom HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_atom_via_http($stream, $host, space($stream, $host, $space));
     } elsif (($space, $n) = $request =~ m!^GET /do/all/atom HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_all_atom_via_http($stream, $host);
     } elsif ($request =~ m!^GET (?:/($spaces))?/do/source HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
+	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       $stream->write("HTTP/1.1 200 OK\r\n");
       $stream->write("Content-Type: text/plain; charset=UTF-8\r\n");
       $stream->write("\r\n");
@@ -3361,10 +3361,10 @@ sub is_upload {
   my $stream = shift;
   my $request = shift;
   $log->info("Looking at $request");
-  my $host_regex = host_regex();
+  my $hosts = host_regex();
   my $spaces_regex = space_regex();
   my $port = port($stream);
-  if ($request =~ m!^titan://($host_regex)(?::$port)?!) {
+  if ($request =~ m!^titan://($hosts)(?::$port)?!) {
     my $host = $1;
     my($scheme, $authority, $path, $query, $fragment) =
 	$request =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?|;
@@ -3495,11 +3495,11 @@ sub process_gemini {
       $log->error("Timeout processing $url");
     };
     alarm(10); # timeout
-    my $host_regex = host_regex();
+    my $hosts = host_regex();
     my $port = port($stream);
     my $spaces = space_regex();
     my $reserved = reserved_regex($stream);
-    $log->debug("Serving ($host_regex)(?::$port)?");
+    $log->debug("Serving ($hosts)(?::$port)?");
     $log->debug("Spaces $spaces");
     my($scheme, $authority, $path, $query, $fragment) =
 	$url =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?|;
@@ -3513,70 +3513,70 @@ sub process_gemini {
     } elsif (length($url) > 1024) {
       $log->debug("The URL is too long");
       $stream->write("59 The URL is too long\r\n");
-    } elsif (($host, $n, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(:$port)?(?:/($spaces))?/(?:$reserved)$!) {
+    } elsif (($host, $n, $space) = $url =~ m!^(?:gemini:)?//($hosts)(:$port)?(?:/($spaces))?/(?:$reserved)$!) {
       # redirect gemini://localhost:2020/do to gemini://localhost:2020/
       # redirect gemini://localhost:2020/space/do to gemini://localhost:2020/space
       $space = space($stream, $host, $space) || "";
       $stream->write("31 gemini://$host" . ($n ? ":$port" : "") . "/$space\r\n"); # this supports "up"
-    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/?$!) {
+    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/?$!) {
       serve_main_menu($stream, $host, space($stream, $host, $space));
-    } elsif (($host, $space, $n) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/more(?:/(\d+))?$!) {
+    } elsif (($host, $space, $n) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/more(?:/(\d+))?$!) {
       serve_blog($stream, $host, space($stream, $host, $space), $n);
-    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/index$!) {
+    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/index$!) {
       serve_index($stream, $host, space($stream, $host, $space));
-    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/files$!) {
+    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/files$!) {
       serve_files($stream, $host, space($stream, $host, $space));
-    } elsif (($host) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/spaces$!) {
+    } elsif (($host) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/spaces$!) {
       serve_spaces($stream, $host, $port);
-    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/data$!) {
+    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/data$!) {
       serve_data($stream, $host, space($stream, $host, $space));
-    } elsif ($url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?/do/source$!) {
+    } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?/do/source$!) {
       success($stream, 'text/plain; charset=UTF-8');
       seek DATA, 0, 0;
       local $/ = undef; # slurp
       $stream->write(encode_utf8 <DATA>);
-    } elsif ($url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/match$!) {
+    } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/match$!) {
       $stream->write("10 Find page by name (Perl regex)\r\n");
-    } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/match\?!) {
+    } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/match\?!) {
       serve_match($stream, $host, map {decode_utf8(uri_unescape($_))} $space, $query);
-    } elsif ($url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/search$!) {
+    } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/search$!) {
       $stream->write("10 Find page by content (Perl regex)\r\n");
-    } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/search\?!) {
+    } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/search\?!) {
       serve_search($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($query))); # search terms include spaces
-    } elsif ($url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/new$!) {
+    } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/new$!) {
       $stream->write("10 New page\r\n");
-    } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/new\?!) {
       # no URI escaping required
+    } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/new\?!) {
       if ($space) {
 	$stream->write("30 gemini://$host:$port/$space/raw/$query\r\n");
       } else {
 	$stream->write("30 gemini://$host:$port/raw/$query\r\n");
       }
-    } elsif (($host, $space, $n, $style) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
+    } elsif (($host, $space, $n, $style) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
       serve_changes($stream, $host, space($stream, $host, $space), $n||100, $style);
-    } elsif (($host, $filter, $n, $style) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?/do/all(?:/(latest))?/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
+    } elsif (($host, $filter, $n, $style) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?/do/all(?:/(latest))?/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
       serve_all_changes($stream, $host, $n||100, $style||"", $filter||"");
-    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/rss$!) {
+    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/rss$!) {
       serve_rss($stream, $host, space($stream, $host, $space));
-    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/atom$!) {
+    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/atom$!) {
       serve_atom($stream, $host, space($stream, $host, $space));
-    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/do/all/atom$!) {
+    } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/all/atom$!) {
       serve_all_atom($stream, $host);
-    } elsif ($url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?/robots.txt$!) {
+    } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?/robots.txt$!) {
       serve_raw($stream, $host, undef, "robots");
-    } elsif (($host, $space, $id, $n, $style) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(\d+))?(?:/(colour|fancy))?$!) {
+    } elsif (($host, $space, $id, $n, $style) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(\d+))?(?:/(colour|fancy))?$!) {
       serve_history($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n||10, $style);
-    } elsif (($host, $space, $id, $n, $style) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?(?:/(colour))?$!) {
+    } elsif (($host, $space, $id, $n, $style) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?(?:/(colour))?$!) {
       serve_diff($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n, $style);
-    } elsif (($host, $space, $id, $n) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/raw/([^/]*)(?:/(\d+))?$!) {
+    } elsif (($host, $space, $id, $n) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/raw/([^/]*)(?:/(\d+))?$!) {
       serve_raw($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
-    } elsif (($host, $space, $id, $n) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/html/([^/]*)(?:/(\d+))?$!) {
+    } elsif (($host, $space, $id, $n) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/html/([^/]*)(?:/(\d+))?$!) {
       serve_html($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
-    } elsif (($host, $space, $id, $n) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/page/([^/]+)(?:/(\d+))?$!) {
+    } elsif (($host, $space, $id, $n) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/page/([^/]+)(?:/(\d+))?$!) {
       serve_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
-    } elsif (($host, $space, $id) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(?:/($spaces))?/file/([^/]+)?$!) {
+    } elsif (($host, $space, $id) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/file/([^/]+)?$!) {
       serve_file($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)));
-    } elsif (($host) = $url =~ m!^(?:gemini:)?//($host_regex)(?::$port)?(/|$)!) {
+    } elsif (($host) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(/|$)!) {
       $log->info("Unknown path for $url\r");
       $stream->write("51 Path not found for $url\r\n");
     } elsif ($authority) {

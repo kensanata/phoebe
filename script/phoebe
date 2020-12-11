@@ -154,12 +154,14 @@ Perl libraries you need to install if you want to run Phoebe:
 
 =item L<URI::Escape>, or C<liburi-escape-xs-perl>
 
+=item L<Net::IDN::Encode>, or C<libnet-idn-encode-perl>
+
 =back
 
 I'm going to be using F<curl> and F<openssl> in the L</Quickstart> instructions,
 so you'll need those tools as well. And finally, when people download their
-data, the code calls C<tar> (available from package with the same name on Debian
-derived systems).
+data, the code calls C<tar> (available from packages with the same name on
+Debian derived systems).
 
 The F<update-readme.pl> script I use to generate F<README.md> also requires some
 libraries:
@@ -970,13 +972,15 @@ L<gemini://transjovian.org/> L<https://transjovian.org:1965/>
 
 package App::Phoebe;
 use File::Slurper qw(read_text read_binary read_lines read_dir write_text write_binary);
-use Encode qw(encode_utf8 decode_utf8);
+use Encode qw(encode_utf8 decode_utf8 decode);
+use Net::IDN::Encode qw(domain_to_ascii);
 use Socket qw(:addrinfo SOCK_RAW);
 use List::Util qw(first min);
 use Modern::Perl '2018';
 use File::ReadBackwards;
 use IO::Socket::SSL;
 use Algorithm::Diff;
+use Encode::Locale;
 use Mojo::IOLoop;
 use Getopt::Long;
 use URI::Escape;
@@ -990,6 +994,7 @@ our (@extensions, @main_menu, @footer);
 our $log ||= Mojo::Log->new(level => 'warn');
 our $server = {host => {}};
 
+# Some of these need to be decoded (hostnames, pagenames).
 GetOptions(
   $server,
   'help' => \&help,
@@ -997,16 +1002,19 @@ GetOptions(
   'log_file=s' => sub { $log->path($_[1]) },
   'cert_file=s' => \&host_setup,
   'key_file=s' => \&host_setup,
-  'host=s' => \&host_setup,
+  'host=s' => sub { host_setup(shift, decode(locale => shift)) },
   'port=i@', # same ports for all hosts!
   'wiki_dir=s',
-  'wiki_space=s@',
-  'wiki_token=s@',
-  'wiki_page=s@',
-  'wiki_main_page=s',
+  'wiki_space=s@' => \&utf8_list_item,
+  'wiki_token=s@' => \&utf8_list_item,
+  'wiki_page=s@' => \&utf8_list_item,
+  'wiki_main_page=s' => \&utf8_item,
   'wiki_mime_type=s@',
   'wiki_page_size_limit=i')
     or die("Error in command line arguments\n");
+
+sub utf8_list_item { my ($key, $value) = @_; push(@{$server->{$key}}, decode(locale => $value)) };
+sub utf8_item { my ($key, $value) = @_; $server->{$key} = decode(locale => $value) };
 
 {
   # use a block so that these variables stay local
@@ -1203,12 +1211,13 @@ sub configure {
 
 sub get_ip_numbers {
   my $hostname = shift;
+  my $punycode = domain_to_ascii($hostname);
   my @addresses;
-  my ($err, @res) = getaddrinfo($hostname, "", {socktype => SOCK_RAW});
-  $log->error("Cannot determine the IP number of $hostname: $err") if $err;
+  my ($err, @res) = getaddrinfo($punycode, "", {socktype => SOCK_RAW});
+  $log->error("Cannot determine the IP number of $punycode: $err") if $err;
   for my $ai (@res) {
     my ($err, $ipaddr) = getnameinfo($ai->{addr}, NI_NUMERICHOST, NIx_NOSERV);
-    $log->error("Cannot get a readable IP number of $hostname: $err") if $err;
+    $log->error("Cannot get a readable IP number of $punycode: $err") if $err;
     push(@addresses, $ipaddr) if $ipaddr;
   }
   return @addresses;
@@ -1397,7 +1406,7 @@ sub with_lock {
 # options.
 sub host_regex {
   my $stream = shift;
-  return join("|", map { quotemeta } keys %{$server->{host}});
+  return join("|", map { quotemeta domain_to_ascii $_ } keys %{$server->{host}});
 }
 
 sub port {

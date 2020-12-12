@@ -4,6 +4,7 @@
 # files for developers
 ^TODO
 ^RELEASE
+^TEST
 ^update-readme
 
 # generated files

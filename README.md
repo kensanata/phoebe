@@ -9,7 +9,6 @@ Phoebe - serve a wiki as a Gemini site
 - [Description](#description)
 - [Gemtext](#gemtext)
 - [Editing the wiki](#editing-the-wiki)
-- [License](#license)
 - [Installation](#installation)
 - [Dependencies](#dependencies)
 - [Quickstart](#quickstart)
@@ -23,6 +22,7 @@ Phoebe - serve a wiki as a Gemini site
 - [Security](#security)
 - [Privacy](#privacy)
 - [Example](#example)
+- [Certificates and file permission](#certificates-and-file-permission)
 - [Main page and title](#main-page-and-title)
 - [Gus and robots.txt](#gus-and-robots-txt)
 - [Limited, read-only http support](#limited-read-only-http-support)
@@ -35,6 +35,7 @@ Phoebe - serve a wiki as a Gemini site
 - [Css for the web](#css-for-the-web)
 - [Favicon for the web](#favicon-for-the-web)
 - [See also](#see-also)
+- [License](#license)
 
 # SYNOPSIS
 
@@ -128,10 +129,6 @@ _Elpher_. [https://alexschroeder.ch/cgit/gemini-write/](https://alexschroeder.ch
 Gemini & Titan for Bash are two shell functions that allow you to download and
 upload files. [https://alexschroeder.ch/cgit/gemini-titan/about/](https://alexschroeder.ch/cgit/gemini-titan/about/)
 
-# LICENSE
-
-GNU Affero General Public License
-
 # INSTALLATION
 
 Using `cpan`:
@@ -155,11 +152,13 @@ Perl libraries you need to install if you want to run Phoebe:
 - [IO::Socket::SSL](https://metacpan.org/pod/IO%3A%3ASocket%3A%3ASSL), or `libio-socket-ssl-perl`
 - [Modern::Perl](https://metacpan.org/pod/Modern%3A%3APerl), or `libmodern-perl-perl`
 - [URI::Escape](https://metacpan.org/pod/URI%3A%3AEscape), or `liburi-escape-xs-perl`
+- [Net::IDN::Encode](https://metacpan.org/pod/Net%3A%3AIDN%3A%3AEncode), or `libnet-idn-encode-perl`
+- [Encode::Locale](https://metacpan.org/pod/Encode%3A%3ALocale), or `libencode-locale-perl`
 
 I'm going to be using `curl` and `openssl` in the ["Quickstart"](#quickstart) instructions,
 so you'll need those tools as well. And finally, when people download their
-data, the code calls `tar` (available from package with the same name on Debian
-derived systems).
+data, the code calls `tar` (available from packages with the same name on
+Debian derived systems).
 
 The `update-readme.pl` script I use to generate `README.md` also requires some
 libraries:
@@ -339,13 +338,6 @@ Check the log output:
 
 ## Troubleshooting
 
-🔥 **SSL\_cert\_file cert.pem can't be used: No such file or directory** 🔥 Perhaps
-you're missing the certificate (`cert.pem`) or key file (`key.pem`). The git
-repo has the necessary files which you can use to do a quick test. Copy them
-into the installation directory where you want to run Phoebe and try again. Once
-it works, you should _generate your own_ using the Makefile: `make cert`
-should do it.
-
 🔥 **1408A0C1:SSL routines:ssl3\_get\_client\_hello:no shared cipher** 🔥 If you
 created a new certificate and key using elliptic curves using an older OpenSSL,
 you might run into this. Try to create a RSA key instead. It is larger, but at
@@ -508,6 +500,69 @@ using one of two tokens.
       --wiki_page=Welcome \
       --wiki_page=About
 
+Here's what my `phoebe.service` file actually looks like:
+
+    [Unit]
+    Description=Phoebe
+    After=network.target
+    [Install]
+    WantedBy=multi-user.target
+    [Service]
+    Type=simple
+    WorkingDirectory=/home/alex/farm
+    Restart=always
+    User=alex
+    Group=ssl-cert
+    ExecStart=/home/alex/src/phoebe/script/phoebe \
+     --port=1965 \
+     --log_level=info \
+     --wiki_dir=/home/alex/phoebe \
+     --host=transjovian.org \
+     --cert_file=/var/lib/dehydrated/certs/transjovian.org/fullchain.pem \
+     --key_file=/var/lib/dehydrated/certs/transjovian.org/privkey.pem \
+     --host=toki.transjovian.org \
+     --cert_file=/var/lib/dehydrated/certs/transjovian.org/fullchain.pem \
+     --key_file=/var/lib/dehydrated/certs/transjovian.org/privkey.pem \
+     --host=vault.transjovian.org \
+     --cert_file=/var/lib/dehydrated/certs/transjovian.org/fullchain.pem \
+     --key_file=/var/lib/dehydrated/certs/transjovian.org/privkey.pem \
+     --host=communitywiki.org \
+     --cert_file=/var/lib/dehydrated/certs/communitywiki.org/fullchain.pem \
+     --key_file=/var/lib/dehydrated/certs/communitywiki.org/privkey.pem \
+     --host=alexschroeder.ch \
+     --cert_file=/var/lib/dehydrated/certs/alexschroeder.ch/fullchain.pem \
+     --key_file=/var/lib/dehydrated/certs/alexschroeder.ch/privkey.pem \
+     --host=next.oddmuse.org \
+     --cert_file=/var/lib/dehydrated/certs/oddmuse.org/fullchain.pem \
+     --key_file=/var/lib/dehydrated/certs/oddmuse.org/privkey.pem \
+     --host=emacswiki.org \
+     --cert_file=/var/lib/dehydrated/certs/emacswiki.org/fullchain.pem \
+     --key_file=/var/lib/dehydrated/certs/emacswiki.org/privkey.pem \
+     --wiki_main_page=Welcome \
+     --wiki_page=About \
+     --wiki_mime_type=image/png \
+     --wiki_mime_type=image/jpeg \
+     --wiki_mime_type=audio/mpeg \
+     --wiki_space=transjovian.org/test \
+     --wiki_space=transjovian.org/phoebe \
+     --wiki_space=transjovian.org/anthe \
+     --wiki_space=transjovian.org/gemini \
+     --wiki_space=transjovian.org/titan
+
+## Certificates and File Permission
+
+In the example above, I'm using certificates I get from Let's Encrypt. Thus, the
+regular website served on port 443 and the Phoebe website on port 1965 use the
+same certificates. My problem is that for the regular website, Apache can read
+the certificates, but in the setup above Phoebe runs as the user `alex` and
+cannot access the certificates. My solution is to use the group `ssl-cert`.
+This is the group that already has read access to `/etc/ssl/private` on my
+system. I granted the following permissions:
+
+    drwxr-x--- root ssl-cert /var/lib/dehydrated/certs
+    drwxr-s--- root ssl-cert /var/lib/dehydrated/certs/*
+    drwxr----- root ssl-cert /var/lib/dehydrated/certs/*/*.pem
+
 ## Main Page and Title
 
 The main page will include ("transclude") a page of your choosing if you use the
@@ -668,7 +723,7 @@ for it:
       my $stream = shift;
       my $url = shift;
       my $headers = shift;
-      my $host = $host_regex();
+      my $host = host_regex();
       my $port = port($stream);
       if ($url =~ m!^gemini://($host)(?::$port)?/do/test$!) {
         $stream->write("20 text/plain\r\n");
@@ -736,11 +791,11 @@ certificates to limit writing to a single, known fingerprint:
     sub protected_wiki {
       my $stream = shift;
       my $url = shift;
-      my $host_regex = host_regex();
+      my $hosts = host_regex();
       my $port = port($stream);
       my $spaces = space_regex($stream);
       my $fingerprint = $server->{client}->get_fingerprint();
-      if (my ($host, $path) = $url =~ m!^titan://($host_regex)(?::$port)?([^?#]*)!) {
+      if (my ($host, $path) = $url =~ m!^titan://($hosts)(?::$port)?([^?#]*)!) {
         my ($space, $resource) = $path =~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!;
         if (not $resource) {
           $log->debug("The Titan URL is malformed: $path $spaces");
@@ -931,3 +986,7 @@ includes a section with more configuration examples, including simple comments
 (append-only via Gemini), complex comments (editing via Titan or the web),
 wholesale page editing via the web, user-agent blocking, and so on.
 [gemini://transjovian.org/](gemini://transjovian.org/) [https://transjovian.org:1965/](https://transjovian.org:1965/)
+
+# LICENSE
+
+GNU Affero General Public License

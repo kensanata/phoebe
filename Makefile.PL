@@ -22,6 +22,7 @@ WriteMakefile(
     'File::ReadBackwards' => 0,
     'Net::IDN::Encode' => 0,
     'IRI' => 0,
+    'Encode::Locale' => 0,
     'Mojolicious' => 8.12, # Mojo::IOLoop, also adds IO::Socket::IP
     'IO::Socket::SSL' => 0, # optional for Mojo::IOLoop
     'File::Slurper' => 0,

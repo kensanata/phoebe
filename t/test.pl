@@ -153,11 +153,11 @@ sub query_web {
 }
 
 say "This is the client waiting 1s for the server to start on port $port...";
-sleep 1; eval { query_gemini('gemini://localhost/') };
-if ($@) { say "One more second..."; sleep 1; eval { query_gemini('gemini://localhost/') }}
-if ($@) { say "Just one more second..."; sleep 1; eval { query_gemini('gemini://localhost/') }}
-if ($@) { say "Another second..."; sleep 1; eval { query_gemini('gemini://localhost/') }}
-if ($@) { say "One last second..."; sleep 1; eval { query_gemini('gemini://localhost/') }}
+sleep 1; eval { query_gemini("gemini://$host:$port/") };
+if ($@) { say "One more second..."; sleep 1; eval { query_gemini("gemini://$host:$port/") }}
+if ($@) { say "Just one more second..."; sleep 1; eval { query_gemini("gemini://$host:$port/") }}
+if ($@) { say "Another second..."; sleep 1; eval { query_gemini("gemini://$host:$port/") }}
+if ($@) { say "One last second..."; sleep 1; eval { query_gemini("gemini://$host:$port/") }}
 if ($@) { say "Still getting an error: $@" }
 
 1;

@@ -91,7 +91,7 @@ if (!defined $pid) {
 	      # expects them encoded in the current locale, however.
 	      (map { "--host=" . encode(locale => $_) } @hosts),
 	      "--port=$port",
-	      "--log_level=debug", # set to debug if you are bug hunting?
+	      "--log_level=warn", # set to debug if you are bug hunting?
 	      "--cert_file=t/cert.pem",
 	      "--key_file=t/key.pem",
 	      "--wiki_dir=$dir",

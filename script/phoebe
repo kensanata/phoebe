@@ -1644,7 +1644,7 @@ sub serve_main_menu_via_http {
   $stream->write("</head>\n");
   $stream->write("<body>\n");
   if ($page) {
-    $stream->write(encode_utf8 to_html($stream, text($host, $space, $page)) . "\n");
+    $stream->write(encode_utf8 to_html(text($host, $space, $page)) . "\n");
   } else {
     $stream->write("<h1>Welcome to Phoebe!</h1>\n");
   }
@@ -2695,15 +2695,14 @@ sub html_page {
   $stream->write("</head>\n");
   $stream->write("<body>\n");
   $stream->write(encode_utf8 "<h1>" . quote_html($id) . "</h1>\n");
-  $stream->write(encode_utf8 to_html($stream, text($host, $space, $id, $revision)) . "\n");
-  $stream->write(encode_utf8 to_html($stream, html_footer($stream, $host, $space, $id, $revision)) . "\n");
+  $stream->write(encode_utf8 to_html(text($host, $space, $id, $revision)) . "\n");
+  $stream->write(encode_utf8 to_html(html_footer($stream, $host, $space, $id, $revision)) . "\n");
   $stream->write("</body>\n");
   $stream->write("</html>\n");
 }
 
 # returns lines!
 sub to_html {
-  my $stream = shift;
   my $text = shift;
   my @lines;
   my $list;

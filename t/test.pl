@@ -15,7 +15,6 @@
 
 use Modern::Perl;
 use Test::More;
-use IO::Socket::SSL;
 use File::Slurper qw(write_text);
 use Mojo::IOLoop;
 use Encode;
@@ -159,13 +158,26 @@ sub query_web {
   return query_gemini("$query\r\n"); # add empty line
 }
 
-say "This is the client waiting 1s for the server to start on port $port...";
-sleep 1; eval { query_gemini("gemini://$host:$port/") };
-if ($@) { say "One more second..."; sleep 1; eval { query_gemini("gemini://$host:$port/") }}
-if ($@) { say "Just one more second..."; sleep 1; eval { query_gemini("gemini://$host:$port/") }}
-if ($@) { say "Another second..."; sleep 1; eval { query_gemini("gemini://$host:$port/") }}
-if ($@) { say "One last second..."; sleep 1; eval { query_gemini("gemini://$host:$port/") }}
-if ($@) { say "Still getting an error: $@" }
+
+my $total = 0;
+my $ok = 0;
+
+# What I'm seeing is that $@ is the empty string and $! is "Connection refused"
+# even though I thought $@ would be set. Oh well.
+say "This is the client waiting for the server to start on port $port...";
+for (qw(1 1 1 1 2 2 3 4 5)) {
+  if (not $total or $!) {
+    diag "$!: waiting ${_}s..." if $total > 0;
+    $total += $_;
+    sleep $_;
+    eval { query_gemini("gemini://$host:$port/") };
+  } else {
+    $ok = 1;
+    last;
+  }
+}
+
+die "$!: giving up after ${total}s\n" unless $ok;
 
 1;
 

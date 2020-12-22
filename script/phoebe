@@ -2931,7 +2931,7 @@ EOT
   return $ban
       . join("\n",
 	     map {
-	       my $space = $_;
+	       my $space = (split /\//)[-1];
 	       join("\n", "# $space", map { "Disallow: /$space$_" } @disallows)
 	     } @{$server->{wiki_space}}) . "\n";
 }
@@ -3246,7 +3246,7 @@ sub wiki_dir {
   my $space = shift;
   my $dir = $server->{wiki_dir};
   if (keys %{$server->{host}} > 1) {
-    $dir .= "/$host" ;
+    $dir .= "/$host";
     mkdir($dir) unless -d $dir;
   }
   $dir .= "/$space" if $space;
@@ -3630,7 +3630,7 @@ sub process_gemini {
       serve_atom($stream, $host, space($stream, $host, $space));
     } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/all/atom$!) {
       serve_all_atom($stream, $host);
-    } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?/robots.txt$!) {
+    } elsif (($host) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?/robots.txt$!) {
       serve_raw($stream, $host, undef, "robots");
     } elsif (($host, $space, $id, $n, $style) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(\d+))?(?:/(colour|fancy))?$!) {
       serve_history($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n||10, $style);

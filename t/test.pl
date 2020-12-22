@@ -17,6 +17,7 @@ use Modern::Perl;
 use Test::More;
 use File::Slurper qw(write_text);
 use Mojo::IOLoop;
+use File::Copy;
 use Encode;
 use Encode::Locale;
 
@@ -59,8 +60,17 @@ no warnings 'redefine';
 sub get_ip_numbers {
   return '127.0.0.1';
 }
-
+our $speed_bump_requests = 2;
+our $speed_bump_window = 5;
 EOT
+
+our @config;
+if (@config) {
+  mkdir("$dir/conf.d");
+  for my $config (@config) {
+    copy("contrib/$config", "$dir/conf.d/$config") or die "Failed to install $config: $!";
+  }
+}
 
 our $pid = fork();
 

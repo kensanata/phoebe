@@ -21,10 +21,10 @@ our $base;
 our $port;
 require './t/test.pl';
 
-my $page = query_gemini("gemini://127.0.0.1:$port/do/speed-bump/reset");
+my $page = query_gemini("$base/do/speed-bump/reset");
 like($page, qr(^20), "Speed bump reset");
 
-my $page = query_gemini("$base/");
+$page = query_gemini("$base/");
 like($page, qr(^20), "Request 1");
 
 $page = query_gemini("$base/");

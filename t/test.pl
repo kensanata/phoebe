@@ -62,6 +62,8 @@ sub get_ip_numbers {
 }
 our $speed_bump_requests = 2;
 our $speed_bump_window = 5;
+our @known_fingerprints = qw(
+  sha256$0ba6ba61da1385890f611439590f2f0758760708d1375859b2184dcd8f855a00);
 EOT
 
 our @config;
@@ -167,7 +169,6 @@ sub query_web {
   my $query = shift;
   return query_gemini("$query\r\n"); # add empty line
 }
-
 
 my $total = 0;
 my $ok = 0;

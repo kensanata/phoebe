@@ -143,18 +143,19 @@ sub speed_bump_admin {
   if ($url =~ m!^gemini://(?:$hosts)(?::$port)?/do/speed-bump/reset$!) {
     with_speed_bump_fingerprint($stream, sub {
       $speed_data = undef;
-      $stream->write("20 text/plain\r\n");
-      $stream->write("Data reset.\n");
+      success($stream);
+      $stream->write("Speed Bump Reset\n");
+      $stream->write("The speed bump data has been reset.\n");
       $stream->write("=> status Show speed bump status\n") });
     return 1;
   } elsif ($url =~ m!^gemini://(?:$hosts)(?::$port)?/do/speed-bump/status$!) {
     with_speed_bump_fingerprint($stream, sub {
-      $stream->write("20 text/plain\r\n");
+      success($stream);
       speed_bump_status($stream) });
     return 1;
   } elsif ($url =~ m!^gemini://(?:$hosts)(?::$port)?/do/speed-bump/debug$!) {
     with_speed_bump_fingerprint($stream, sub {
-      $stream->write("20 text/plain\r\n");
+      success($stream, 'text/plain; charset=UTF-8');
       use Data::Dumper;
       $stream->write(Dumper($speed_data)) });
     return 1;

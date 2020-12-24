@@ -179,7 +179,7 @@ sub wikipedia_text {
   # strip remaining empty brackets
   $text =~ s/\(\s*\)//g;
   # handle tables
-  $text =~ s/^(\{\|.+?\|\})\n?/push(@escaped, wikipedia_table($1)); "\x03" . $ref++ . "\x04"/mesg;
+  # $text =~ s/^(\{\|.+?\|\})\n?/push(@escaped, wikipedia_table($1)); "\x03" . $ref++ . "\x04"/mesg;
   my @blocks = split(/\n\n+|\n(?=[*#=])|<br\s+\/>/, $text);
     for my $block (@blocks) {
     $block =~ s/\s+/ /g; # unwrap lines

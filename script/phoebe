@@ -619,18 +619,19 @@ L<https://en.wikipedia.org/wiki/Robots_exclusion_standard>
 Here's my suggestion:
 
     User-agent: *
-    Disallow: /raw/*
-    Disallow: /html/*
-    Disallow: /diff/*
-    Disallow: /history/*
-    Disallow: /do/changes*
-    Disallow: /do/all/changes*
-    Disallow: /do/all/latest/changes*
+    Disallow: /raw
+    Disallow: /html
+    Disallow: /diff
+    Disallow: /history
+    Disallow: /do/comment
+    Disallow: /do/changes
+    Disallow: /do/all/changes
+    Disallow: /do/all/latest/changes
     Disallow: /do/rss
     Disallow: /do/atom
     Disallow: /do/all/atom
     Disallow: /do/new
-    Disallow: /do/more/*
+    Disallow: /do/more
     Disallow: /do/match
     Disallow: /do/search
     # allowing do/index!
@@ -2910,13 +2911,14 @@ sub text {
 sub robots () {
   my $ban = << 'EOT';
 User-agent: *
-Disallow: /raw/*
-Disallow: /html/*
-Disallow: /diff/*
-Disallow: /history/*
-Disallow: /do/changes*
-Disallow: /do/all/changes*
-Disallow: /do/all/latest/changes*
+Disallow: /raw
+Disallow: /html
+Disallow: /diff
+Disallow: /history
+Disallow: /do/comment
+Disallow: /do/changes
+Disallow: /do/all/changes
+Disallow: /do/all/latest/changes
 Disallow: /do/rss
 Disallow: /do/atom
 Disallow: /do/all/atom

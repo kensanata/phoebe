@@ -196,10 +196,11 @@ sub oddmuse_serve_robots {
   success($stream, 'text/plain');
   $stream->write(<<'EOT');
 User-agent: *
-Disallow: /raw/*
-Disallow: /html/*
-Disallow: /diff/*
-Disallow: /history/*
+Disallow: /raw
+Disallow: /html
+Disallow: /diff
+Disallow: /history
+Disallow: /do/comment
 Disallow: /do/changes
 Disallow: /do/rss
 Disallow: /do/atom

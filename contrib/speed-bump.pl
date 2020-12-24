@@ -193,7 +193,7 @@ sub speed_bump_status {
   #               <-4s> <-4s> <2/2> <-4s> <-4s>    <-4s>
   $stream->write(" From    To Warns Block Until Probation IP\n");
   for my $ip (keys %ips) {
-    $stream->write(sprintf("%4ds %4ds %2d/%2d %s %s     %s $ip\n",
+    $stream->write(sprintf("%s %s %2d/%2d %s %s     %s $ip\n",
 			   $speed_data->{visitors}->{$ip}
 			   ? speed_bump_time($speed_data->{visitors}->{$ip}->[-1] - $now)
 			   : " n/a ",

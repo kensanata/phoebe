@@ -203,8 +203,8 @@ sub speed_bump_time {
   my $now = shift;
   return "  n/a" unless $seconds;
   $seconds -= $now if $now;
-  return sprintf("%4dd", int($seconds/86400)) if $seconds > 172800; # 2d
-  return sprintf("%4dh", int($seconds/3600)) if $seconds > 7200; # 2h
-  return sprintf("%4dm", int($seconds/60)) if $seconds > 120; # 2min
+  return sprintf("%4dd", int($seconds/86400)) if abs($seconds) > 172800; # 2d
+  return sprintf("%4dh", int($seconds/3600)) if abs($seconds) > 7200; # 2h
+  return sprintf("%4dm", int($seconds/60)) if abs($seconds) > 120; # 2min
   return sprintf("%4ds", $seconds);
 }

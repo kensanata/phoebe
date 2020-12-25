@@ -69,7 +69,8 @@ sub speed_bump {
   # go through all the request time stamps and delete data outside the time window
   for my $ip (keys %{$speed_data->{visitors}}) {
     # if the latest visit was longer ago than the time window, forget it
-    if ($speed_data->{visitors}->{$ip}->[0] + $speed_bump_window < $now) {
+    if (not $speed_data->{visitors}->{$ip}
+	or $speed_data->{visitors}->{$ip}->[0] + $speed_bump_window < $now) {
       delete($speed_data->{visitors}->{$ip});
       delete($speed_data->{warnings}->{$ip});
     }
@@ -93,7 +94,7 @@ sub speed_bump {
   # add a timestamp to the front for the current $ip
   unshift(@{$speed_data->{visitors}->{$ip}}, $now);
   # add a warning to the front for the current $ip if the current URL could be a bot
-  unshift(@{$speed_data->{warnings}->{$ip}}, scalar $url =~ m!/(do|raw|diff|history|html)/!);
+  unshift(@{$speed_data->{warnings}->{$ip}}, scalar $url =~ m!/(raw|html|diff|history|do/(?:comment|do/(?:all/(?:latest/)?)?changes/|rss|(?:all)?atom|new|more|match|search|index|tag))/!);
   # if there are enough timestamps, pop the last one and see if it falls within
   # the time window
   if (@{$speed_data->{visitors}->{$ip}} > $speed_bump_requests) {

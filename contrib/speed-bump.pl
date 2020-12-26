@@ -182,7 +182,6 @@ sub speed_bump_status {
   #               <-4s> <-4s> <2/2> <-4s> <-4s>    <-4s>
   $stream->write(" From    To Warns Block Until Probation IP\n");
   for my $ip (keys %$speed_data) {
-    $log->debug($ip);
     $stream->write(sprintf("%s %s %2d/%2d %s %s     %s $ip\n",
 			   speed_bump_time($speed_data->{$ip}->{visits}->[-1], $now),
 			   speed_bump_time($speed_data->{$ip}->{visits}->[0], $now),

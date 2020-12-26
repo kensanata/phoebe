@@ -16,9 +16,11 @@
 
 package App::Phoebe;
 use Modern::Perl;
+use File::Slurper qw(read_binary write_binary);
 use List::Util qw(sum);
+use Mojo::JSON qw(decode_json encode_json);
 
-our (@extensions, $log);
+our (@extensions, $log, $server);
 
 our @known_fingerprints = qw(
   sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
@@ -136,13 +138,15 @@ sub speed_bump_admin {
   my $url = shift;
   my $hosts = host_regex();
   my $port = port($stream);
-  if ($url =~ m!^gemini://(?:$hosts)(?::$port)?/do/speed-bump/reset$!) {
-    with_speed_bump_fingerprint($stream, sub {
-      $speed_data = undef;
-      success($stream);
-      $stream->write("Speed Bump Reset\n");
-      $stream->write("The speed bump data has been reset.\n");
-      $stream->write("=> status Show speed bump status\n") });
+  if ($url =~ m!^gemini://(?:$hosts)(?::$port)?/do/speed-bump$!) {
+    success($stream);
+    $stream->write("# Speed Bump\n");
+    $stream->write("Administer the block lists from this menu.\n");
+    $stream->write("=> /do/speed-bump/status status\n");
+    $stream->write("=> /do/speed-bump/debug debug\n");
+    $stream->write("=> /do/speed-bump/save save\n");
+    $stream->write("=> /do/speed-bump/load load\n");
+    $stream->write("=> /do/speed-bump/reset reset\n");
     return 1;
   } elsif ($url =~ m!^gemini://(?:$hosts)(?::$port)?/do/speed-bump/status$!) {
     with_speed_bump_fingerprint($stream, sub {
@@ -154,6 +158,32 @@ sub speed_bump_admin {
       success($stream, 'text/plain; charset=UTF-8');
       use Data::Dumper;
       $stream->write(Dumper($speed_data)) });
+    return 1;
+  } elsif ($url =~ m!^gemini://(?:$hosts)(?::$port)?/do/speed-bump/save$!) {
+    with_speed_bump_fingerprint($stream, sub {
+      success($stream);
+      my $bytes = encode_json $speed_data;
+      my $dir = $server->{wiki_dir};
+      write_binary("$dir/speed-bump.json", $bytes);
+      $stream->write("# Speed Bump Saved\n");
+      $stream->write("=> /do/speed-bump menu\n") });
+    return 1;
+  } elsif ($url =~ m!^gemini://(?:$hosts)(?::$port)?/do/speed-bump/load$!) {
+    with_speed_bump_fingerprint($stream, sub {
+      success($stream);
+      my $dir = $server->{wiki_dir};
+      my $bytes = read_binary("$dir/speed-bump.json");
+      $speed_data = decode_json $bytes;
+      $stream->write("# Speed Bump Loaded\n");
+      $stream->write("=> /do/speed-bump menu\n") });
+    return 1;
+  } elsif ($url =~ m!^gemini://(?:$hosts)(?::$port)?/do/speed-bump/reset$!) {
+    with_speed_bump_fingerprint($stream, sub {
+      $speed_data = undef;
+      success($stream);
+      $stream->write("# Speed Bump Reset\n");
+      $stream->write("The speed bump data has been reset.\n");
+      $stream->write("=> /do/speed-bump menu\n") });
     return 1;
   }
   return;
@@ -193,8 +223,7 @@ sub speed_bump_status {
     # use Net::Whois::IP qw(whoisip_query); my $response = whoisip_query($ip); $response->{OrgName};
   }
   $stream->write("```\n");
-  $stream->write("=> debug Debug speed bumps\n");
-  $stream->write("=> reset Reset speed bumps\n");
+  $stream->write("=> /do/speed-bump menu\n");
 }
 
 sub speed_bump_time {

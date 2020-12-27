@@ -200,6 +200,7 @@ Disallow: /raw
 Disallow: /html
 Disallow: /diff
 Disallow: /history
+Disallow: /tag
 Disallow: /do/comment
 Disallow: /do/changes
 Disallow: /do/rss

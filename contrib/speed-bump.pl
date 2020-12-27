@@ -19,7 +19,8 @@ use Modern::Perl;
 use File::Slurper qw(read_binary write_binary);
 use List::Util qw(sum);
 use Mojo::JSON qw(decode_json encode_json);
-
+use Net::IP;
+use Net::DNS qw(rr);
 our (@extensions, $log, $server);
 
 our @known_fingerprints = qw(
@@ -50,6 +51,8 @@ our $speed_bump_window = 60;
 # $speed_data->{$ip}->{until} = $ts
 # $speed_data->{$ip}->{probation} = $ts + $sec
 my $speed_data;
+# $speed_cidr_data->{$cidr} = $ts
+my $speed_cidr_data;
 
 # order is important: we must be able to reset the stats for tests
 push(@extensions, \&speed_bump_admin, \&speed_bump);
@@ -69,6 +72,9 @@ sub speed_bump {
       delete($speed_data->{$ip});
     }
   }
+  for my $cidr (keys %$speed_cidr_data) {
+    delete($speed_cidr_data->{$cidr}) if $speed_cidr_data->{$cidr} < $now;
+  }
   # check if we are currently blocked
   my $ip = $stream->handle->peerhost;
   if (exists $speed_data->{$ip}) {
@@ -77,6 +83,16 @@ sub speed_bump {
       my $seconds = speed_bump_add($ip, $now);
       $log->debug("Extending the block by $seconds");
       my $delta = $speed_data->{$ip}->{until} - $now;
+      $stream->write("44 $delta\r\n");
+      # no more processing
+      return 1;
+    }
+  }
+  # check whether the range is blocked
+  for my $cidr (keys %$speed_cidr_data) {
+    my $range = new Net::IP($cidr);
+    if ($range->overlaps($ip) != $IP_NO_OVERLAP) {
+      my $delta = $speed_cidr_data->{$cidr} - $now;
       $stream->write("44 $delta\r\n");
       # no more processing
       return 1;
@@ -125,12 +141,30 @@ sub speed_bump_add {
   my $seconds = $speed_data->{$ip}->{seconds} || 60;
   # if this happened within the probation time, double the block time
   $seconds *= 2 if $seconds and $probation and $probation > $now;
-  # protect against integer overflows, haha: 1y is 365*24*60*60 = 31536000
-  $seconds = 31536000 if $seconds > 31536000;
+  # protect against integer overflows, haha: 28d is 28*24*60*60 = 2419200
+  $seconds = 2419200 if $seconds > 2419200;
   $speed_data->{$ip}->{seconds} = $seconds;
   $speed_data->{$ip}->{until} = $now + $seconds;
   $speed_data->{$ip}->{probation} = $now + 2 * $seconds;
+  return $seconds if $seconds < 2419200;
+  # finally, check if there are enough other IPs in the same network to warrant a net range block
+  $speed_data->{$ip}->{cidr} ||= speed_bump_cidr($ip, $now);
+  my $cidr = $speed_data->{$ip}->{cidr};
+  if ($cidr) {
+    my $count = 0;
+    for (keys %$speed_data) {
+      $count++ if $speed_data->{$_}->{cidr} eq $cidr;
+    }
+    speed_bump_add_cidr($cidr, $now + $seconds) if $count >= 3;
+  }
   return $seconds;
+}
+
+sub speed_bump_add_cidr {
+  my $cidr = shift;
+  my $until = shift;
+  $log->info("Blocking CIDR $cidr");
+  $speed_cidr_data->{$cidr} = $until;
 }
 
 sub speed_bump_admin {
@@ -212,18 +246,40 @@ sub speed_bump_status {
   #               <-4s> <-4s> <2/2> <-4s> <-4s>    <-4s>
   $stream->write(" From    To Warns Block Until Probation IP\n");
   for my $ip (keys %$speed_data) {
-    $stream->write(sprintf("%s %s %2d/%2d %s %s     %s $ip\n",
+    $stream->write(sprintf("%s %s %2d/%2d %s %s     %s $ip %s\n",
 			   speed_bump_time($speed_data->{$ip}->{visits}->[-1], $now),
 			   speed_bump_time($speed_data->{$ip}->{visits}->[0], $now),
-			   sum(@{$speed_data->{$ip}->{warnings}}) || 0,
+			   sum(@{$speed_data->{$ip}->{warnings}} || 0),
 			   scalar(@{$speed_data->{$ip}->{warnings}}) || 0,
 			   speed_bump_time($speed_data->{$ip}->{seconds}),
 			   speed_bump_time($speed_data->{$ip}->{until}, $now),
-			   speed_bump_time($speed_data->{$ip}->{probation}, $now)));
-    # use Net::Whois::IP qw(whoisip_query); my $response = whoisip_query($ip); $response->{OrgName};
+			   speed_bump_time($speed_data->{$ip}->{probation}, $now),
+			   $speed_data->{$ip}->{cidr} || ""));
   }
   $stream->write("```\n");
   $stream->write("=> /do/speed-bump menu\n");
+}
+
+my $resolver;
+
+sub speed_bump_cidr {
+  my $ip = shift;
+  my $now = shift;
+  my $cidr = $speed_data->{$ip}->{cidr};
+  my $until = $speed_data->{$ip}->{until};
+  return $cidr if $cidr or not $until or $until - $now < 604800;
+  # if blocked for at least 7d and no cidr is available, get it: 7*24*60*60 = 604800
+  $ip = new Net::IP ($ip) or return;
+  my $reverse = $ip->reverse_ip();
+  $reverse =~ s/in-addr\.arpa\.$/asn.routeviews.org/;
+  $log->debug("DNS TXT query for $reverse");
+  $resolver ||= Net::DNS::Resolver->new;
+  for my $rr (rr($reverse, "TXT")) {
+    next unless $rr->type eq "TXT";
+    my @data = $rr->txtdata;
+    $log->debug("DNS TXT @data");
+    return join("/", @data[1..2]); # CIDR
+  }
 }
 
 sub speed_bump_time {

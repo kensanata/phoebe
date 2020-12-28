@@ -75,24 +75,25 @@ sub speed_bump {
   for my $cidr (keys %$speed_cidr_data) {
     delete($speed_cidr_data->{$cidr}) if $speed_cidr_data->{$cidr} < $now;
   }
-  # check if we are currently blocked
+  # check whether the range is blocked
   my $ip = $stream->handle->peerhost;
+  my $ob = new Net::IP($ip);
+  for my $cidr (keys %$speed_cidr_data) {
+    my $range = new Net::IP($cidr) or $log->error(Net::IP::Error());
+    if ($range->overlaps($ob) != $IP_NO_OVERLAP) {
+      my $delta = $speed_cidr_data->{$cidr} - $now;
+      $stream->write("44 $delta\r\n");
+      # no more processing
+      return 1;
+    }
+  }
+  # check if the ip is currently blocked and extend the block if so
   if (exists $speed_data->{$ip}) {
     my $until = $speed_data->{$ip}->{until};
     if ($until and $until > $now) {
       my $seconds = speed_bump_add($ip, $now);
       $log->debug("Extending the block by $seconds");
       my $delta = $speed_data->{$ip}->{until} - $now;
-      $stream->write("44 $delta\r\n");
-      # no more processing
-      return 1;
-    }
-  }
-  # check whether the range is blocked
-  for my $cidr (keys %$speed_cidr_data) {
-    my $range = new Net::IP($cidr);
-    if ($range->overlaps($ip) != $IP_NO_OVERLAP) {
-      my $delta = $speed_cidr_data->{$cidr} - $now;
       $stream->write("44 $delta\r\n");
       # no more processing
       return 1;
@@ -208,6 +209,7 @@ sub speed_bump_admin {
       my $dir = $server->{wiki_dir};
       my $bytes = read_binary("$dir/speed-bump.json");
       $speed_data = decode_json $bytes;
+      speed_bump_compute_cidr_blocks();
       $stream->write("# Speed Bump Loaded\n");
       $stream->write("=> /do/speed-bump menu\n") });
     return 1;
@@ -221,6 +223,24 @@ sub speed_bump_admin {
     return 1;
   }
   return;
+}
+
+sub speed_bump_compute_cidr_blocks {
+  my %count;
+  my %until;
+  # check which CIDR has been blocked at least three times
+  for my $ip (keys %$speed_data) {
+    my $cidr = $speed_data->{$ip}->{cidr};
+    next unless $cidr;
+    $count{$cidr}++;
+    $until{$cidr} ||= $speed_data->{$ip}->{until};
+    $until{$cidr} = $speed_data->{$ip}->{until} if $speed_data->{$ip}->{until} > $until{$cidr};
+  }
+  # only copy the blocked-until timestamp for those CIDRs that were listed at least three times
+  for my $cidr (keys %count) {
+    next unless $count{$cidr} >= 3;
+    speed_bump_add_cidr($cidr, $until{$cidr});
+  }
 }
 
 sub with_speed_bump_fingerprint {
@@ -255,6 +275,13 @@ sub speed_bump_status {
 			   speed_bump_time($speed_data->{$ip}->{until}, $now),
 			   speed_bump_time($speed_data->{$ip}->{probation}, $now),
 			   $speed_data->{$ip}->{cidr} || ""));
+  }
+  if (%$speed_cidr_data) {
+    $stream->write("\n");
+    $stream->write("Until CIDR\n");
+    for my $cidr (keys %$speed_cidr_data) {
+      $stream->write(sprintf("%s $cidr\n", speed_bump_time($speed_cidr_data->{$cidr}, $now)));
+    }
   }
   $stream->write("```\n");
   $stream->write("=> /do/speed-bump menu\n");

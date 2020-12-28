@@ -81,6 +81,7 @@ sub speed_bump {
   for my $cidr (keys %$speed_cidr_data) {
     my $range = new Net::IP($cidr) or $log->error(Net::IP::Error());
     if ($range->overlaps($ob) != $IP_NO_OVERLAP) {
+      $log->info("Net range is blocked");
       my $delta = $speed_cidr_data->{$cidr} - $now;
       $stream->write("44 $delta\r\n");
       # no more processing
@@ -92,7 +93,7 @@ sub speed_bump {
     my $until = $speed_data->{$ip}->{until};
     if ($until and $until > $now) {
       my $seconds = speed_bump_add($ip, $now);
-      $log->debug("Extending the block by $seconds");
+      $log->info("IP is blocked, extending by $seconds");
       my $delta = $speed_data->{$ip}->{until} - $now;
       $stream->write("44 $delta\r\n");
       # no more processing
@@ -112,7 +113,7 @@ sub speed_bump {
     my $oldest = pop(@{$speed_data->{$ip}->{visits}});
     if ($now < $oldest + $speed_bump_window) {
       my $seconds = speed_bump_add($ip, $now);
-      $log->debug("Block for $seconds because of too many requests");
+      $log->info("Blocked for $seconds because of too many requests");
       $stream->write("44 $seconds\r\n");
       # no more processing
       return 1;
@@ -123,7 +124,7 @@ sub speed_bump {
   my $warnings = sum(@{$speed_data->{$ip}->{warnings}}) || 0;
   if ($warnings > $speed_bump_requests / 3) {
     my $seconds = speed_bump_add($ip, $now);
-    $log->debug("Block for $seconds because of too many suspicious requests");
+    $log->info("Blocked for $seconds because of too many suspicious requests");
     $stream->write("44 $seconds\r\n");
     # no more processing
     return 1;

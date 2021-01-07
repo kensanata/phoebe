@@ -1980,9 +1980,9 @@ sub serve_changes {
   $log->info("Serving $n changes");
   success($stream);
   $stream->write("# Changes\n");
-  if (not $style) { print_link($stream, $host, undef, "Colour changes", "do/changes/$n/colour") }
-  elsif ($style eq "colour") { print_link($stream, $host, undef, "Fancy changes", "do/changes/$n/fancy") }
-  elsif ($style eq "fancy") { print_link($stream, $host, undef, "Normal changes", "do/changes/$n") }
+  if (not $style) { print_link($stream, $host, $space, "Colour changes", "do/changes/$n/colour") }
+  elsif ($style eq "colour") { print_link($stream, $host, $space, "Fancy changes", "do/changes/$n/fancy") }
+  elsif ($style eq "fancy") { print_link($stream, $host, $space, "Normal changes", "do/changes/$n") }
   print_link($stream, $host, undef, "Changes for all spaces", "do/all/changes")
       if @{$server->{wiki_space}};
   print_link($stream, $host, $space, "Atom Feed", "do/atom");

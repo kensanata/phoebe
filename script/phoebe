@@ -1172,7 +1172,11 @@ sub verify_fingerprint {
 # the default is to request client certificates and then to simply accept them
 IO::Socket::SSL::set_defaults(
   SSL_verify_mode => SSL_VERIFY_PEER,
-  SSL_verify_callback => \&verify_fingerprint);
+  SSL_verify_callback => \&verify_fingerprint,
+  SSL_create_ctx_callback => sub {
+    my $ctx = shift;
+    Net::SSLeay::CTX_sess_set_cache_size($ctx, 128);
+  });
 
 # defaults
 $server->{port} ||= [1965];
@@ -1225,11 +1229,7 @@ for my $host (keys %{$server->{host}}) {
 	  my ($stream, $bytes) = @_;
 	  $log->debug("Received " . length($bytes) . " bytes");
 	  $data->{buffer} .= $bytes;
-	  $data->{handler}->($stream, $data) });
-	$stream->on(close => sub {
-	  my $stream = shift;
-          undef($data);
-         }) });
+	  $data->{handler}->($stream, $data) }) });
     }
   }
 }

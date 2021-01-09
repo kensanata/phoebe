@@ -1175,7 +1175,7 @@ IO::Socket::SSL::set_defaults(
   SSL_verify_callback => \&verify_fingerprint,
   SSL_create_ctx_callback => sub {
     my $ctx = shift;
-    Net::SSLeay::CTX_sess_set_cache_size($ctx, 128);
+    Net::SSLeay::CTX_sess_set_cache_size($ctx, 64);
   });
 
 # defaults

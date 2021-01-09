@@ -19,6 +19,7 @@ use Modern::Perl;
 use MediaWiki::API;
 use Text::SpanningTable;
 use List::Util qw(sum min max);
+use Encode;
 
 our (@extensions, $server, $full_url_regex, $log);
 

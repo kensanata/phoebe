@@ -329,6 +329,8 @@ Basically, this is the template for our service:
     Restart=always
     User=phoebe
     Group=phoebe
+    MemoryMax=100M
+    MemoryHigh=90M
     [Install]
     WantedBy=multi-user.target
 
@@ -541,6 +543,8 @@ Here's what my F<phoebe.service> file actually looks like:
     Restart=always
     User=alex
     Group=ssl-cert
+    MemoryMax=100M
+    MemoryHigh=90M
     ExecStart=/home/alex/src/phoebe/script/phoebe \
      --port=1965 \
      --log_level=debug \

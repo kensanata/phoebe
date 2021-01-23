@@ -1,4 +1,4 @@
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -69,8 +69,15 @@ EOT
 our @config;
 if (@config) {
   mkdir("$dir/conf.d");
+  my $i = 0;
   for my $config (@config) {
-    copy("contrib/$config", "$dir/conf.d/$config") or die "Failed to install $config: $!";
+    if ($config =~ /\n/) {
+      # make sure this is loaded at the very end
+      write_text("$dir/conf.d/__$i.pl", $config);
+      $i++;
+    } else {
+      copy("contrib/$config", "$dir/conf.d/$config") or die "Failed to install $config: $!";
+    }
   }
 }
 
@@ -86,7 +93,7 @@ END {
 if (!defined $pid) {
   die "Cannot fork: $!";
 } elsif ($pid == 0) {
-  say "This is the server listening on port $port...";
+  say "This is the Phoebe server listening on port $port...";
   if (not -f "t/cert.pem" or not -f "t/key.pem") {
     local $/ = undef;
     my $data = <DATA>;
@@ -175,7 +182,7 @@ my $ok = 0;
 
 # What I'm seeing is that $@ is the empty string and $! is "Connection refused"
 # even though I thought $@ would be set. Oh well.
-say "This is the client waiting for the server to start on port $port...";
+say "This is the Phoebe client waiting for the server to start on port $port...";
 for (qw(1 1 1 1 2 2 3 4 5)) {
   if (not $total or $!) {
     diag "$!: waiting ${_}s..." if $total > 0;

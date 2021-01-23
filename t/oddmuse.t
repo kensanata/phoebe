@@ -122,7 +122,33 @@ EOT
 
    # Test Phoebe
 
-   like(query_gemini("gemini://localhost/page/Test"), qr(Alex), "Gemini proxy for Oddmuse");
+   like(query_gemini("$base/page/Test"), qr(Alex), "Gemini proxy for Oddmuse");
+   like(query_gemini("$base/Travels/page/Test"), qr(Berta), "Gemini proxy for Oddmuse namespace");
+
+   my $titan = "titan://$host:$port";
+
+   my $haiku = <<EOT;
+The soundtrack of my
+mysterious, dangerous
+life plays in this bar
+EOT
+
+   my $page = query_gemini("$titan/raw/Haiku;size=66;mime=text/plain;token=hello", $haiku);
+   like($page, qr/^30 $base\/page\/Haiku\r$/, "Titan Haiku");
+
+   like(query_gemini("$base/page/Haiku"), qr(soundtrack), "Gemini proxy for Oddmuse");
+
+   $haiku = <<EOT;
+Rain drumming on my
+window blinds, relentlessly
+and into the snow
+EOT
+
+   my $page = query_gemini("$titan/Travels/raw/Haiku;size=66;mime=text/plain;token=hello", $haiku);
+   like($page, qr/^30 $base\/Travels\/page\/Haiku\r$/, "Titan Haiku");
+
+   like(query_gemini("$base/Travels/page/Haiku"), qr(drumming), "Gemini proxy for Oddmuse");
+
 }
 
 done_testing();

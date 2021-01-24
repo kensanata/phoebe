@@ -362,7 +362,7 @@ sub oddmuse_gemini_text {
       if $oddmuse_wiki_links{$host};
     $block =~ s/\[color=([^]]+)\]/colour($stream, $1)/ge;
     $block =~ s/\[\/color\]/colour($stream, "reset")/ge;
-    $block =~ s/^(=+)(.*?)=+$/'#' x length($1) . ' ' . $2/gem;
+    $block =~ s/^(=+)(.*?)=*$/'#' x length($1) . ' ' . $2/gem;
     $block =~ s/<[a-z]+(?:\s+[a-z-]+="[^"]+")>//g;
     $block =~ s/<\/[a-z]+>//g;
     $block =~ s/^((?:> .*\n?)+)$/join(" ", split("\n> ", $1))/ge; # unwrap quotes

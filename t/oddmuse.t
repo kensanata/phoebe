@@ -122,8 +122,22 @@ EOT
 
    # Test Phoebe
 
-   like(query_gemini("$base/page/Test"), qr(Alex), "Gemini proxy for Oddmuse");
-   like(query_gemini("$base/Travels/page/Test"), qr(Berta), "Gemini proxy for Oddmuse namespace");
+   like(query_gemini("$base/page"), qr(^31 $base/\r\n), "Reserved word");
+   like(query_gemini("$base/Travels/page"), qr(31 $base/Travels\r\n), "Reserved word (namespace)");
+
+   my $page = query_gemini("$base/page/Test");
+   like($page, qr(Alex), "Page");
+   like($page, qr(^=> gemini://localhost:$port/raw/Test Raw text$)m, "Raw link");
+   like($page, qr(^=> gemini://localhost:$port/html/Test HTML$)m, "HTML link");
+   like(query_gemini("$base/raw/Test"), qr(^Alex$)m, "Raw");
+   like(query_gemini("$base/html/Test"), qr(<p>Alex</p>), "HTML");
+
+   $page = query_gemini("$base/Travels/page/Test");
+   like($page, qr(Berta), "Page (namespace)");
+   like($page, qr(^=> gemini://localhost:$port/raw/Test Raw text$)m, "Raw link (namespace)");
+   like($page, qr(^=> gemini://localhost:$port/html/Test HTML$)m, "HTML link (namespace)");
+   like(query_gemini("$base/Travels/raw/Test"), qr(^Berta$)m, "Raw (namespace)");
+   like(query_gemini("$base/Travels/html/Test"), qr(<p>Berta</p>), "HTML (namespace)");
 
    my $titan = "titan://$host:$port";
 
@@ -133,7 +147,7 @@ mysterious, dangerous
 life plays in this bar
 EOT
 
-   my $page = query_gemini("$titan/raw/Haiku;size=66;mime=text/plain;token=hello", $haiku);
+   $page = query_gemini("$titan/raw/Haiku;size=66;mime=text/plain;token=hello", $haiku);
    like($page, qr/^30 $base\/page\/Haiku\r$/, "Titan Haiku");
 
    like(query_gemini("$base/page/Haiku"), qr(soundtrack), "Gemini proxy for Oddmuse");
@@ -144,7 +158,7 @@ window blinds, relentlessly
 and into the snow
 EOT
 
-   my $page = query_gemini("$titan/Travels/raw/Haiku;size=66;mime=text/plain;token=hello", $haiku);
+   $page = query_gemini("$titan/Travels/raw/Haiku;size=66;mime=text/plain;token=hello", $haiku);
    like($page, qr/^30 $base\/Travels\/page\/Haiku\r$/, "Titan Haiku");
 
    like(query_gemini("$base/Travels/page/Haiku"), qr(drumming), "Gemini proxy for Oddmuse");

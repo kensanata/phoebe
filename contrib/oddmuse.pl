@@ -51,12 +51,14 @@ our %oddmuse_wiki_links = ("communitywiki.org" => 1);
 our %oddmuse_wiki_tokens = (
   "emacswiki.org" => "emacs" );
 
+our $oddmuse_namespace_regex = '[\p{Uppercase}\d][\w_  ]*';
+
 *oddmuse_old_space_regex = \&space_regex;
 *space_regex = \&oddmuse_new_space_regex;
 
 sub oddmuse_new_space_regex {
   my $spaces = oddmuse_old_space_regex();
-  return $spaces . '|[\p{Uppercase}\d][\w_  ]*';
+  return "$spaces|$oddmuse_namespace_regex";
 }
 
 *oddmuse_old_space = \&space;
@@ -145,51 +147,52 @@ sub oddmuse_process_request {
   my $stream = shift;
   my $url = shift;
   my $headers = shift;
-  my $host_regex = "(" . join("|", keys %oddmuse_wikis) . ")";
+  my $hosts = "(" . join("|", keys %oddmuse_wikis) . ")";
+  my $spaces = $oddmuse_namespace_regex;
   my $reserved = reserved_regex();
   my $port = port($stream);
   my ($host, $space, $id, $query, $n, $style, $token);
-  if ($url =~ m!^gemini://$host_regex(?::$port)?/robots\.txt$!) {
+  if ($url =~ m!^gemini://$hosts(?::$port)?/robots\.txt$!) {
     # must come before redirection to regular pages since it contains no slash
     oddmuse_serve_robots($stream);
-  } elsif (($host, $space) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/?(?:$reserved)?$!) {
-    oddmuse_serve_main_menu($stream, $host, $space);
-  } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/page/([^/]+)(?:/(\d+))?$!
+  } elsif (($host, $n, $space) = $url =~ m!^gemini://$hosts(:$port)?(?:/($spaces))?/?(?:$reserved)?$!) {
+    $stream->write("31 gemini://$host" . ($n ? ":$port" : "") . "/$space\r\n"); # this supports "up"
+  } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/page/([^/]+)(?:/(\d+))?$!
 	   and $id ne $server->{wiki_main_page}) {
     oddmuse_serve_page($stream, $host, $space, decode_utf8(uri_unescape($id)), $n);
-  } elsif (($host, $space, $id) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/tag/([^/]+)$!) {
-    oddmuse_serve_tag($stream, $host, free_to_normal(decode_utf8(uri_unescape($id))));
-  } elsif (($host, $space, $id) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/raw/([^/]+)$!
+  } elsif (($host, $space, $id) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/tag/([^/]+)$!) {
+    oddmuse_serve_tag($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))));
+  } elsif (($host, $space, $id) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/raw/([^/]+)$!
 	   and $id ne $server->{wiki_main_page}) {
-    oddmuse_serve_raw($stream, $host, free_to_normal(decode_utf8(uri_unescape($id))));
-  } elsif (($host, $space, $id) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/html/([^/]+)$!) {
-    oddmuse_serve_html($stream, $host, free_to_normal(decode_utf8(uri_unescape($id))));
-  } elsif (($host, $space, $n) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/do/(?:blog|more)(?:/(\d+))?$!) {
-    oddmuse_serve_blog($stream, $host, $n||10);
-  } elsif (($host, $space, $n, $style) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
-    oddmuse_serve_changes($stream, $host, $n||3, $style); # days!
-  } elsif (($host, $space, $id, $style) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/history/([^/]*)(?:/(colour|fancy))?$!) {
+    oddmuse_serve_raw($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))));
+  } elsif (($host, $space, $id) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/html/([^/]+)$!) {
+    oddmuse_serve_html($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))));
+  } elsif (($host, $space, $n) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/(?:blog|more)(?:/(\d+))?$!) {
+    oddmuse_serve_blog($stream, $host, $space, $n||10);
+  } elsif (($host, $space, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
+    oddmuse_serve_changes($stream, $host, $space, $n||3, $style); # days!
+  } elsif (($host, $space, $id, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(colour|fancy))?$!) {
     oddmuse_serve_history($stream, $host, free_to_normal(decode_utf8(uri_unescape($id))), $style);
-  } elsif (($host, $space, $id, $n, $style) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/diff/([^/]*)(?:/(\d+))?(?:/(colour))?$!) {
-    oddmuse_serve_diff($stream, $host, free_to_normal(decode_utf8(uri_unescape($id))), $n, $style);
-  } elsif ($url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/do/match$!) {
+  } elsif (($host, $space, $id, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?(?:/(colour))?$!) {
+    oddmuse_serve_diff($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), $n, $style);
+  } elsif ($url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/match$!) {
     $stream->write("10 Find page by name (Perl regex)\r\n");
-  } elsif (($host, $space, $query) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/do/match\?([^#]+)!) {
-    oddmuse_serve_match($stream, $host, decode_utf8(uri_unescape($query)));
-  } elsif ($url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/do/search$!) {
+  } elsif (($host, $space, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/match\?([^#]+)!) {
+    oddmuse_serve_match($stream, $host, $space, decode_utf8(uri_unescape($query)));
+  } elsif ($url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/search$!) {
     $stream->write("10 Find page by content (Perl regex)\r\n");
-  } elsif (($host, $space, $query) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/do/search\?([^#]+)!) {
-    oddmuse_serve_search($stream, $host, decode_utf8(uri_unescape($query)));
-  } elsif (($host, $space, $id, $query) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/do/comment/([^/#?]+)(?:\?([^#]+))?$!) {
-    oddmuse_comment($stream, $host, free_to_normal(decode_utf8(uri_unescape($id))), decode_utf8(uri_unescape($query)));
-  } elsif (($host) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/do/atom$!) {
-    oddmuse_serve_atom($stream, $host);
-  } elsif (($host) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/do/rss$!) {
-    oddmuse_serve_rss($stream, $host);
-  } elsif (($host, $space, $id) = $url =~ m!^gemini://$host_regex(?::$port)?(?:/([^/]+))?/do/config(?:/(config|conf\.d/[^/]+\.p[lm]$))?$!) {
+  } elsif (($host, $space, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/search\?([^#]+)!) {
+    oddmuse_serve_search($stream, $host, $space, decode_utf8(uri_unescape($query)));
+  } elsif (($host, $space, $id, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/comment/([^/#?]+)(?:\?([^#]+))?$!) {
+    oddmuse_comment($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), decode_utf8(uri_unescape($query)));
+  } elsif (($host) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/atom$!) {
+    oddmuse_serve_atom($stream, $host, $space);
+  } elsif (($host) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/rss$!) {
+    oddmuse_serve_rss($stream, $host, $space);
+  } elsif (($host, $space, $id) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/config(?:/(config|conf\.d/[^/]+\.p[lm]$))?$!) {
     oddmuse_serve_config($stream, $id); # ignore the host
   } elsif (($query) = $url =~ m!^GET (\S*) HTTP/1\.[01]$!
-	   and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)(.*)$!) {
+	   and ($host) = $headers->{host} =~ m!^$hosts(?::$port)(.*)$!) {
     $log->info("Redirecting to https://$host$query");
     $stream->write("HTTP/1.1 301 Back to port 443!\r\n");
     $stream->write("Location: https://$host:443$query\r\n");
@@ -413,11 +416,11 @@ sub oddmuse_footer {
   my $token = $oddmuse_wiki_tokens{$host};
   $token = $server->{wiki_token}->[0] if not $token and $server->{wiki_token};
   $stream->write(encode_utf8 "(The access token for short comments is “$token”.)\n");
-  push(@links, oddmuse_gemini_link($stream, $host, "Leave a short comment", "do/comment/$id"));
-  push(@links, oddmuse_gemini_link($stream, $host, "How to leave a longer comment", "How_to_comment_without_a_browser"));
-  push(@links, oddmuse_gemini_link($stream, $host, "Raw comments", "raw/Comments_on_$id")) if $id !~ /^Comments_on_(.*)/;
-  push(@links, oddmuse_gemini_link($stream, $host, "Raw text", "raw/$id"));
-  push(@links, oddmuse_gemini_link($stream, $host, "HTML", "html/$id"));
+  push(@links, oddmuse_gemini_link($stream, $host, $space, "Leave a short comment", "do/comment/$id"));
+  push(@links, oddmuse_gemini_link($stream, $host, $space, "How to leave a longer comment", "How_to_comment_without_a_browser"));
+  push(@links, oddmuse_gemini_link($stream, $host, $space, "Raw comments", "raw/Comments_on_$id")) if $id !~ /^Comments_on_(.*)/;
+  push(@links, oddmuse_gemini_link($stream, $host, $space, "Raw text", "raw/$id"));
+  push(@links, oddmuse_gemini_link($stream, $host, $space, "HTML", "html/$id"));
   return join("\n", @links, "");
 }
 
@@ -459,7 +462,9 @@ sub oddmuse_serve_raw {
   my $space = shift;
   my $id = shift;
   my $revision = shift;
-  my $url = "$oddmuse_wikis{$host}/raw/" . uri_escape_utf8($id);
+  my $url = "$oddmuse_wikis{$host}";
+  $url .= "/$space" if $space;
+  $url .= "/raw/" . uri_escape_utf8($id);
   $url .= "?revision=$revision" if $revision;
   my $page = oddmuse_get_raw($stream, $url) or return;
   if (my ($type, $data) = $page =~ /^#FILE (\S+) ?(?:\S+)?\n(.*)/s) {
@@ -477,7 +482,9 @@ sub oddmuse_serve_html {
   my $space = shift;
   my $id = shift;
   my $revision = shift;
-  my $url = "$oddmuse_wikis{$host}/" . uri_escape_utf8($id);
+  my $url = "$oddmuse_wikis{$host}";
+  $url .= "/$space" if $space;
+  $url .= "/" . uri_escape_utf8($id);
   $url .= "?revision=$revision" if $revision;
   my $page = oddmuse_get_raw($stream, $url) or return;
   $log->info("Serving $id as HTML");
@@ -507,7 +514,7 @@ sub oddmuse_serve_main_menu {
   success($stream);
   my $page = $server->{wiki_main_page};
   if ($page) {
-    $stream->write(encode_utf8 text($host, undef, $page) . "\n");
+    $stream->write(encode_utf8 text($host, $space, $page) . "\n");
   } else {
     $stream->write("# Welcome!\n");
     $stream->write("\n");
@@ -591,7 +598,7 @@ sub oddmuse_serve_changes {
 	   $data->{revision},
 	   $author,
 	   $host,
-	   undef, # space
+	   $space,
 	   0]);   # show space
   }
   # taking the head of the @$log to get new log entries
@@ -610,7 +617,7 @@ sub oddmuse_serve_changes {
       );
   # there is always more...
   $stream->write("\n");
-  print_link($stream, $host, undef, "More...", "do/changes/" . 2 * $n . ($style ? "/$style" : ""));
+  print_link($stream, $host, $space, "More...", "do/changes/" . 2 * $n . ($style ? "/$style" : ""));
 }
 
 sub oddmuse_serve_history {
@@ -645,7 +652,7 @@ sub oddmuse_serve_history {
 	   $data->{revision},
 	   $author,
 	   $host,
-	   undef, # space
+	   $space, # space
 	   0]);   # show space
   }
   # taking the head of the @$log to get new log entries

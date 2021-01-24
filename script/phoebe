@@ -2080,13 +2080,13 @@ sub serve_all_changes {
   }
   my $filter_segment = $filter ? "/$filter" : "";
   my $style_segment = $style ? "/$style" : "";
-  if (not $style) { print_link($stream, $host, undef, "Colour changes", "do/all$filter_segment/changes/$n/colour") }
-  elsif ($style eq "colour") { print_link($stream, $host, undef, "Fancy changes", "do/all$filter_segment/changes/$n/fancy") }
-  elsif ($style eq "fancy") { print_link($stream, $host, undef, "Normal changes", "do/all$filter_segment/changes/$n") }
-  if ($filter) { print_link($stream, $host, undef, "All changes", "do/all/changes/$n$style_segment") }
-  else { print_link($stream, $host, undef, "Latest changes", "do/all/latest/changes/$n$style_segment") }
+  if (not $style) { print_link($stream, $host, $space, "Colour changes", "do/all$filter_segment/changes/$n/colour") }
+  elsif ($style eq "colour") { print_link($stream, $host, $space, "Fancy changes", "do/all$filter_segment/changes/$n/fancy") }
+  elsif ($style eq "fancy") { print_link($stream, $host, $space, "Normal changes", "do/all$filter_segment/changes/$n") }
+  if ($filter) { print_link($stream, $host, $space, "All changes", "do/all/changes/$n$style_segment") }
+  else { print_link($stream, $host, $space, "Latest changes", "do/all/latest/changes/$n$style_segment") }
   # taking the head of the @$log to get new log entries
-  print_link($stream, $host, undef, "Atom Feed", "do/all/atom");
+  print_link($stream, $host, $space, "Atom Feed", "do/all/atom");
   my $filter_description = $filter ? " $filter" : "";
   $stream->write("Showing up to $n$filter_description changes.\n");
   return unless changes($stream,
@@ -2099,7 +2099,7 @@ sub serve_all_changes {
     undef,
     $filter);
   $stream->write("\n");
-  print_link($stream, $host, undef, "More...", "do/all/changes/" . 10 * $n . ($style ? "/$style" : ""));
+  print_link($stream, $host, $space, "More...", "do/all/changes/" . 10 * $n . ($style ? "/$style" : ""));
 }
 
 sub serve_all_changes_via_http {
@@ -2122,9 +2122,9 @@ sub serve_all_changes_via_http {
   $stream->write("<body>\n");
   $stream->write("<h1>Changes for all spaces</h1>\n");
   $stream->write("<ul>\n");
-  $stream->write("<li>" . link_html($stream, $host, undef, "Atom feed", "do/all/atom") . "\n");
-  if ($filter) { $stream->write("<li>" . link_html($stream, $host, undef, "All changes", "do/all/changes/$n") . "\n") }
-  else { $stream->write("<li>" . link_html($stream, $host, undef, "Latest changes", "do/all/latest/changes/$n") . "\n") }
+  $stream->write("<li>" . link_html($stream, $host, $space, "Atom feed", "do/all/atom") . "\n");
+  if ($filter) { $stream->write("<li>" . link_html($stream, $host, $space, "All changes", "do/all/changes/$n") . "\n") }
+  else { $stream->write("<li>" . link_html($stream, $host, $space, "Latest changes", "do/all/latest/changes/$n") . "\n") }
   $stream->write("</ul>\n");
   my $log = all_logs($stream, $host, $n);
   if (not @$log) {
@@ -2143,7 +2143,7 @@ sub serve_all_changes_via_http {
     undef,
     $filter);
   return unless $more;
-  $stream->write("<p>" . link_html($stream, $host, undef, "More...", "do/all/changes/" . 10 * $n) . "\n");
+  $stream->write("<p>" . link_html($stream, $host, $space, "More...", "do/all/changes/" . 10 * $n) . "\n");
 }
 
 sub all_logs {
@@ -2417,7 +2417,7 @@ sub serve_all_atom {
   $log->info("Serving Gemini Atom");
   success($stream, "application/atom+xml");
   my $log = all_logs($stream, $host, 30);
-  atom($stream, sub { @{shift(@$log) }, 1 if @$log }, $host, undef, 'gemini');
+  atom($stream, sub { @{shift(@$log) }, 1 if @$log }, $host, $space, 'gemini');
 }
 
 sub serve_atom_via_http {
@@ -2446,7 +2446,7 @@ sub serve_all_atom_via_http {
   $stream->write("Content-Type: application/xml\r\n");
   $stream->write("\r\n");
   my $log = all_logs($stream, $host, 30);
-  atom($stream, sub { @{shift(@$log) }, 1 if @$log }, $host, undef, 'https');
+  atom($stream, sub { @{shift(@$log) }, 1 if @$log }, $host, $space, 'https');
 }
 
 # $next is a code reference that returns the list of attributes for the next

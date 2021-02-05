@@ -1706,7 +1706,7 @@ sub serve_blog {
   $stream->write("# Blog\n");
   my @blog = blog_pages($host, $space);
   if (not @blog) {
-    $stream->write("The are no blog pages.\n");
+    $stream->write("There are no blog pages.\n");
     return;
   }
   $stream->write("Serving up to $n entries.\n");
@@ -1724,7 +1724,7 @@ sub serve_index {
   $log->info("Serving index of all pages");
   $stream->write("# All Pages\n");
   my @pages = pages($host, $space);
-  $stream->write("The are no pages.\n") unless @pages;
+  $stream->write("There are no pages.\n") unless @pages;
   for my $id (sort { newest_first($stream, $a, $b) } @pages) {
     print_link($stream, $host, $space, $id);
   }

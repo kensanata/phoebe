@@ -1218,6 +1218,7 @@ $SIG{HUP} = sub { Mojo::IOLoop->next_tick(\&configure) };
 # servers for both IPv4 and IPv6…
 for my $host (keys %{$server->{host}}) {
   for my $address (get_ip_numbers($host)) {
+    $server->{address}->{$address} = $host;
     for my $port (@{$server->{port}}) {
       $log->info("Listening on $address:$port");
       Mojo::IOLoop->server({

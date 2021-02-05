@@ -16,7 +16,7 @@
 
 package App::Phoebe;
 use Modern::Perl;
-
+use Encode qw(encode_utf8 decode_utf8 decode);
 our $gopher_header = "iBlog\n"; # must start with 'i'
 our $gopher_port ||= 70;
 our $gophers_port = [];

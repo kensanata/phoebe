@@ -19,37 +19,46 @@ use Modern::Perl;
 
 our $gopher_header = "iBlog\n"; # must start with 'i'
 our $gopher_port ||= 70;
+our $gophers_port = [];
 our ($server, $log, @main_menu);
 
 use Mojo::IOLoop;
 
 # start the loop after configuration (so that the user can change $gopher_port)
+Mojo::IOLoop->next_tick(\&gopher_startup);
 
-Mojo::IOLoop->next_tick(sub {
+sub gopher_startup {
   for my $host (keys %{$server->{host}}) {
     for my $address (get_ip_numbers($host)) {
-      $log->info("Listening on $address:$gopher_port");
-      Mojo::IOLoop->server({
-	address => $address,
-	port => $gopher_port,
-      } => sub {
-	my ($loop, $stream) = @_;
-	my $buffer;
-	$stream->on(read => sub {
-	  my ($stream, $bytes) = @_;
-	  $log->debug("Received " . length($bytes) . " bytes via Gopher");
-	  $buffer .= $bytes;
-	  if ($buffer =~ /^(.*)\r\n/) {
-	    $log->debug("Looking at $1");
-	    serve_gopher($stream, $1);
-	  } else {
-	    $log->debug("Waiting for more bytes...");
-	  }
-	});
-      });
+      my @ports = ref $gopher_port ? @$gopher_port : ($gopher_port);
+      my %tls = map { push(@ports, $_); $_ => 1 } ref $gophers_port ? @$gophers_port : ($gophers_port);
+      for my $port (@ports) {
+	$log->info("Listening on $address:$port");
+	Mojo::IOLoop->server({
+	  address => $address,
+	  port => $port,
+	  tls => $tls{$port},
+	  tls_cert => $server->{cert_file},
+	  tls_key  => $server->{key_file},
+        } => sub {
+	  my ($loop, $stream) = @_;
+	  my $buffer;
+	  $stream->on(read => sub {
+	    my ($stream, $bytes) = @_;
+	    $log->debug("Received " . length($bytes) . " bytes via Gopher");
+	    $buffer .= $bytes;
+	    if ($buffer =~ /^(.*)\r\n/) {
+	      $log->debug("Looking at $1");
+	      serve_gopher($stream, $1);
+	    } else {
+	      $log->debug("Waiting for more bytes...");
+	    }
+	  });
+        });
+      }
     }
   }
-});
+}
 
 sub serve_gopher {
   my ($stream, $selector) = @_;
@@ -151,6 +160,16 @@ sub gopher_link {
   $stream->write(encode_utf8 join("\t", "1" . $title, $id, $host, $port) . "\n");
 }
 
+sub gopher_menu_link {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  my $title = shift;
+  my $selector = shift;
+  my $port = port($stream);
+  $stream->write(encode_utf8 join("\t", "0" . $title, $selector, $host, $port) . "\n");
+}
+
 sub gopher_main_menu {
   my $stream = shift;
   my $host = shift;
@@ -174,7 +193,7 @@ sub gopher_main_menu {
   # gopher_link($stream, $host, $space, "Search matching page names", "do/match");
   # gopher_link($stream, $host, $space, "Search matching page content", "do/search");
   $stream->write("i\n");
-  gopher_link($stream, $host, $space, "Index of all pages", "do/index");
+  gopher_menu_link($stream, $host, $space, "Index of all pages", "do/index");
   # gopher_link($stream, $host, $space, "Index of all files", "do/files");
   # gopher_link($stream, $host, undef, "Index of all spaces", "do/spaces")
   #     if @{$server->{wiki_space}} or keys %{$server->{host}} > 1;

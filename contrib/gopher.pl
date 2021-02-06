@@ -14,6 +14,42 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 Gopher
+
+This extension serves your Gemini pages via Gopher and generates a few automatic
+pages for you, such as the main page.
+
+To configure, you need to specify the Gopher port(s) in your Phoebe config file.
+The default port is 70. This is a priviledge port. Thus, you either need to
+grant Perl the permission to listen on a priviledged port, or you need to run
+Phoebe as a super user. Both are potential security risk, but the first option
+is much less of a problem, I think.
+
+If you want to try this, run the following as root:
+
+    setcap 'cap_net_bind_service=+ep' $(which perl)
+
+Verify it:
+
+    getcap $(which perl)
+
+If you want to undo this:
+
+    setcap -r $(which perl)
+
+The alternative is to use a port number above 1024.
+
+You can set the normale Gopher and the encrypted Gopher ports by setting the
+appropriate variables. These variables either be a single port, or an array of
+ports.
+
+    our $gopher_port = 7000; # listen on port 7000
+    our $gopher_port = [70,79]; # listen on the finger port as well
+    our $gophers_port = 7443; # listen on port 7443 using TLS
+    our $gophers_port = [7070,7079]; # listen on port 7070 and 7079 using TLS
+
+=cut
+
 package App::Phoebe;
 use Modern::Perl;
 use Encode qw(encode_utf8 decode_utf8 decode);

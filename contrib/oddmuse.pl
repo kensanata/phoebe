@@ -345,24 +345,24 @@ sub oddmuse_gemini_text {
   for my $block (@blocks) {
     my @links;
     $block =~ s/^(=>.*)\n?/push(@links, $1); ""/gem;
-    $block =~ s/\[([^]]+)\]\($full_url_regex\)/push(@links, oddmuse_gemini_link($stream, $host, $1, $2)); $1/ge;
-    $block =~ s/\[([^]]+)\]\(([^) ]+)\)/push(@links, oddmuse_gemini_link($stream, $host, $1, $2)); $1/ge;
-    $block =~ s/\[$full_url_regex\s+([^]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $2, $1)); $2/ge;
-    $block =~ s/\[\[([a-z\/-]+):$full_url_regex\|([^]]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $3, $2)); $3/ge;
-    $block =~ s/\[\[tag:([^]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $1, "tag\/$1")); $1/ge;
-    $block =~ s/\[\[tag:([^]|]+)\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $2, "tag\/$1")); $2/ge;
-    $block =~ s/<journal search tag:(\S+)>\n*/push(@links, oddmuse_gemini_link($stream, $host, "Explore the $1 tag", "tag\/$1")); ""/ge;
-    $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, "$1 (image)", $1)); "$1"/ge;
-    $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\|([^\]|]*)\]\]/push(@links, oddmuse_gemini_link($stream, $host, "$2 (image)", $1)) if $2; "$2"/ge;
-    $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\|([^\]|]*)\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, "$2 (image)", $1), oddmuse_gemini_link($stream, $host, "$2 (follow-up)", $3)); "$2"/ge;
-    $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\|([^\]|]*)\|([^\]|]*)\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, "$2 (image)", $1), oddmuse_gemini_link($stream, $host, "$4 (follow-up)", $3)); "$2"/ge;
-    $block =~ s/\[\[$link_regex\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $2, $1)); $2/ge;
+    $block =~ s/\[([^]]+)\]\($full_url_regex\)/push(@links, oddmuse_gemini_link($stream, $host, $space, $1, $2)); $1/ge;
+    $block =~ s/\[([^]]+)\]\(([^) ]+)\)/push(@links, oddmuse_gemini_link($stream, $host, $space, $1, $2)); $1/ge;
+    $block =~ s/\[$full_url_regex\s+([^]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $2, $1)); $2/ge;
+    $block =~ s/\[\[([a-z\/-]+):$full_url_regex\|([^]]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $3, $2)); $3/ge;
+    $block =~ s/\[\[tag:([^]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $1, "tag\/$1")); $1/ge;
+    $block =~ s/\[\[tag:([^]|]+)\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $2, "tag\/$1")); $2/ge;
+    $block =~ s/<journal search tag:(\S+)>\n*/push(@links, oddmuse_gemini_link($stream, $host, $space, "Explore the $1 tag", "tag\/$1")); ""/ge;
+    $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, "$1 (image)", $1)); "$1"/ge;
+    $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\|([^\]|]*)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, "$2 (image)", $1)) if $2; "$2"/ge;
+    $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\|([^\]|]*)\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, "$2 (image)", $1), oddmuse_gemini_link($stream, $host, $space, "$2 (follow-up)", $3)); "$2"/ge;
+    $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\|([^\]|]*)\|([^\]|]*)\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, "$2 (image)", $1), oddmuse_gemini_link($stream, $host, $space, "$4 (follow-up)", $3)); "$2"/ge;
+    $block =~ s/\[\[$link_regex\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $2, $1)); $2/ge;
     $block =~ s/\[\[(?:[^]:]+:)?$link_regex\]\]/$1/g; # no link for [[h/p-note:I'm interested in ...]]
-    $block =~ s/\[$wiki_word ([^\]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $2, $1)); $2/ge
+    $block =~ s/\[$wiki_word ([^\]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $2, $1)); $2/ge
       if $oddmuse_wiki_links{$host};
     $block =~ s/\[Self:\S+ ([^\]]+)\]/$1/ge;
     $block =~ s/\[new:([^\]:]+)[^\]]*\]/join(' ', split(':', $1)) . ': '/ge;
-    $block =~ s/$wiki_word/push(@links, oddmuse_gemini_link($stream, $host, $1)); $1/ge
+    $block =~ s/$wiki_word/push(@links, oddmuse_gemini_link($stream, $host, $space, $1)); $1/ge
       if $oddmuse_wiki_links{$host};
     $block =~ s/\[color=([^]]+)\]/colour($stream, $1)/ge;
     $block =~ s/\[\/color\]/colour($stream, "reset")/ge;
@@ -370,7 +370,7 @@ sub oddmuse_gemini_text {
     $block =~ s/<[a-z]+(?:\s+[a-z-]+="[^"]+")>//g;
     $block =~ s/<\/[a-z]+>//g;
     $block =~ s/^((?:> .*\n?)+)$/join(" ", split("\n> ", $1))/ge; # unwrap quotes
-    $block =~ s/#(\w+) */push(@links, oddmuse_gemini_link($stream, $host, normal_to_free($1), "tag\/$1")); ""/ge; # hashtags at the end
+    $block =~ s/#(\w+) */push(@links, oddmuse_gemini_link($stream, $host, $space, normal_to_free($1), "tag\/$1")); ""/ge; # hashtags at the end
     $block =~ s/\s+/ /g; # unwrap lines
     $block =~ s/^\s+//; # trim
     $block =~ s/\s+$//; # trim
@@ -415,7 +415,7 @@ sub oddmuse_footer {
   my @links;
   $stream->write("\n\n\n");
   if (my ($original) = $id =~ /^Comments_on_(.*)/) {
-    push(@links, oddmuse_gemini_link($stream, $host, "Back to the original page", $original));
+    push(@links, oddmuse_gemini_link($stream, $host, $space, "Back to the original page", $original));
   }
   my $token = $oddmuse_wiki_tokens{$host};
   $token = $server->{wiki_token}->[0] if not $token and $server->{wiki_token};
@@ -436,7 +436,7 @@ sub oddmuse_serve_tag {
   success($stream);
   $log->info("Serving tag $tag");
   $stream->write("This page is about the tag $tag.\n");
-  print_link($stream, $host, $space, normal_to_free($tag), $tag);
+  print_link($stream, $host, $space, normal_to_free($tag), "tag/$tag");
   $stream->write("\n");
   my $url = "$oddmuse_wikis{$host}?raw=1&search=tag:$tag";
   my $page = oddmuse_get_raw($stream, $url) or return;
@@ -445,7 +445,7 @@ sub oddmuse_serve_tag {
   foreach my $entry (@entries) {
     my $data = parse_data($entry);
     my $id = $data->{title};
-    print_link($stream, $host, $space, normal_to_free($id), $id);
+    print_link($stream, $host, $space, normal_to_free($id), "page/$id");
   }
 }
 
@@ -551,7 +551,7 @@ sub oddmuse_blog {
   my @pages = split(/\n/, oddmuse_get_raw($stream, $url)) or return;
   return unless @pages;
   for my $id (@pages) {
-    print_link($stream, $host, $space, normal_to_free($id), "page/" . free_to_normal($id));
+    print_link($stream, $host, $space, normal_to_free($id), "page/$id");
   }
   print_link($stream, $host, $space, "More...", "do/blog/" . 10 * $n);
 }
@@ -626,7 +626,7 @@ sub oddmuse_serve_changes {
     sub {
       my ($host, $space, $title, $id) = @_;
       $title =~ s/_/ /g;
-      print_link($stream, $host, $space, $title, $id) },
+      print_link($stream, $host, $space, $title, "page/$id") },
     sub { $stream->write(encode_utf8 join("\n", @_, "")) },
     sub { @{shift(@$log) } if @$log },
     sub { 1 }, # show a diff link, always
@@ -679,7 +679,7 @@ sub oddmuse_serve_history {
     sub {
       my ($host, $space, $title, $id) = @_;
       $title =~ s/_/ /g;
-      print_link($stream, $host, $space, $title, $id) },
+      print_link($stream, $host, $space, $title, "page/$id") },
     sub { $stream->write(join("\n", @_, "")) },
     sub { @{shift(@$log) } if @$log },
     sub { 1 }, # show a diff link, always
@@ -729,7 +729,7 @@ sub oddmuse_serve_match {
   my $url = "$oddmuse_wikis{$host}?raw=1;action=index;match=" . uri_escape_utf8($term);
   my @pages = split(/\n/, oddmuse_get_raw($stream, $url)) or return;
   for my $id (@pages) {
-    print_link($stream, $host, $space, normal_to_free($id), "page/" . free_to_normal($id));
+    print_link($stream, $host, $space, normal_to_free($id), "page/$id");
   }
 }
 
@@ -748,7 +748,7 @@ sub oddmuse_serve_search {
   foreach my $entry (@entries) {
     my $data = parse_data($entry);
     my $id = $data->{title};
-    print_link($stream, $host, $space, normal_to_free($id), $id);
+    print_link($stream, $host, $space, normal_to_free($id), "page/$id");
   }
 }
 

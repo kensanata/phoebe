@@ -155,8 +155,10 @@ sub oddmuse_process_request {
   if ($url =~ m!^gemini://$hosts(?::$port)?/robots\.txt$!) {
     # must come before redirection to regular pages since it contains no slash
     oddmuse_serve_robots($stream);
+  } elsif (($host, $space) = $url =~ m!^gemini://$host_regex(?::$port)?/(?:/($spaces))?$!) {
+    oddmuse_serve_main_menu($stream, $host, $space);
   } elsif (($host, $n, $space) = $url =~ m!^gemini://$hosts(:$port)?(?:/($spaces))?/?(?:$reserved)?$!) {
-    $stream->write("31 gemini://$host" . ($n ? ":$port" : "") . "/$space\r\n"); # this supports "up"
+    $stream->write("31 gemini://$host" . ($n ? ":$port" : "") . "/" . ($space ? $space : "") . "\r\n"); # this supports "up"
   } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/page/([^/]+)(?:/(\d+))?$!
 	   and $id ne $server->{wiki_main_page}) {
     oddmuse_serve_page($stream, $host, $space, decode_utf8(uri_unescape($id)), $n);

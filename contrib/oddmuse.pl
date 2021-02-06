@@ -155,7 +155,7 @@ sub oddmuse_process_request {
   if ($url =~ m!^gemini://$hosts(?::$port)?/robots\.txt$!) {
     # must come before redirection to regular pages since it contains no slash
     oddmuse_serve_robots($stream);
-  } elsif (($host, $space) = $url =~ m!^gemini://$host_regex(?::$port)?/(?:/($spaces))?$!) {
+  } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?/(?:/($spaces))?$!) {
     oddmuse_serve_main_menu($stream, $host, $space);
   } elsif (($host, $n, $space) = $url =~ m!^gemini://$hosts(:$port)?(?:/($spaces))?/?(?:$reserved)?$!) {
     $stream->write("31 gemini://$host" . ($n ? ":$port" : "") . "/" . ($space ? $space : "") . "\r\n"); # this supports "up"
@@ -173,6 +173,8 @@ sub oddmuse_process_request {
     oddmuse_serve_blog($stream, $host, $space, $n||10);
   } elsif (($host, $space, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
     oddmuse_serve_changes($stream, $host, $space, $n||3, $style); # days!
+  } elsif (($host, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?/do/all/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
+    oddmuse_serve_changes($stream, $host, undef, $n||3, $style, 1); # days!
   } elsif (($host, $space, $id, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(colour|fancy))?$!) {
     oddmuse_serve_history($stream, $host, free_to_normal(decode_utf8(uri_unescape($id))), $style);
   } elsif (($host, $space, $id, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?(?:/(colour))?$!) {
@@ -187,9 +189,9 @@ sub oddmuse_process_request {
     oddmuse_serve_search($stream, $host, $space, decode_utf8(uri_unescape($query)));
   } elsif (($host, $space, $id, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/comment/([^/#?]+)(?:\?([^#]+))?$!) {
     oddmuse_comment($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), decode_utf8(uri_unescape($query)));
-  } elsif (($host) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/atom$!) {
+  } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/atom$!) {
     oddmuse_serve_atom($stream, $host, $space);
-  } elsif (($host) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/rss$!) {
+  } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/rss$!) {
     oddmuse_serve_rss($stream, $host, $space);
   } elsif (($host, $space, $id) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/config(?:/(config|conf\.d/[^/]+\.p[lm]$))?$!) {
     oddmuse_serve_config($stream, $id); # ignore the host
@@ -449,7 +451,7 @@ sub oddmuse_serve_tag {
 
 sub parse_data {
   my $data = shift;
-  my %result;
+  my %result = (description => "");
   while ($data =~ /(\S+?): (.*?)(?=\n[^ \t]|\Z)/gs) {
     my ($key, $value) = ($1, $2);
     $value =~ s/\n\t/\n/g;
@@ -572,6 +574,7 @@ sub oddmuse_serve_changes {
   my $space = shift;
   my $n = shift;
   my $style = shift;
+  my $all = 1;
   $log->info("Serving changes for $n days");
   success($stream);
   $stream->write("# Changes\n");
@@ -581,12 +584,23 @@ sub oddmuse_serve_changes {
   print_link($stream, $host, $space, "Atom Feed", "do/atom");
   print_link($stream, $host, $space, "RSS Feed", "do/rss");
   my $url = "$oddmuse_wikis{$host}?raw=1;action=rc;all=1;showedit=1;days=$n";
+  if ($space) {
+    $url .= ";ns=$space";
+  } if (not $all) {
+    $url .= ";local=1";
+  }
   my $page = oddmuse_get_raw($stream, $url) or return;
   my @entries = split(/\n\n+/, $page);
   shift @entries; # skip head
   my $log;
   foreach my $entry (@entries) {
     my $data = parse_data($entry);
+    # namespaces
+    my $ns = $space;
+    my $title = $data->{title};
+    if (not $ns and $title =~ /:/) {
+      ($ns, $title) = split(/:/, $title);
+    }
     # timestamp from 2020-07-22T20:59Z back to a number
     my $ts = $data->{"last-modified"};
     $ts =~ s/Z/:00Z/; # apparently seconds are mandatory?
@@ -596,12 +610,12 @@ sub oddmuse_serve_changes {
     $author = bogus_hash($stream, encode_utf8($author)) unless $author =~ /^[0-7]{4}$/;
     push(@$log, [
 	   $ts,
-	   free_to_normal($data->{title}),
+	   free_to_normal($title),
 	   $data->{revision},
 	   $author,
 	   $host,
-	   $space,
-	   0]);   # show space
+	   $ns,
+	   1]);   # show space
   }
   # taking the head of the @$log to get new log entries
   $stream->write("Showing up to $n days.\n");
@@ -748,7 +762,10 @@ sub oddmuse_serve_rss {
   success($stream, "application/rss+xml");
   $stream->write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
   $stream->write("<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n");
-  my $url = "$oddmuse_wikis{$host}?action=rc;raw=1;full=1;match=^\\d\\d\\d\\d\\-\\d\\d-\\d\\d";
+  my $url = "$oddmuse_wikis{$host}?action=rc;raw=1;full=1";
+  if ($space) {
+    $url .= ";ns=$space";
+  }
   my $page = oddmuse_get_raw($stream, $url) or return;
   my @entries = split(/\n\n+/, $page);
   my $entry = shift @entries;
@@ -768,13 +785,19 @@ sub oddmuse_serve_rss {
   while (@entries) {
     $data = parse_data(shift(@entries));
     $stream->write("<item>\n");
+    # namespaces
+    my $ns;
+    my $title = $data->{title};
+    if ($title =~ /:/) {
+      ($ns, $title) = split(/:/, $title);
+    }
     $stream->write(encode_utf8 "<title>" . quote_html($data->{title}) . "</title>\n");
-    my $link = "gemini://$host:$port/page/" . uri_escape_utf8(free_to_normal($data->{title}));
+    my $link = "gemini://$host:$port/" . ($ns ? "$ns/" : "") . "page/" . uri_escape_utf8(free_to_normal($title));
     $stream->write("<link>$link</link>\n");
     $stream->write("<guid>$link</guid>\n");
-    $link = "gemini://$host:$port/page/Comments_on_" . uri_escape_utf8(free_to_normal($data->{title}));
+    $link = "gemini://$host:$port/" . ($ns ? "$ns/" : "") . "page/Comments_on_" . uri_escape_utf8(free_to_normal($title));
     $stream->write("<comments>$link</comments>\n");
-    my $summary = quote_html(oddmuse_gemini_text($stream, $host, $data->{description}));
+    my $summary = quote_html(oddmuse_gemini_text($stream, $host, $space, $data->{description}));
     $stream->write(encode_utf8 "<description>$summary</description>") if $summary;
     # timestamp from 2020-07-22T20:59Z back to a number
     my $ts = $data->{"last-modified"};
@@ -809,7 +832,10 @@ sub oddmuse_serve_atom {
       . "</updated>\n");
   $stream->write("<generator uri=\"gemini://$host:$port/\" version=\"1.0\">Gemini Wiki + Config</generator>\n");
   # now get the data and print the entries
-  my $url = "$oddmuse_wikis{$host}?action=rc;raw=1;full=1;match=^\\d\\d\\d\\d\\-\\d\\d-\\d\\d";
+  my $url = "$oddmuse_wikis{$host}?action=rc;raw=1;full=1";
+  if ($space) {
+    $url .= ";ns=$space";
+  }
   my $page = oddmuse_get_raw($stream, $url) or return;
   my @entries = split(/\n\n+/, $page);
   my $data = parse_data(shift @entries);
@@ -822,7 +848,7 @@ sub oddmuse_serve_atom {
     my $link = "gemini://$host:$port/page/" . uri_escape_utf8(free_to_normal($name));
     $stream->write("<link href=\"$link\"/>\n");
     $stream->write("<id>$link</id>\n");
-    my $summary = quote_html(oddmuse_gemini_text($stream, $host, $data->{description}));
+    my $summary = quote_html(oddmuse_gemini_text($stream, $host, $space, $data->{description}));
     $stream->write(encode_utf8 "<content type=\"text\">$summary</content>\n") if $summary;
     $stream->write("<updated>$data->{'last-modified'}</updated>\n");
     $stream->write("</entry>\n");

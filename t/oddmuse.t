@@ -139,6 +139,16 @@ EOT
    like(query_gemini("$base/Travels/raw/Test"), qr(^Berta$)m, "Raw (namespace)");
    like(query_gemini("$base/Travels/html/Test"), qr(<p>Berta</p>), "HTML (namespace)");
 
+   $page = query_gemini("$base/do/all/changes");
+   like($page, qr(^=> gemini://localhost:$port/page/Test Test)m, "All changes");
+   like($page, qr(^=> gemini://localhost:$port/Travels/page/Test \[Travels\] Test)m, "All changes (namespace)");
+
+   like(query_gemini("$base/do/rss"), qr(Test.*Alex)s, "RSS");
+   like(query_gemini("$base/Travels/do/rss"), qr(Test.*Berta)s, "RSS (namespace)");
+
+   like(query_gemini("$base/do/atom"), qr(Test.*Alex)s, "Atom");
+   like(query_gemini("$base/Travels/do/atom"), qr(Test.*Berta)s, "Atom (namespace)");
+
    my $titan = "titan://$host:$port";
 
    my $haiku = <<EOT;

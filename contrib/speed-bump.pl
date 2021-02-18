@@ -169,6 +169,13 @@ sub speed_bump_add_cidr {
   $speed_cidr_data->{$cidr} = $until;
 }
 
+# save every half hour
+Mojo::IOLoop->recurring(1800 => sub {
+  my $bytes = encode_json $speed_data;
+  my $dir = $server->{wiki_dir};
+  write_binary("$dir/speed-bump.json", $bytes);
+});
+
 sub speed_bump_admin {
   my $stream = shift;
   my $url = shift;

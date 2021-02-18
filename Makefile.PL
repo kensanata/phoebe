@@ -23,13 +23,12 @@ WriteMakefile(
     'Net::IDN::Encode' => 0,
     'IRI' => 0,
     'Encode::Locale' => 0,
-    'Mojolicious' => 8.12, # Mojo::IOLoop, also adds IO::Socket::IP
-    'IO::Socket::SSL' => 0, # optional for Mojo::IOLoop
+    'Mojolicious' => 9.00, # removed tls_verify from Mojo::IOLoop::TLS
+    'IO::Socket::SSL' => 2.069, # optional for Mojo::IOLoop
+    'Net::SSLeay' => 1.90,
     'File::Slurper' => 0,
     'Modern::Perl' => 1.20180701, # for '2018'
-    'Mojo::IOLoop' => 0,
     'URI::Escape' => 0,
-    'Mojo::Log' => 0,
   },
   META_MERGE => {
     'meta-spec' => { version => 2 },

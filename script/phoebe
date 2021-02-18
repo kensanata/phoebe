@@ -1173,15 +1173,6 @@ sub verify_fingerprint {
   return 1;
 }
 
-# the default is to request client certificates and then to simply accept them
-IO::Socket::SSL::set_defaults(
-  SSL_verify_mode => SSL_VERIFY_PEER,
-  SSL_verify_callback => \&verify_fingerprint,
-  SSL_create_ctx_callback => sub {
-    my $ctx = shift;
-    Net::SSLeay::CTX_sess_set_cache_size($ctx, 64);
-  });
-
 # defaults
 $server->{port} ||= [1965];
 $server->{wiki_token} ||= ['hello'];
@@ -1220,13 +1211,22 @@ for my $host (keys %{$server->{host}}) {
   for my $address (get_ip_numbers($host)) {
     $server->{address}->{$address} = $host;
     for my $port (@{$server->{port}}) {
-      $log->info("Listening on $address:$port");
+      $log->info("$host: listening on $address:$port");
       Mojo::IOLoop->server({
 	address => $address,
 	port => $port,
 	tls => 1,
 	tls_cert => $server->{cert_file},
 	tls_key  => $server->{key_file},
+	tls_options => {
+	  # request client certificates and accept them
+	  SSL_verify_mode => SSL_VERIFY_PEER,
+	  SSL_verify_callback => \&verify_fingerprint,
+	  SSL_create_ctx_callback => sub {
+	    my $ctx = shift;
+	    Net::SSLeay::CTX_sess_set_cache_size($ctx, 64);
+	  }
+	}
       } => sub {
 	my ($loop, $stream) = @_;
 	my $data = { buffer => '', handler => \&handle_request };

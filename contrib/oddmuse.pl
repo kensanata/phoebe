@@ -574,7 +574,7 @@ sub oddmuse_serve_changes {
   my $space = shift;
   my $n = shift;
   my $style = shift;
-  my $all = 1;
+  my $all = shift;
   $log->info("Serving changes for $n days");
   success($stream);
   $stream->write("# Changes\n");
@@ -626,7 +626,7 @@ sub oddmuse_serve_changes {
     sub {
       my ($host, $space, $title, $id) = @_;
       $title =~ s/_/ /g;
-      print_link($stream, $host, $space, $title, "page/$id") },
+      print_link($stream, $host, $space, $title, $id) },
     sub { $stream->write(encode_utf8 join("\n", @_, "")) },
     sub { @{shift(@$log) } if @$log },
     sub { 1 }, # show a diff link, always

@@ -190,9 +190,13 @@ sub oddmuse_process_request {
   } elsif (($host, $space, $id, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/comment/([^/#?]+)(?:\?([^#]+))?$!) {
     oddmuse_comment($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), decode_utf8(uri_unescape($query)));
   } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/atom$!) {
-    oddmuse_serve_atom($stream, $host, $space);
+    oddmuse_serve_atom($stream, $host, $space, 'rc');
   } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/rss$!) {
-    oddmuse_serve_rss($stream, $host, $space);
+    oddmuse_serve_rss($stream, $host, $space, 'rc');
+  } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/blog/atom$!) {
+    oddmuse_serve_atom($stream, $host, $space, 'journal');
+  } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/blog/rss$!) {
+    oddmuse_serve_rss($stream, $host, $space, 'journal');
   } elsif (($host, $space, $id) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/config(?:/(config|conf\.d/[^/]+\.p[lm]$))?$!) {
     oddmuse_serve_config($stream, $id); # ignore the host
   } elsif (($query) = $url =~ m!^GET (\S*) HTTP/1\.[01]$!
@@ -529,6 +533,8 @@ sub oddmuse_serve_main_menu {
   for my $id (@{$server->{wiki_page}}) {
     print_link($stream, $host, $space, $id);
   }
+  print_link($stream, $host, $space, "Atom Feed", "do/blog/atom");
+  print_link($stream, $host, $space, "RSS Feed", "do/blog/rss");
   for my $line (@main_menu) {
     $stream->write(encode_utf8 "$line\n");
   }
@@ -756,13 +762,14 @@ sub oddmuse_serve_rss {
   my $stream = shift;
   my $host = shift;
   my $space = shift;
+  my $action = shift;
   my $scheme = 'gemini';
   my $port = port($stream);
   $log->info("Serving Gemini RSS");
   success($stream, "application/rss+xml");
   $stream->write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
   $stream->write("<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n");
-  my $url = "$oddmuse_wikis{$host}?action=rc;raw=1;full=1";
+  my $url = "$oddmuse_wikis{$host}?action=$action;raw=1;full=1";
   if ($space) {
     $url .= ";ns=$space";
   }
@@ -818,6 +825,7 @@ sub oddmuse_serve_atom {
   my $stream = shift;
   my $host = shift;
   my $space = shift;
+  my $action = shift;
   my $port = port($stream);
   $log->info("Serving Gemini Atom");
   success($stream, "application/atom+xml");
@@ -832,7 +840,7 @@ sub oddmuse_serve_atom {
       . "</updated>\n");
   $stream->write("<generator uri=\"gemini://$host:$port/\" version=\"1.0\">Gemini Wiki + Config</generator>\n");
   # now get the data and print the entries
-  my $url = "$oddmuse_wikis{$host}?action=rc;raw=1;full=1";
+  my $url = "$oddmuse_wikis{$host}?action=$action;raw=1;full=1";
   if ($space) {
     $url .= ";ns=$space";
   }

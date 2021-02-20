@@ -26,6 +26,8 @@ WriteMakefile(
     'Mojolicious' => 9.00, # removed tls_verify from Mojo::IOLoop::TLS
     'IO::Socket::SSL' => 2.069, # optional for Mojo::IOLoop
     'Net::SSLeay' => 1.90,
+    'Net::DNS' => 0,
+    'Net::IP' => 0,
     'File::Slurper' => 0,
     'Modern::Perl' => 1.20180701, # for '2018'
     'URI::Escape' => 0,

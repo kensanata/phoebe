@@ -18,19 +18,20 @@ WriteMakefile(
   PREREQ_PM => {
     'strict' => 0,
     'warnings' => 0,
+    'Modern::Perl' => 1.20180701, # for '2018'
+    'URI::Escape' => 0,
+    'Encode::Locale' => 0,
     'Algorithm::Diff' => 0,
     'File::ReadBackwards' => 0,
-    'Net::IDN::Encode' => 0,
-    'IRI' => 0,
-    'Encode::Locale' => 0,
+    'File::Slurper' => 0,
     'Mojolicious' => 9.00, # removed tls_verify from Mojo::IOLoop::TLS
     'IO::Socket::SSL' => 2.069, # optional for Mojo::IOLoop
     'Net::SSLeay' => 1.90,
-    'Net::DNS' => 0,
-    'Net::IP' => 0,
-    'File::Slurper' => 0,
-    'Modern::Perl' => 1.20180701, # for '2018'
-    'URI::Escape' => 0,
+    'Net::IDN::Encode' => 0,
+    'IRI' => 0,      # for script/gemini
+    'Net::IP' => 0,  # required for contrib/speed-bump.pl
+    'Net::DNS' => 0, # required for contrib/speed-bump.pl
+    'IO::Socket::IP' => 0, # required for t/gopher.t
   },
   META_MERGE => {
     'meta-spec' => { version => 2 },

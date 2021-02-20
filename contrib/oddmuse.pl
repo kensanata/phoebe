@@ -228,6 +228,8 @@ Disallow: /do/comment
 Disallow: /do/changes
 Disallow: /do/rss
 Disallow: /do/atom
+Disallow: /do/blog/rss
+Disallow: /do/blog/atom
 Disallow: /do/new
 Disallow: /do/more
 Disallow: /do/match

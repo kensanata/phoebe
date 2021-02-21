@@ -45,6 +45,7 @@ t/oddmuse-namespaces.pl
 t/oddmuse-server.pl
 t/oddmuse-wiki.pl
 t/oddmuse.t
+t/prerequisites.t
 t/README.md
 t/spaces.t
 t/speed-bump.t

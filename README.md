@@ -9,6 +9,7 @@ Phoebe - serve a wiki as a Gemini site
 - [Description](#description)
 - [Gemtext](#gemtext)
 - [Editing the wiki](#editing-the-wiki)
+- [Editing via the web](#editing-via-the-web)
 - [Installation](#installation)
 - [Dependencies](#dependencies)
 - [Quickstart](#quickstart)
@@ -59,11 +60,13 @@ account. All they need is a client that speaks both Gemini and Titan, and the
 password. The default password is "hello". 😃
 
 People can also access it using a regular web browser. They'll get a very
-simple, read-only version of the site.
+simple, read-only version of the site. (But there's an extension that allows you
+to edit pages from the web, too.)
 
 To take a look for yourself, check out the test wiki via the web or via the web.
 
 - [https://gemini.circumlunar.space/clients.html](https://gemini.circumlunar.space/clients.html)
+- [https://git.sr.ht/~kr1sp1n/awesome-gemini](https://git.sr.ht/~kr1sp1n/awesome-gemini)
 - [https://transjovian.org:1965/test](https://transjovian.org:1965/test)
 - [gemini://transjovian.org/test](gemini://transjovian.org/test)
 
@@ -128,6 +131,14 @@ _Elpher_. [https://alexschroeder.ch/cgit/gemini-write/](https://alexschroeder.ch
 
 Gemini & Titan for Bash are two shell functions that allow you to download and
 upload files. [https://alexschroeder.ch/cgit/gemini-titan/about/](https://alexschroeder.ch/cgit/gemini-titan/about/)
+
+## Editing via the web
+
+The Configuration section of the Phoebe space on _The Transjovian Council_ has
+an example config on how to enable editing via the web.
+
+- [https://transjovian.org:1965/phoebe/page/Configuration](https://transjovian.org:1965/phoebe/page/Configuration)
+- [gemini://transjovian.org/phoebe/page/Configuration](gemini://transjovian.org/phoebe/page/Configuration)
 
 # INSTALLATION
 

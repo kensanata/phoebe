@@ -42,13 +42,16 @@ account. All they need is a client that speaks both Gemini and Titan, and the
 password. The default password is "hello". 😃
 
 People can also access it using a regular web browser. They'll get a very
-simple, read-only version of the site.
+simple, read-only version of the site. (But there's an extension that allows you
+to edit pages from the web, too.)
 
 To take a look for yourself, check out the test wiki via the web or via the web.
 
 =over
 
 =item L<https://gemini.circumlunar.space/clients.html>
+
+=item L<https://git.sr.ht/~kr1sp1n/awesome-gemini>
 
 =item L<https://transjovian.org:1965/test>
 
@@ -117,6 +120,19 @@ L<https://thelambdalab.xyz/elpher/>
 
 Gemini & Titan for Bash are two shell functions that allow you to download and
 upload files. L<https://alexschroeder.ch/cgit/gemini-titan/about/>
+
+=head2 Editing via the web
+
+The Configuration section of the Phoebe space on I<The Transjovian Council> has
+an example config on how to enable editing via the web.
+
+=over
+
+=item L<https://transjovian.org:1965/phoebe/page/Configuration>
+
+=item L<gemini://transjovian.org/phoebe/page/Configuration>
+
+=back
 
 =head1 INSTALLATION
 

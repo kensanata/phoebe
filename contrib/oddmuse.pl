@@ -171,6 +171,8 @@ sub oddmuse_process_request {
     oddmuse_serve_html($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))));
   } elsif (($host, $space, $n) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/(?:blog|more)(?:/(\d+))?$!) {
     oddmuse_serve_blog($stream, $host, $space, $n||10);
+  } elsif (($host, $space, $n) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/index$!) {
+    oddmuse_serve_index($stream, $host, $space);
   } elsif (($host, $space, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
     oddmuse_serve_changes($stream, $host, $space, $n||3, $style); # days!
   } elsif (($host, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?/do/all/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
@@ -585,6 +587,22 @@ sub oddmuse_serve_blog {
   $stream->write("# Blog\n");
   $stream->write("Serving the last $n items.\n");
   oddmuse_blog($stream, $host, $space, $n);
+}
+
+sub oddmuse_serve_index {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  $log->info("Serving all pages for $host");
+  success($stream);
+  $stream->write("# All Pages\n");
+  my $url = "$oddmuse_wikis{$host}?raw=1;action=index";
+  $url .= ";ns=$space" if $space;
+  my @pages = split(/\n/, oddmuse_get_raw($stream, $url)) or return;
+  return unless @pages;
+  for my $id (@pages) {
+    print_link($stream, $host, $space, normal_to_free($id), "page/$id");
+  }
 }
 
 sub oddmuse_serve_changes {

@@ -142,6 +142,10 @@ like($page, qr(^=> $base/html/Test HTML$)m, "HTML link");
 like(query_gemini("$base/raw/Test"), qr(^Alex$)m, "Raw");
 like(query_gemini("$base/html/Test"), qr(<p>Alex</p>), "HTML");
 
+$page = query_gemini("$base/do/index");
+like($page, qr(All Pages), "Index");
+like($page, qr(^=> $base/page/Test Test$)m, "Page link");
+
 $page = query_gemini("$base/do/changes");
 like($page, qr(Changes), "Changes");
 like($page, qr(^=> $base/page/Test Test \(current\)$)m, "Page link to current revision");
@@ -166,6 +170,10 @@ like($page, qr(^=> $base/Travels/raw/Test Raw text$)m, "Raw link (namespace)");
 like($page, qr(^=> $base/Travels/html/Test HTML$)m, "HTML link (namespace)");
 like(query_gemini("$base/Travels/raw/Test"), qr(^Berta$)m, "Raw (namespace)");
 like(query_gemini("$base/Travels/html/Test"), qr(<p>Berta</p>), "HTML (namespace)");
+
+$page = query_gemini("$base/Travels/do/index");
+like($page, qr(All Pages), "Index");
+like($page, qr(^=> $base/Travels/page/Test Test$)m, "Page link");
 
 $page = query_gemini("$base/do/all/changes");
 like($page, qr(^=> $base/page/Test Test)m, "All changes");

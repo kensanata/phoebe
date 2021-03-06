@@ -101,7 +101,7 @@ $res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Fnord")->re
 is($res->code, 302, "Oddmuse save page");
 $res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Alex")->result;
 is($res->code, 302, "Oddmuse updated page");
-$res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Bet&ns=Travels")->result;
+$res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Check%20out%20[[Bet]].&ns=Travels")->result;
 is($res->code, 302, "Oddmuse save page in namespace");
 $res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Bert&ns=Travels")->result;
 is($res->code, 302, "Oddmuse save page in namespace");
@@ -162,8 +162,8 @@ like($page, qr(^to:\n> ｢Alex｣$)m, "To");
 
 $page = query_gemini("$base/Travels/page/Test");
 like($page, qr(Berta), "Page (namespace)");
-like($page, qr(^=> $base/raw/Test Raw text$)m, "Raw link (namespace)");
-like($page, qr(^=> $base/html/Test HTML$)m, "HTML link (namespace)");
+like($page, qr(^=> $base/Travels/raw/Test Raw text$)m, "Raw link (namespace)");
+like($page, qr(^=> $base/Travels/html/Test HTML$)m, "HTML link (namespace)");
 like(query_gemini("$base/Travels/raw/Test"), qr(^Berta$)m, "Raw (namespace)");
 like(query_gemini("$base/Travels/html/Test"), qr(<p>Berta</p>), "HTML (namespace)");
 
@@ -183,6 +183,10 @@ like($page, qr(^# Differences for Test$)m, "Diff");
 like($page, qr(^Showing the differences between revision 2 and the current revision\.$)m, "Intro");
 like($page, qr(^Changed line 1 from:\n> ｢Bert｣$)m, "From");
 like($page, qr(^to:\n> ｢Berta｣$)m, "To");
+
+$page = query_gemini("$base/Travels/page/Test/1");
+like($page, qr(^Check out Bet\.$)m, "Revision 1");
+like($page, qr(^=> $base/Travels/page/Bet Bet$)m, "Link");
 
 like(query_gemini("$base/do/rss"), qr(Test.*Alex)s, "RSS");
 like(query_gemini("$base/Travels/do/rss"), qr(Test.*Berta)s, "RSS (namespace)");

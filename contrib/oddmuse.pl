@@ -363,6 +363,7 @@ sub oddmuse_gemini_text {
     $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\|([^\]|]*)\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, "$2 (image)", $1), oddmuse_gemini_link($stream, $host, $space, "$2 (follow-up)", $3)); "$2"/ge;
     $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\|([^\]|]*)\|([^\]|]*)\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, "$2 (image)", $1), oddmuse_gemini_link($stream, $host, $space, "$4 (follow-up)", $3)); "$2"/ge;
     $block =~ s/\[\[$link_regex\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $2, $1)); $2/ge;
+    $block =~ s/\[\[$link_regex\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $1)); $1/ge;
     $block =~ s/\[\[(?:[^]:]+:)?$link_regex\]\]/$1/g; # no link for [[h/p-note:I'm interested in ...]]
     $block =~ s/\[$wiki_word ([^\]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $2, $1)); $2/ge
       if $oddmuse_wiki_links{$host};
@@ -398,7 +399,7 @@ sub oddmuse_gemini_link {
   my $title = shift;
   my $id = shift;
   $id = "page/" . free_to_normal($id) if $id and $id !~ /\//;
-  return gemini_link($stream, $host, undef, $title, $id);
+  return gemini_link($stream, $host, $space, $title, $id);
 }
 
 # This is only used for the [color=foo]. I'm keeping this simple (the old eight

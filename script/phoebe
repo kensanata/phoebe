@@ -1222,35 +1222,39 @@ configure();
 $SIG{HUP} = sub { Mojo::IOLoop->next_tick(\&configure) };
 
 # Figure out what IP numbers we need to listen to because we need to start
-# servers for both IPv4 and IPv6…
-for my $host (keys %{$server->{host}}) {
-  for my $address (get_ip_numbers($host)) {
-    $server->{address}->{$address} = $host;
-    for my $port (@{$server->{port}}) {
-      $log->info("$host: listening on $address:$port");
-      Mojo::IOLoop->server({
-	address => $address,
-	port => $port,
-	tls => 1,
-	tls_cert => $server->{cert_file},
-	tls_key  => $server->{key_file},
-	tls_options => {
-	  # request client certificates and accept them
-	  SSL_verify_mode => SSL_VERIFY_PEER,
-	  SSL_verify_callback => \&verify_fingerprint,
-	  SSL_create_ctx_callback => sub {
-	    my $ctx = shift;
-	    Net::SSLeay::CTX_sess_set_cache_size($ctx, 64);
+# servers for both IPv4 and IPv6. Only do this if phoebe is actually executing.
+# If it is called under a different name, it's probably just being loaded as a
+# library, in which case we don't want to start the servers.
+if ($0 eq __FILE__) {
+  for my $host (keys %{$server->{host}}) {
+    for my $address (get_ip_numbers($host)) {
+      $server->{address}->{$address} = $host;
+      for my $port (@{$server->{port}}) {
+	$log->info("$host: listening on $address:$port");
+	Mojo::IOLoop->server({
+	  address => $address,
+	  port => $port,
+	  tls => 1,
+	  tls_cert => $server->{cert_file},
+	  tls_key  => $server->{key_file},
+	  tls_options => {
+	    # request client certificates and accept them
+	    SSL_verify_mode => SSL_VERIFY_PEER,
+	    SSL_verify_callback => \&verify_fingerprint,
+	    SSL_create_ctx_callback => sub {
+	      my $ctx = shift;
+	      Net::SSLeay::CTX_sess_set_cache_size($ctx, 64);
+	    }
 	  }
-	}
-      } => sub {
-	my ($loop, $stream) = @_;
-	my $data = { buffer => '', handler => \&handle_request };
-	$stream->on(read => sub {
-	  my ($stream, $bytes) = @_;
-	  $log->debug("Received " . length($bytes) . " bytes");
-	  $data->{buffer} .= $bytes;
-	  $data->{handler}->($stream, $data) }) });
+	} => sub {
+	  my ($loop, $stream) = @_;
+	  my $data = { buffer => '', handler => \&handle_request };
+	  $stream->on(read => sub {
+	    my ($stream, $bytes) = @_;
+	    $log->debug("Received " . length($bytes) . " bytes");
+	    $data->{buffer} .= $bytes;
+	    $data->{handler}->($stream, $data) }) });
+      }
     }
   }
 }
@@ -1494,6 +1498,7 @@ sub host_regex {
 
 sub port {
   my $stream = shift;
+  return 1965 unless $stream; # if called in a test situation
   return $stream->handle->sockport; # the actual port
 }
 
@@ -3811,5 +3816,7 @@ sub process_gemini {
   alarm(0);
   $stream->close_gracefully();
 }
+
+1;
 
 __DATA__

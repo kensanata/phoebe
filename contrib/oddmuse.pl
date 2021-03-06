@@ -355,6 +355,8 @@ sub oddmuse_gemini_text {
     $block =~ s/\[([^]]+)\]\(([^) ]+)\)/push(@links, oddmuse_gemini_link($stream, $host, $space, $1, $2)); $1/ge;
     $block =~ s/\[$full_url_regex\s+([^]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $2, $1)); $2/ge;
     $block =~ s/\[\[([a-z\/-]+):$full_url_regex\|([^]]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $3, $2)); $3/ge;
+    # numbered entities are not hashtags, e.g. &#x2605; is ★
+    $block =~ s/&#x([0-9a-f]{4});/chr(hex($1))/gie;
     $block =~ s/\[\[tag:([^]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $1, "tag\/$1")); $1/ge;
     $block =~ s/\[\[tag:([^]|]+)\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $2, "tag\/$1")); $2/ge;
     $block =~ s/<journal search tag:(\S+)>\n*/push(@links, oddmuse_gemini_link($stream, $host, $space, "Explore the $1 tag", "tag\/$1")); ""/ge;
@@ -362,9 +364,17 @@ sub oddmuse_gemini_text {
     $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\|([^\]|]*)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, "$2 (image)", $1)) if $2; "$2"/ge;
     $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\|([^\]|]*)\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, "$2 (image)", $1), oddmuse_gemini_link($stream, $host, $space, "$2 (follow-up)", $3)); "$2"/ge;
     $block =~ s/\[\[image(?:\/[^\/:]+)*:([^]|]+)\|([^\]|]*)\|([^\]|]*)\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, "$2 (image)", $1), oddmuse_gemini_link($stream, $host, $space, "$4 (follow-up)", $3)); "$2"/ge;
+    # free links with text, e.g. [[Alex Schroeder|code monkey]]
     $block =~ s/\[\[$link_regex\|([^\]|]+)\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $2, $1)); $2/ge;
+    # free links, e.g. [[Alex Schröder]]
     $block =~ s/\[\[$link_regex\]\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $1)); $1/ge;
-    $block =~ s/\[\[(?:[^]:]+:)?$link_regex\]\]/$1/g; # no link for [[h/p-note:I'm interested in ...]]
+    # but excluding special typing like [[h/p-note:I'm interested in ...]]
+    $block =~ s/\[\[(?:[^]:]+:)?$link_regex\]\]/$1/g;
+    # handle the ?action=index url abbreviation [Tau_Subsector:?action=index 39 pages]
+    $block =~ s/\[($oddmuse_namespace_regex):\?action=index\s+([^\]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $1, $2, "do\/index")); $2/ge;
+    # namespaces, e.g. on campaignwiki.org: [Tau_Subsector:HomePage Tau Subsector]
+    $block =~ s/\[($oddmuse_namespace_regex):(\S+) ([^\]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $1, $3, $2)); $3/ge;
+    # wiki words with text, e.g. [AlexSchroeder code monkey]
     $block =~ s/\[$wiki_word ([^\]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $2, $1)); $2/ge
       if $oddmuse_wiki_links{$host};
     $block =~ s/\[Self:\S+ ([^\]]+)\]/$1/ge;

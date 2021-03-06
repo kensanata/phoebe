@@ -373,7 +373,7 @@ sub oddmuse_gemini_text {
     # handle the ?action=index url abbreviation [Tau_Subsector:?action=index 39 pages]
     $block =~ s/\[($oddmuse_namespace_regex):\?action=index\s+([^\]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $1, $2, "do\/index")); $2/ge;
     # namespaces, e.g. on campaignwiki.org: [Tau_Subsector:HomePage Tau Subsector]
-    $block =~ s/\[($oddmuse_namespace_regex):(\S+) ([^\]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $1, $3, $2)); $3/ge;
+    $block =~ s/\[($oddmuse_namespace_regex):([^?#[:space:]]*) ([^\]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $1, $3, $2)); $3/ge;
     # wiki words with text, e.g. [AlexSchroeder code monkey]
     $block =~ s/\[$wiki_word ([^\]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $2, $1)); $2/ge
       if $oddmuse_wiki_links{$host};

@@ -176,7 +176,7 @@ sub oddmuse_process_request {
   } elsif (($host, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?/do/all/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
     oddmuse_serve_changes($stream, $host, undef, $n||3, $style, 1); # days!
   } elsif (($host, $space, $id, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(colour|fancy))?$!) {
-    oddmuse_serve_history($stream, $host, free_to_normal(decode_utf8(uri_unescape($id))), $style);
+    oddmuse_serve_history($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), $style);
   } elsif (($host, $space, $id, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?(?:/(colour))?$!) {
     oddmuse_serve_diff($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), $n, $style);
   } elsif ($url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/match$!) {
@@ -657,6 +657,7 @@ sub oddmuse_serve_history {
   elsif ($style eq "colour") { print_link($stream, $host, $space, "Fancy history", "history/$id/fancy") }
   elsif ($style eq "fancy") { print_link($stream, $host, $space, "Normal history", "history/$id") }
   my $url = "$oddmuse_wikis{$host}?raw=1;action=history;id=" . uri_escape_utf8($id);
+  $url .= ";ns=$space" if $space;
   my $page = oddmuse_get_raw($stream, $url) or return;
   my @entries = split(/\n\n+/, $page);
   shift @entries; # skip head
@@ -687,7 +688,7 @@ sub oddmuse_serve_history {
     sub {
       my ($host, $space, $title, $id) = @_;
       $title =~ s/_/ /g;
-      print_link($stream, $host, $space, $title, "page/$id") },
+      print_link($stream, $host, $space, $title, $id) },
     sub { $stream->write(join("\n", @_, "")) },
     sub { @{shift(@$log) } if @$log },
     sub { 1 }, # show a diff link, always
@@ -707,7 +708,7 @@ sub oddmuse_serve_diff {
   if (not $style) { print_link($stream, $host, $space, "Colour diff", "diff/$id/$revision/colour") }
   else { print_link($stream, $host, $space, "Normal diff", "diff/$id/$revision") }
   $stream->write("Showing the differences between revision $revision and the current revision.\n");
-  my $url = "$oddmuse_wikis{$host}/raw/" . uri_escape_utf8($id);
+  my $url = $oddmuse_wikis{$host} . ($space ? "/$space" : "") . "/raw/" . uri_escape_utf8($id);
   my $new = oddmuse_get_raw($stream, $url);
   $url .= "?revision=$revision" if $revision;
   my $old = oddmuse_get_raw($stream, $url);

@@ -14,6 +14,7 @@ Use n.nn_nn for developer releases:
 make distdir
 mv App-phoebe-3 App-phoebe-3.00_00
 tar czf App-phoebe-3.00_00
+```
 
 Double check the `MANIFEST`. Did we add new files that should be in
 here?

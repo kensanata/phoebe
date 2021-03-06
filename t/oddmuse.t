@@ -27,8 +27,8 @@ if (not $ENV{TEST_AUTHOR}) {
   $msg = 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.';
 } else {
   for my $module (qw(CGI Mojolicious::Plugin::CGI DateTime::Format::ISO8601)) {
-    if (not eval { require $module }) {
-      $msg = "You need to install the $module module for this test.";
+    if (not defined eval "require $module") {
+      $msg = "You need to install the $module module for this test: $@";
       last;
     }
   }
@@ -95,11 +95,18 @@ for (qw(1 1 1 1 2 2 3 4 5)) {
 
 die "$!: giving up after ${total}s\n" unless $ok;
 
-# test Oddmuse
+# Test Oddmuse, and create the Test page in the main namespace (with the text
+# "Alex") and in the "Travels" namespace (with the text "Berta").
+$res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Fnord")->result;
+is($res->code, 302, "Oddmuse save page");
 $res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Alex")->result;
-is($res->code, 302, "Oddmuse save page");
+is($res->code, 302, "Oddmuse updated page");
+$res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Bet&ns=Travels")->result;
+is($res->code, 302, "Oddmuse save page in namespace");
+$res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Bert&ns=Travels")->result;
+is($res->code, 302, "Oddmuse save page in namespace");
 $res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Berta&ns=Travels")->result;
-is($res->code, 302, "Oddmuse save page");
+is($res->code, 302, "Oddmuse updated page in namespace");
 $res = $ua->get("http://localhost:$oddmuse_port/wiki/raw/Test")->result;
 is($res->code, 200, "Oddmuse read page");
 is($res->body, "Alex\n", "Oddmuse page content");
@@ -130,21 +137,52 @@ like(query_gemini("$base/Travels/page"), qr(31 $base/Travels\r\n), "Reserved wor
 
 my $page = query_gemini("$base/page/Test");
 like($page, qr(Alex), "Page");
-like($page, qr(^=> gemini://localhost:$port/raw/Test Raw text$)m, "Raw link");
-like($page, qr(^=> gemini://localhost:$port/html/Test HTML$)m, "HTML link");
+like($page, qr(^=> $base/raw/Test Raw text$)m, "Raw link");
+like($page, qr(^=> $base/html/Test HTML$)m, "HTML link");
 like(query_gemini("$base/raw/Test"), qr(^Alex$)m, "Raw");
 like(query_gemini("$base/html/Test"), qr(<p>Alex</p>), "HTML");
 
+$page = query_gemini("$base/do/changes");
+like($page, qr(Changes), "Changes");
+like($page, qr(^=> $base/page/Test Test \(current\)$)m, "Page link to current revision");
+like($page, qr(^=> $base/history/Test History$)m, "History link");
+like($page, qr(^=> $base/page/Test/1 Test \(1\)$)m, "Page link to revision 1");
+like($page, qr(^=> $base/diff/Test/1 Differences$)m, "Diff link");
+
+$page = query_gemini("$base/history/Test");
+like($page, qr(^=> $base/page/Test Test \(current\)$)m, "Page link to current revision");
+like($page, qr(^=> $base/page/Test/1 Test \(1\)$)m, "Page link to revision 1");
+like($page, qr(^=> $base/diff/Test/1 Differences$)m, "Diff link");
+
+$page = query_gemini("$base/diff/Test/1");
+like($page, qr(^# Differences for Test$)m, "Diff");
+like($page, qr(^Showing the differences between revision 1 and the current revision\.$)m, "Intro");
+like($page, qr(^Changed line 1 from:\n> ｢Fnord｣$)m, "From");
+like($page, qr(^to:\n> ｢Alex｣$)m, "To");
+
 $page = query_gemini("$base/Travels/page/Test");
 like($page, qr(Berta), "Page (namespace)");
-like($page, qr(^=> gemini://localhost:$port/raw/Test Raw text$)m, "Raw link (namespace)");
-like($page, qr(^=> gemini://localhost:$port/html/Test HTML$)m, "HTML link (namespace)");
+like($page, qr(^=> $base/raw/Test Raw text$)m, "Raw link (namespace)");
+like($page, qr(^=> $base/html/Test HTML$)m, "HTML link (namespace)");
 like(query_gemini("$base/Travels/raw/Test"), qr(^Berta$)m, "Raw (namespace)");
 like(query_gemini("$base/Travels/html/Test"), qr(<p>Berta</p>), "HTML (namespace)");
 
 $page = query_gemini("$base/do/all/changes");
-like($page, qr(^=> gemini://localhost:$port/page/Test Test)m, "All changes");
-like($page, qr(^=> gemini://localhost:$port/Travels/page/Test \[Travels\] Test)m, "All changes (namespace)");
+like($page, qr(^=> $base/page/Test Test)m, "All changes");
+like($page, qr(^=> $base/Travels/page/Test \[Travels\] Test)m, "All changes (namespace)");
+
+$page = query_gemini("$base/Travels/history/Test");
+like($page, qr(^=> $base/Travels/page/Test Test \(current\)$)m, "Page link to current revision");
+like($page, qr(^=> $base/Travels/page/Test/2 Test \(2\)$)m, "Page link to revision 2");
+like($page, qr(^=> $base/Travels/diff/Test/2 Differences$)m, "Diff link for revision 2");
+like($page, qr(^=> $base/Travels/page/Test/1 Test \(1\)$)m, "Page link to revision 1");
+like($page, qr(^=> $base/Travels/diff/Test/1 Differences$)m, "Diff link for revision 1");
+
+$page = query_gemini("$base/Travels/diff/Test/2");
+like($page, qr(^# Differences for Test$)m, "Diff");
+like($page, qr(^Showing the differences between revision 2 and the current revision\.$)m, "Intro");
+like($page, qr(^Changed line 1 from:\n> ｢Bert｣$)m, "From");
+like($page, qr(^to:\n> ｢Berta｣$)m, "To");
 
 like(query_gemini("$base/do/rss"), qr(Test.*Alex)s, "RSS");
 like(query_gemini("$base/Travels/do/rss"), qr(Test.*Berta)s, "RSS (namespace)");

@@ -169,12 +169,19 @@ sub speed_bump_add_cidr {
   $speed_cidr_data->{$cidr} = $until;
 }
 
+# load on startup
+Mojo::IOLoop->next_tick(sub {
+  my $dir = $server->{wiki_dir};
+  return unless -f "$dir/speed-bump.json";
+  my $bytes = read_binary("$dir/speed-bump.json");
+  $speed_data = decode_json $bytes;
+  speed_bump_compute_cidr_blocks() });
+
 # save every half hour
 Mojo::IOLoop->recurring(1800 => sub {
   my $bytes = encode_json $speed_data;
   my $dir = $server->{wiki_dir};
-  write_binary("$dir/speed-bump.json", $bytes);
-});
+  write_binary("$dir/speed-bump.json", $bytes) });
 
 sub speed_bump_admin {
   my $stream = shift;

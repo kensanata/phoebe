@@ -77,7 +77,7 @@ directory.
 
 Example:
 
-=> gemini://toki.transjovian.org/
+=> //toki.transjovian.org/
 
 ## web-edit.pl
 

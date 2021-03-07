@@ -19,7 +19,15 @@ use Modern::Perl;
 
 our (@extensions, $server, $log);
 
-## Toki Pona Font
+=head Toki Pona
+
+You need to host the Toki Pona font from your server. That is to say: you need
+to download the WOFF file from the Linja Pona 4.2 repository and put it into
+your wiki directory.
+
+L<https://github.com/janSame/linja-pona/>
+
+=cut
 
 push(@extensions, \&toki_pona_font);
 

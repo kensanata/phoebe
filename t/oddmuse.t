@@ -226,7 +226,8 @@ like($page, qr/^30 $base\/Travels\/page\/Haiku\r$/, "Titan Haiku");
 
 like(query_gemini("$base/Travels/page/Haiku"), qr(drumming), "Gemini proxy for Oddmuse");
 
-# and more unit testing stuff
+# Unit testing of text formatting rules
+
 ok(require "./script/phoebe", "load phoebe");
 ok(require "./contrib/oddmuse.pl", "load oddmuse.pl");
 
@@ -240,5 +241,14 @@ like($page, qr(^e.g. ★ is ★$)m, "HTML entities that look like hash tags");
 $page = App::Phoebe::oddmuse_gemini_text(undef, $host, "", "it has [Tau_Subsector:?action=index 39 pages]");
 like($page, qr(^it has 39 pages$)m, "index link inline text");
 like($page, qr(^=> gemini://localhost:1965/Tau_Subsector/do/index 39 pages$)m, "index link");
+
+$page = App::Phoebe::oddmuse_gemini_text(undef, $host, "", qq{
+This is a table.
+
+|hello|
+|kitten|
+
+And this is the end.});
+like($page, qr(^This is a table\.\n\n```\n\|hello\|\n\|kitten\|\n```\n\nAnd this is the end\.$)m, "table");
 
 done_testing();

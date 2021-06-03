@@ -22,7 +22,7 @@ if (not $ENV{TEST_AUTHOR}) {
   $msg = 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.';
 } else {
   for my $module (qw(Net::IP Net::DNS)) {
-    if (not eval { require $module }) {
+    if (not defined eval "require $module") {
       $msg = "You need to install the $module module for this test.";
       last;
     }

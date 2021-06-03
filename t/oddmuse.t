@@ -228,8 +228,8 @@ like(query_gemini("$base/Travels/page/Haiku"), qr(drumming), "Gemini proxy for O
 
 # Unit testing of text formatting rules
 
-ok(require "./script/phoebe", "load phoebe");
-ok(require "./contrib/oddmuse.pl", "load oddmuse.pl");
+ok(require './script/phoebe', "load phoebe");
+ok(require './contrib/oddmuse.pl', "load oddmuse.pl");
 
 $page = App::Phoebe::oddmuse_gemini_text(undef, $host, "", "Testing [Foo:Bar baz]");
 like($page, qr(^Testing baz$)m, "Namespace link with text, text");

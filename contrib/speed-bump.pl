@@ -84,8 +84,8 @@ sub speed_bump {
     # $IP_PARTIAL_OVERLAP (ranges overlap) $IP_NO_OVERLAP (no overlap)
     # $IP_A_IN_B_OVERLAP (range2 contains range1) $IP_B_IN_A_OVERLAP (range1
     # contains range2) $IP_IDENTICAL (ranges are identical) undef (problem)
-    if (not defined $overlap or $overlap != $IP_NO_OVERLAP) {
-      $log->info("Net range is blocked");
+    if (defined $overlap and $overlap != $IP_NO_OVERLAP) {
+      $log->info("Net range $cidr is blocked");
       my $delta = $speed_cidr_data->{$cidr} - $now;
       $stream->write("44 $delta\r\n");
       # no more processing

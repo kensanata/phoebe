@@ -1397,11 +1397,12 @@ sub handle_http_header {
       my $actual = length($data->{buffer});
       return http_error($stream, "Content longer than what the header says") if $actual > $length;
       if ($length == $actual) {
+	# got the entire body as part of the first part
 	process_http($stream, $data->{request}, $data->{headers}, $data->{buffer});
 	$stream->close_gracefully();
 	return;
       } elsif ($length) {
-	# read body
+	# read body if it was sent in multiple parts
 	$data->{handler} = \&handle_http_body;
 	handle_http_body($stream, $data);
 	return;
@@ -1425,9 +1426,15 @@ sub handle_http_body {
   my $stream = shift;
   my $data = shift;
   $log->debug("Reading HTTP body");
-  process_http($stream, $data->{request}, $data->{headers}, $data->{buffer});
-  $stream->close_gracefully();
-  return;
+  my $length = $data->{headers}->{'content-length'} || 0;
+  my $actual = length($data->{buffer});
+  if ($length == $actual) {
+    # got the entire body
+    process_http($stream, $data->{request}, $data->{headers}, $data->{buffer});
+    $stream->close_gracefully();
+    return;
+  }
+  $log->debug("Received $actual/$length bytes");
 }
 
 sub http_error {

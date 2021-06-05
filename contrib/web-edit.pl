@@ -83,7 +83,7 @@ sub serve_edit_via_http {
   $stream->write("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n");
   $stream->write("</head>\n");
   $stream->write("<body>\n");
-  $stream->write("<h1>" . quote_html($id) . "</h1>\n");
+  $stream->write(encode_utf8 "<h1>" . quote_html($id) . "</h1>\n");
   $stream->write("<form method=\"POST\">\n");
   $stream->write("<p><label for=\"token\">Token:</label>\n");
   $stream->write("<br><input type=\"text\" id=\"token\" name=\"token\" required>\n");

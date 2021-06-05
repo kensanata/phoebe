@@ -114,8 +114,18 @@ sub save_edit_via_http {
   my @tokens = @{$server->{wiki_token}};
   push(@tokens, @{$server->{wiki_space_token}->{$space}})
       if $space and $server->{wiki_space_token}->{$space};
-  return http_error($stream, "Token required") if not $token and @tokens;
-  return http_error($stream, "Wrong token") if not grep(/^$token$/, @tokens);
+  if (@tokens) {
+    if (not $token) {
+      $log->info("Token required (one of @tokens)");
+      http_error($stream, "Token required");
+      return;
+    }
+    if (not grep(/^$token$/, @tokens)) {
+      $log->info("Wrong token ($token)");
+      http_error($stream, "Wrong token");
+      return;
+    }
+  }
   my $text = $params{text}||"";
   $text =~ s/\r\n/\n/g; # fix DOS EOL convention
   with_lock($stream, $host, $space, sub { write_page_for_http($stream, $host, $space, $id, $text) } );

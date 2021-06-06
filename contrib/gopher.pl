@@ -39,7 +39,7 @@ If you want to undo this:
 
 The alternative is to use a port number above 1024.
 
-You can set the normale Gopher and the encrypted Gopher ports by setting the
+You can set the normal Gopher and the encrypted Gopher ports by setting the
 appropriate variables. These variables either be a single port, or an array of
 ports.
 

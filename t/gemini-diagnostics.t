@@ -20,7 +20,7 @@ use utf8; # tests contain UTF-8 characters and it matters
 
 my $msg;
 if (not $ENV{TEST_AUTHOR} or $ENV{TEST_AUTHOR} < 2) {
-  $msg = 'Diagnostics are an author test. Set $ENV{TEST_AUTHOR} to "2" to run.';
+  $msg = 'Diagnostics are an author test that cannot succeed, unfortunately. Set $ENV{TEST_AUTHOR} to "2" to run it anyway.';
 }
 plan skip_all => $msg if $msg;
 

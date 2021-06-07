@@ -2945,7 +2945,7 @@ sub serve_history {
   my $style = shift;
   success($stream);
   $log->info("Serve history for $id");
-  $stream->write("# Page history for $id\n");
+  $stream->write(encode_utf8 "# Page history for $id\n");
   if (not $style) { print_link($stream, $host, $space, "Colour history", "history/$id/$n/colour") }
   elsif ($style eq "colour") { print_link($stream, $host, $space, "Fancy history", "history/$id/$n/fancy") }
   elsif ($style eq "fancy") { print_link($stream, $host, $space, "Normal history", "history/$id/$n") }

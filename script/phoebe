@@ -3637,8 +3637,8 @@ sub valid_id {
     $stream->close_gracefully();
     return;
   } elsif ($id =~ /[[:cntrl:]]/) {
-    $log->debug("Page names must not control characters");
-    $stream->write("59 Page names must not control characters\r\n");
+    $log->debug("Page names must not contain any control characters");
+    $stream->write("59 Page names must not contain any control characters\r\n");
     $stream->close_gracefully();
     return;
   }

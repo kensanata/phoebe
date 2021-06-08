@@ -26,7 +26,7 @@ You need to set C<@fingerprints> in your config file. Here's an example:
       sha256$fce75346ccbcf0da647e887271c3d3666ef8c7b181f2a3b22e976ddc8fa38401
       sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
 
-The way to do it is to request the I<certificate> from your friends (not they
+The way to do it is to request the I<certificate> from your friends (not their
 key!) and run the following:
 
     openssl x509 -in client-cert.pem -noout -sha256 -fingerprint \

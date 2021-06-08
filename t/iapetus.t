@@ -15,10 +15,7 @@
 
 use Modern::Perl;
 use Test::More;
-use File::Slurper qw(write_text read_binary);
-use IO::Socket::IP;
 use IO::Socket::SSL;
-use Mojo::IOLoop::Server;
 use utf8; # tests contain UTF-8 characters and it matters
 
 my $msg;

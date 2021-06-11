@@ -849,7 +849,7 @@ certificates to limit writing to a single, known fingerprint:
       my $hosts = host_regex();
       my $port = port($stream);
       my $spaces = space_regex($stream);
-      my $fingerprint = $server->{client}->get_fingerprint();
+      my $fingerprint = $stream->handle->get_fingerprint();
       if (my ($host, $path) = $url =~ m!^titan://($hosts)(?::$port)?([^?#]*)!) {
 	my ($space, $resource) = $path =~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!;
 	if (not $resource) {

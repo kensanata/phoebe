@@ -148,14 +148,17 @@ sub ijirait_main {
 	if ($command) {
 	  my $routine = $ijirait_commands->{$command};
 	  if ($routine) {
+	    $log->debug("Running $command");
 	    $routine->($stream, $p, "");
 	  } else {
 	    ijirait_command($stream, $p, $command);
 	  }
 	} else {
 	  if ($type) {
+	    $log->debug("Asking for a command");
 	    $stream->write("10 Type your command\r\n");
 	  } else {
+	    $log->debug("Running look as a default");
 	    ijirait_look($stream, $p);
 	  }
 	}
@@ -266,6 +269,7 @@ sub ijirait_command {
   my ($stream, $p, $command) = @_;
   if ($command) {
     if ($command =~ /^["“„«]/) {
+      $log->debug("Saying some words");
       ijirait_say($stream, $p, $command);
       return;
     }
@@ -273,23 +277,27 @@ sub ijirait_command {
     my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
     my $exit = first { $_->{direction} eq $command } @{$room->{exits}};
     if ($exit) {
+      $log->debug("Taking the exit '$command'");
       $p->{location} = $exit->{destination};
       $stream->write("30 /play/ijirait?look\r\n");
       return;
     }
     my $o = first { $_->{location} eq $p->{location} and $_->{name} eq $command } @{$ijirait_data->{people}};
     if ($o) {
+      $log->debug("Looking at '$command'");
       success($stream);
       $stream->write("# $o->{name}\n");
       $stream->write("$o->{description}\n");
       $stream->write("=> /play/ijirait Back\n");
       return;
     }
+    $log->debug("Unknown command '$command'");
     success($stream);
     $stream->write("# Unknown command\n");
     $stream->write("“$command” is an unknown command.\n");
     ijirait_menu($stream);
   } else {
+    $log->debug("Asking for a command as a default");
     $stream->write("10 Type your command\r\n");
   }
 }

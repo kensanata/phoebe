@@ -31,26 +31,35 @@ require './t/test.pl';
 
 my $page = query_gemini("$base/play/ijirait");
 like($page, qr(^20), "Ijirait");
-like($page, qr(^And you, (\S+)\.)m, "And you");
 like($page, qr(Ijiraq said “Welcome!”), "Welcome");
+$page =~ /(\S+) \(you\)/;
+my $name = $1;
+ok($name, "Name set");
 
-$page = query_gemini("$base/play/ijirait?Ijiraq");
+$page = query_gemini("$base/play/ijirait/examine?Ijiraq");
 like($page, qr(^# Ijiraq)m, "Heading");
 like($page, qr(^A shape-shifter with red eyes\.)m, "Description");
 
-$page = query_gemini("$base/play/ijirait/type?%22Hello%22");
+$page = query_gemini("$base/play/ijirait/type?say Hello");
 like($page, qr(said “Hello”), "Hello");
 
-$page = query_gemini("$base/play/ijirait?out");
+$page = query_gemini("$base/play/ijirait/go?out");
 like($page, qr(^30), "Redirect after a move");
 
-$page = query_gemini("$base/play/ijirait?look");
+$page = query_gemini("$base/play/ijirait/look");
 like($page, qr(^# Outside The Tent)m, "Outside");
 
-$page = query_gemini("$base/play/ijirait?tent");
+$page = query_gemini("$base/play/ijirait/go?tent");
 like($page, qr(^30), "Redirect after a move");
 
-$page = query_gemini("$base/play/ijirait?look");
+$page = query_gemini("$base/play/ijirait/look");
 like($page, qr(^# The Tent)m, "Back inside");
+
+$page = query_gemini("$base/play/ijirait/describe?I%E2%80%99’m%20cool%2E");
+like($page, qr(^30)m, "Redirect after describe");
+
+$page = query_gemini("$base/play/ijirait/examine?$name");
+like($page, qr(^# $name$)m, "Name");
+like($page, qr(^I’m cool\.)m, "Description");
 
 done_testing();

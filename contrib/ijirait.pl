@@ -19,11 +19,12 @@ our (@extensions, $log, $server);
 
 package App::Phoebe::Ijirait;
 use Modern::Perl;
-use Encode qw(encode_utf8);
+use Encode qw(encode_utf8 decode_utf8);
 use File::Slurper qw(read_binary write_binary read_text);
 use Mojo::JSON qw(decode_json encode_json);
 use List::Util qw(first);
 use URI::Escape;
+use utf8;
 
 *success = \&App::Phoebe::success;
 
@@ -68,11 +69,15 @@ Mojo::IOLoop->next_tick(sub {
 
 # global commands
 our $ijirait_commands = {
-  help => \&ijirait_help,
-  look => \&ijirait_look,
-  type => \&ijirait_type,
-  save => \&ijirait_save,
-  who  => \&ijirait_who,
+  help     => \&ijirait_help,
+  look     => \&ijirait_look,
+  type     => \&ijirait_type,
+  save     => \&ijirait_save,
+  say      => \&ijirait_say,
+  who      => \&ijirait_who,
+  go       => \&ijirait_go,
+  examine  => \&ijirait_examine,
+  describe => \&ijirait_describe,
 };
 
 # load world on startup
@@ -135,39 +140,26 @@ sub ijirait_main {
   my $stream = shift;
   my $url = shift;
   my $port = App::Phoebe::port($stream);
-  if ($url =~ m!^gemini://(?:$ijirait_host)(?::$port)?/play/ijirait!) {
-    # We're using /play/ijirait/type to ask the user to type a command so that
-    # we can process /play/ijirait/type?command; otherwise things get difficult:
-    # /play/ijirait could mean "look around" or "ask the user for input", which
-    # is awkward; or we could ask the user for input using /play/ijirait?more
-    # and then expect to receive /play/ijirait?more?command (maybe?). In short,
-    # better to use a different URL.
-    my ($command) = $url =~ /\?(.*)/;
-    my $type = $url =~ /\/type/;
-    $log->debug("Handling $url - " . ($command || "no command"));
-    $command = uri_unescape($command);
+  if ($url =~ m!^gemini://(?:$ijirait_host)(?::$port)?/play/ijirait(?:/([a-z]+))?(?:\?(.*))?!) {
+    my $command = $1 || "look";
+    my $arg = decode_utf8 uri_unescape($2) || "";
+    $log->debug("Handling $url - $command $arg");
     my $fingerprint = $stream->handle->get_fingerprint();
     if ($fingerprint) {
       my $p = first { $_->{fingerprint} eq $fingerprint} @{$ijirait_data->{people}};
       if ($p) {
 	$log->info("Successfully identified client certificate: " . $p->{name});
 	$p->{ts} = time();
-	if ($command) {
-	  my $routine = $ijirait_commands->{$command};
-	  if ($routine) {
-	    $log->debug("Running $command");
-	    $routine->($stream, $p, "");
-	  } else {
-	    ijirait_command($stream, $p, $command);
-	  }
+	my $routine = $ijirait_commands->{$command};
+	if ($routine) {
+	  $log->debug("Running $command");
+	  $routine->($stream, $p, $arg);
 	} else {
-	  if ($type) {
-	    $log->debug("Asking for a command");
-	    $stream->write("10 Type your command\r\n");
-	  } else {
-	    $log->debug("Running look as a default");
-	    ijirait_look($stream, $p);
-	  }
+	  $log->debug("Unknown command '$command'");
+	  success($stream);
+	  $stream->write("# Unknown command\n");
+	  $stream->write(encode_utf8 "“$command” is an unknown command.\n");
+	  ijirait_menu($stream);
 	}
       } else {
 	$log->info("New client certificate $fingerprint");
@@ -212,11 +204,11 @@ sub ijirait_look {
   my ($stream, $p) = @_;
   success($stream);
   my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
-  $stream->write("# " . $room->{name} . "\n");
-  $stream->write($room->{description} . "\n") if $room->{description};
+  $stream->write(encode_utf8 "# " . $room->{name} . "\n");
+  $stream->write(encode_utf8 $room->{description} . "\n") if $room->{description};
   $stream->write("## Exits\n") if $room->{exits};
   for my $exit (@{$room->{exits}}) {
-    $stream->write("=> /play/ijirait?" . $exit->{direction} . " " . $exit->{name} . "\n");
+    $stream->write(encode_utf8 "=> /play/ijirait/go?$exit->{direction} $exit->{name} ($exit->{direction})\n");
   }
   $stream->write("## People\n");
   my $n = 0;
@@ -224,20 +216,19 @@ sub ijirait_look {
   for my $o (@{$ijirait_data->{people}}) {
     next unless $o->{location} == $p->{location};
     next if $now - $o->{ts} > 600;      # don't show people inactive for 10min or more
-    next if $o->{id} == $p->{id};       # skip yourself
     $n++;
-    $stream->write("=> /play/ijirait?$o->{name} $o->{name}\n");
+    if ($o->{id} == $p->{id}) {
+      $stream->write(encode_utf8 "=> /play/ijirait/examine?$o->{name} $o->{name} (you)\n");
+    } else {
+      $stream->write(encode_utf8 "=> /play/ijirait/examine?$o->{name} $o->{name}\n");
+    }
   }
-  if ($n) {
-    $stream->write("And you, $p->{name}.\n");
-  } else {
-    $stream->write("Just you, $p->{name}.\n");
-  }
-  $stream->write("## Words\n") if @{$room->{words}} > 0;
+  my $title = 0;
   for my $word (@{$room->{words}}) {
     next if $now - $word->{ts} > 600; # don't show messages older than 10min
+    $stream->write("## Words\n") unless $title++;
     my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};
-    $stream->write(ijirait_time($now - $word->{ts}) . ", " . $o->{name} . " said “" . $word->{text} . "”\n");
+    $stream->write(encode_utf8 ijirait_time($now - $word->{ts}) . ", " . $o->{name} . " said “" . $word->{text} . "”\n");
   }
   ijirait_menu($stream);
 }
@@ -255,8 +246,8 @@ sub ijirait_time {
 sub ijirait_menu {
   my $stream = shift;
   $stream->write("## Commands\n");
-  $stream->write("=> /play/ijirait?look look\n");
-  $stream->write("=> /play/ijirait?help help\n");
+  $stream->write("=> /play/ijirait/look look\n");
+  $stream->write("=> /play/ijirait/help help\n");
   $stream->write("=> /play/ijirait/type type\n");
 }
 
@@ -273,40 +264,57 @@ sub ijirait_help {
   }
 }
 
-sub ijirait_command {
-  my ($stream, $p, $command) = @_;
-  if ($command) {
-    if ($command =~ /^["“„«]/) {
-      $log->debug("Saying some words");
-      ijirait_say($stream, $p, $command);
-      return;
-    }
-    # these are local commands, like exits
-    my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
-    my $exit = first { $_->{direction} eq $command } @{$room->{exits}};
-    if ($exit) {
-      $log->debug("Taking the exit '$command'");
-      $p->{location} = $exit->{destination};
-      $stream->write("30 /play/ijirait?look\r\n");
-      return;
-    }
-    my $o = first { $_->{location} eq $p->{location} and $_->{name} eq $command } @{$ijirait_data->{people}};
-    if ($o) {
-      $log->debug("Looking at '$command'");
+sub ijirait_type {
+  my ($stream, $p, $str) = @_;
+  if ($str) {
+    my ($command, $arg) = split(/\s+/, $str, 2);
+    my $routine = $ijirait_commands->{$command};
+    if ($routine) {
+      $log->debug("Running $command");
+      $routine->($stream, $p, $arg);
+    } else {
+      $log->debug("Unknown command '$command'");
       success($stream);
-      $stream->write("# $o->{name}\n");
-      $stream->write("$o->{description}\n");
-      $stream->write("=> /play/ijirait Back\n");
-      return;
+      $stream->write("# Unknown command\n");
+      $stream->write(encode_utf8 "“$command” is an unknown command.\n");
+      ijirait_menu($stream);
     }
-    $log->debug("Unknown command '$command'");
-    success($stream);
-    $stream->write("# Unknown command\n");
-    $stream->write("“$command” is an unknown command.\n");
-    ijirait_menu($stream);
   } else {
-    $log->debug("Asking for a command as a default");
     $stream->write("10 Type your command\r\n");
+  }
+}
+
+sub ijirait_go {
+  my ($stream, $p, $direction) = @_;
+  my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+  my $exit = first { $_->{direction} eq $direction } @{$room->{exits}};
+  if ($exit) {
+    $log->debug("Taking the exit '$direction'");
+    $p->{location} = $exit->{destination};
+    $stream->write("30 /play/ijirait/look\r\n");
+  } else {
+    success($stream);
+    $log->debug("Unknown exit '$direction'");
+    $stream->write(encode_utf8 "# Unknown exit “$direction”\n");
+    $stream->write("The exit does not exist.\n");
+    $stream->write("=> /play/ijirait Back\n");
+  }
+}
+
+sub ijirait_examine {
+  my ($stream, $p, $name) = @_;
+  success($stream);
+  my $o = first { $_->{location} eq $p->{location} and $_->{name} eq $name } @{$ijirait_data->{people}};
+  if ($o) {
+    $log->debug("Looking at '$name'");
+    $stream->write(encode_utf8 "# $o->{name}\n");
+    $stream->write(encode_utf8 "$o->{description}\n");
+    $stream->write("=> /play/ijirait Back\n");
+  } else {
+    $log->debug("Unknown target '$name'");
+    $stream->write(encode_utf8 "# Unknown target “$name”\n");
+    $stream->write("No such person or object is visible.\n");
+    $stream->write("=> /play/ijirait Back\n");
   }
 }
 
@@ -360,9 +368,15 @@ sub ijirait_who {
   success($stream);
   $stream->write("# Who are shape shifters?\n");
   for my $o (sort { $b->{ts} <=> $a->{ts} } @{$ijirait_data->{people}}) {
-    $stream->write("* $o->{name}, active " . ijirait_time($now - $o->{ts}) . "\n");
+    $stream->write(encode_utf8 "* $o->{name}, active " . ijirait_time($now - $o->{ts}) . "\n");
   }
   $stream->write("=> /play/ijirait Back\n");
+}
+
+sub ijirait_describe {
+  my ($stream, $p, $text) = @_;
+  $p->{description} = $text;
+  $stream->write("30 /play/ijirait/examine?$p->{name}\r\n");
 }
 
 1;

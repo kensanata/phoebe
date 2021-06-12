@@ -41,4 +41,16 @@ like($page, qr(^A shape-shifter with red eyes\.)m, "Description");
 $page = query_gemini("$base/play/ijirait/type?%22Hello%22");
 like($page, qr(said “Hello”), "Hello");
 
+$page = query_gemini("$base/play/ijirait?out");
+like($page, qr(^30), "Redirect after a move");
+
+$page = query_gemini("$base/play/ijirait?look");
+like($page, qr(^# Outside The Tent)m, "Outside");
+
+$page = query_gemini("$base/play/ijirait?tent");
+like($page, qr(^30), "Redirect after a move");
+
+$page = query_gemini("$base/play/ijirait?look");
+like($page, qr(^# The Tent)m, "Back inside");
+
 done_testing();

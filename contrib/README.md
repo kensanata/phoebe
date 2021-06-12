@@ -41,6 +41,15 @@ Example:
 
 => gemini://alexschroeder.ch/do/gallery
 
+# ijirait.pl
+
+This extension is a simple MUSH-like game, totally unrelated to your
+wiki.
+
+Example:
+
+=> gemini://campaignwiki.org/play/ijirait
+
 ## moku-pona.pl
 
 This extension is only useful if you're hosting your Gopher, Gemini,

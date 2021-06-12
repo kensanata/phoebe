@@ -15,12 +15,16 @@
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
 package App::Phoebe;
+our (@extensions, $log, $server);
+
+package App::Phoebe::Ijirait;
 use Modern::Perl;
 use File::Slurper qw(read_binary write_binary read_text);
 use List::Util qw(first);
 use Mojo::JSON qw(decode_json encode_json);
 use URI::Escape;
-our (@extensions, $log, $server);
+
+*success = \&App::Phoebe::success;
 
 =head1 Ijirait
 
@@ -56,13 +60,14 @@ my $ijirait_data;
 my $ijirait_next;
 
 # by default, /play/ijirait on all hosts is the same game
-our $ijirait_host = host_regex();
+our $ijirait_host = App::Phoebe::host_regex();
 
 # global commands
 our $ijirait_commands = {
   help => \&ijirait_help,
   look => \&ijirait_look,
   type => \&ijirait_type,
+  save => \&ijirait_save,
 };
 
 # load world on startup
@@ -81,7 +86,7 @@ Mojo::IOLoop->next_tick(sub {
 	  description => "A shape-shifter with red eyes.",
 	  fingerprint => "",
 	  location => $ijirait_next, # 2
-	  ts => time,
+	  ts => time(),
 	} ],
       rooms => [
 	{
@@ -116,10 +121,7 @@ Mojo::IOLoop->next_tick(sub {
     } } );
 
 # save every half hour
-Mojo::IOLoop->recurring(1800 => sub {
-  my $bytes = encode_json $ijirait_data;
-  my $dir = $server->{wiki_dir};
-  write_binary("$dir/ijirait.json", $bytes) });
+Mojo::IOLoop->recurring(1800 => \&ijirait_save_world);
 
 # main loop
 push(@extensions, \&ijirait_main);
@@ -127,7 +129,7 @@ push(@extensions, \&ijirait_main);
 sub ijirait_main {
   my $stream = shift;
   my $url = shift;
-  my $port = port($stream);
+  my $port = App::Phoebe::port($stream);
   if ($url =~ m!^gemini://$ijirait_host(?::$port)?/play/ijirait(/type)?(?:\?(.*))?$!) {
     # We're using /play/ijirait/type to ask the user to type a command so that
     # we can process /play/ijirait/type?command; otherwise things get difficult:
@@ -178,6 +180,7 @@ sub ijirait_new_person {
     description => "A shape-shifter with red eyes.",
     fingerprint => $fingerprint,
     location => 2, # The Tent
+    ts => time,
   };
   push(@{$ijirait_data->{people}}, $p);
   return $p;
@@ -207,12 +210,13 @@ sub ijirait_look {
   }
   $stream->write("## People\n");
   my $n = 0;
+  my $now = time();
   for my $o (@{$ijirait_data->{people}}) {
     next unless $o->{location} == $p->{location};
-    if ($o->{id} != $p->{id}) {
-      $n++;
-      $stream->write("=> /play/ijirait?$o->{name} $o->{name}\n");
-    }
+    next if $now - $o->{ts} > 600;      # don't show people inactive for 10min or more
+    next if $o->{id} == $p->{id};       # skip yourself
+    $n++;
+    $stream->write("=> /play/ijirait?$o->{name} $o->{name}\n");
   }
   if ($n) {
     $stream->write("And you, $p->{name}.\n");
@@ -221,17 +225,16 @@ sub ijirait_look {
   }
   $stream->write("## Words\n") if $room->{words};
   for my $word (@{$room->{words}}) {
-    next if time() - $word->{ts} > 600; # don't show messages older than 10min
+    next if $now - $word->{ts} > 600; # don't show messages older than 10min
     my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};
-    $stream->write(ijirait_time($word->{ts}) . ", " . $o->{name} . " said “" . $word->{text} . "”\n");
+    $stream->write(ijirait_time($now - $word->{ts}) . ", " . $o->{name} . " said “" . $word->{text} . "”\n");
   }
   ijirait_menu($stream);
 }
 
 sub ijirait_time {
-  my $ts = shift;
-  return "Some time ago" unless $ts;
-  my $seconds = time() - $ts;
+  my $seconds = shift;
+  return "Some time ago" unless $seconds;
   return sprintf("%d days ago", int($seconds/86400)) if abs($seconds) > 172800; # 2d
   return sprintf("%d hours ago", int($seconds/3600)) if abs($seconds) > 7200; # 2h
   return sprintf("%d minutes ago", int($seconds/60)) if abs($seconds) > 120; # 2min
@@ -305,6 +308,34 @@ sub ijirait_say {
   my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
   push(@{$room->{words}}, $w);
   ijirait_look($stream, $p);
+}
+
+sub ijirait_save {
+  my ($stream, $p) = @_;
+  ijirait_save_world();
+  success($stream);
+  $stream->write("# World Save\n");
+  $stream->write("Data was saved.\n");
+  $stream->write("=> /play/ijirait Back\n");
+}
+
+sub ijirait_save_world {
+  ijirait_cleanup();
+  my $bytes = encode_json $ijirait_data;
+  my $dir = $server->{wiki_dir};
+  write_binary("$dir/ijirait.json", $bytes);
+}
+
+sub ijirait_cleanup() {
+  my $now = time();
+  for my $room (@{$ijirait_data->{rooms}}) {
+    my @words;
+    for my $word (@{$room->{words}}) {
+      next if $now - $word->{ts} > 600; # don't show messages older than 10min
+      push(@words, $word);
+    }
+    $room->{words} = \@words;
+  }
 }
 
 1;

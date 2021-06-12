@@ -130,14 +130,16 @@ sub ijirait_main {
   my $stream = shift;
   my $url = shift;
   my $port = App::Phoebe::port($stream);
-  if ($url =~ m!^gemini://$ijirait_host(?::$port)?/play/ijirait(/type)?(?:\?(.*))?$!) {
+  if ($url =~ m!^gemini://$ijirait_host(?::$port)?/play/ijirait!) {
     # We're using /play/ijirait/type to ask the user to type a command so that
     # we can process /play/ijirait/type?command; otherwise things get difficult:
     # /play/ijirait could mean "look around" or "ask the user for input", which
     # is awkward; or we could ask the user for input using /play/ijirait?more
     # and then expect to receive /play/ijirait?more?command (maybe?). In short,
     # better to use a different URL.
-    my ($type, $command) = ($1, $2);
+    my ($command) = $url =~ /\?(.*)/;
+    my $type = $url =~ /\/type/;
+    $log->debug("Handling $url - " . ($command || "no command"));
     $command = uri_unescape($command);
     my $fingerprint = $stream->handle->get_fingerprint();
     if ($fingerprint) {

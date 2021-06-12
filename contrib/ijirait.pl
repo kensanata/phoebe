@@ -19,9 +19,10 @@ our (@extensions, $log, $server);
 
 package App::Phoebe::Ijirait;
 use Modern::Perl;
+use Encode qw(encode_utf8);
 use File::Slurper qw(read_binary write_binary read_text);
-use List::Util qw(first);
 use Mojo::JSON qw(decode_json encode_json);
+use List::Util qw(first);
 use URI::Escape;
 
 *success = \&App::Phoebe::success;
@@ -62,12 +63,16 @@ my $ijirait_next;
 # by default, /play/ijirait on all hosts is the same game
 our $ijirait_host = App::Phoebe::host_regex();
 
+Mojo::IOLoop->next_tick(sub {
+  $log->info("Serving Ijirait on $ijirait_host") });
+
 # global commands
 our $ijirait_commands = {
   help => \&ijirait_help,
   look => \&ijirait_look,
   type => \&ijirait_type,
   save => \&ijirait_save,
+  who  => \&ijirait_who,
 };
 
 # load world on startup
@@ -130,7 +135,7 @@ sub ijirait_main {
   my $stream = shift;
   my $url = shift;
   my $port = App::Phoebe::port($stream);
-  if ($url =~ m!^gemini://$ijirait_host(?::$port)?/play/ijirait!) {
+  if ($url =~ m!^gemini://(?:$ijirait_host)(?::$port)?/play/ijirait!) {
     # We're using /play/ijirait/type to ask the user to type a command so that
     # we can process /play/ijirait/type?command; otherwise things get difficult:
     # /play/ijirait could mean "look around" or "ask the user for input", which
@@ -228,7 +233,7 @@ sub ijirait_look {
   } else {
     $stream->write("Just you, $p->{name}.\n");
   }
-  $stream->write("## Words\n") if $room->{words};
+  $stream->write("## Words\n") if @{$room->{words}} > 0;
   for my $word (@{$room->{words}}) {
     next if $now - $word->{ts} > 600; # don't show messages older than 10min
     my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};
@@ -239,7 +244,8 @@ sub ijirait_look {
 
 sub ijirait_time {
   my $seconds = shift;
-  return "Some time ago" unless $seconds;
+  return "some time ago" if not defined $seconds;
+  return "just now" if $seconds == 0;
   return sprintf("%d days ago", int($seconds/86400)) if abs($seconds) > 172800; # 2d
   return sprintf("%d hours ago", int($seconds/3600)) if abs($seconds) > 7200; # 2h
   return sprintf("%d minutes ago", int($seconds/60)) if abs($seconds) > 120; # 2min
@@ -261,7 +267,7 @@ sub ijirait_help {
   my $dir = $server->{wiki_dir};
   my $file = "$dir/ijirait-help.gmi";
   if (-f $file) {
-    $stream->write(read_text($file));
+    $stream->write(encode_utf8 read_text($file));
   } else {
     $stream->write("The help file does not exist.\n");
   }
@@ -346,6 +352,17 @@ sub ijirait_cleanup() {
     }
     $room->{words} = \@words;
   }
+}
+
+sub ijirait_who {
+  my ($stream, $p) = @_;
+  my $now = time();
+  success($stream);
+  $stream->write("# Who are shape shifters?\n");
+  for my $o (sort { $b->{ts} <=> $a->{ts} } @{$ijirait_data->{people}}) {
+    $stream->write("* $o->{name}, active " . ijirait_time($now - $o->{ts}) . "\n");
+  }
+  $stream->write("=> /play/ijirait Back\n");
 }
 
 1;

@@ -393,6 +393,18 @@ sub ijirait_describe {
       $room->{description} = $description;
       $stream->write("30 /play/ijirait/look\r\n");
       return;
+    } elsif ($description =~ /(^.*) \((\w+)\)$/) {
+      my $name = $1;
+      my $direction = $2;
+      my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+      my $exit = first { $_->{direction} eq $obj } @{$room->{exits}};
+      if ($exit) {
+	$log->debug("Describing $exit->{name}");
+	$exit->{name} = $name;
+	$exit->{direction} = $direction;
+	$stream->write("30 /play/ijirait/look\r\n");
+	return;
+      }
     }
   }
   success($stream);

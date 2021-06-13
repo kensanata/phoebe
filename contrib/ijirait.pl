@@ -80,6 +80,7 @@ our $ijirait_commands = {
   describe => \&ijirait_describe,
   name     => \&ijirait_name,
   exit     => \&ijirait_exit,
+  rooms    => \&ijirait_rooms,
 };
 
 # load world on startup
@@ -492,6 +493,17 @@ sub ijirait_new_exit {
   };
   push(@{$from->{exits}}, $e);
   return $e;
+}
+
+sub ijirait_rooms {
+  my ($stream, $p) = @_;
+  $log->debug("Listing all rooms");
+  success($stream);
+  $stream->write("# Rooms\n");
+  for my $room (sort @{$ijirait_data->{rooms}}) {
+    $stream->write(encode_utf8 "* $room->{name}\n");
+  }
+  $stream->write("=> /play/ijirait Back\n");
 }
 
 1;

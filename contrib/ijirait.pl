@@ -121,7 +121,7 @@ Mojo::IOLoop->next_tick(sub {
 	{
 	  id => $ijirait_next++, # 4
 	  name => "Outside The Tent",
-	  description => "You're standing in a rocky hollow, somewhat protected from the wind. There's a large tent, here.",
+	  description => "You’re standing in a rocky hollow, somewhat protected from the wind. There’s a large tent, here.",
 	  exits => [
 	    {
 	      id => $ijirait_next++, # 5
@@ -380,8 +380,14 @@ sub ijirait_describe {
     my ($obj, $description) = split(/\s+/, $text, 2);
     if ($obj eq "me") {
       $log->debug("Describing $p->{name}");
-      $p->{description} = $text;
+      $p->{description} = $description;
       $stream->write("30 /play/ijirait/examine?$p->{name}\r\n");
+      return;
+    } elsif ($obj eq "room") {
+      my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+      $log->debug("Describing $room->{name}");
+      $room->{description} = $description;
+      $stream->write("30 /play/ijirait/look\r\n");
       return;
     }
   }

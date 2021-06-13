@@ -185,7 +185,7 @@ sub ijirait_new_person {
   my $fingerprint = shift;
   my $p = {
     id => $ijirait_next++,
-    name => ijirait_name(),
+    name => ijirait_person_name(),
     description => "A shape-shifter with red eyes.",
     fingerprint => $fingerprint,
     location => 2, # The Tent
@@ -195,7 +195,7 @@ sub ijirait_new_person {
   return $p;
 }
 
-sub ijirait_name {
+sub ijirait_person_name {
   my $digraphs = "..lexegezacebisousesarmaindire.aeratenberalavetiedorquanteisrion";
   my $max = length($digraphs);
   my $length = 4 + rand(7); # 4-8

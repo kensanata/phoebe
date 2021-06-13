@@ -263,6 +263,10 @@ sub ijirait_help {
   } else {
     $stream->write("The help file does not exist.\n");
   }
+  $stream->write("## Automatically Generated Command List\n");
+  for my $command (sort keys %$ijirait_commands) {
+    $stream->write("* $command\n");
+  }
 }
 
 sub ijirait_type {

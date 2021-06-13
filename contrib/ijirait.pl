@@ -78,6 +78,7 @@ our $ijirait_commands = {
   go       => \&ijirait_go,
   examine  => \&ijirait_examine,
   describe => \&ijirait_describe,
+  name     => \&ijirait_name,
   exit     => \&ijirait_exit,
 };
 
@@ -88,48 +89,52 @@ Mojo::IOLoop->next_tick(sub {
     my $bytes = read_binary("$dir/ijirait.json");
     $ijirait_data = decode_json $bytes;
   } else {
-    $ijirait_next = 1;
-    $ijirait_data = {
-      people => [
-	{
-	  id => $ijirait_next++, # 1
-	  name => "Ijiraq",
-	  description => "A shape-shifter with red eyes.",
-	  fingerprint => "",
-	  location => $ijirait_next, # 2
-	  ts => time(),
-	} ],
-      rooms => [
-	{
-	  id => $ijirait_next++, # 2
-	  name => "The Tent",
-	  description => "This is a large tent, illuminated by candles.",
-	  exits => [
-	    {
-	      id => $ijirait_next++, # 3
-	      name => "An exit leads outside.",
-	      direction => "out",
-	      destination => $ijirait_next,
-	    } ],
-	  words => [
-	    {
-	      text => "Welcome!",
-	      by => 1, # Ijirait
-	      ts => time,
-	    } ],
-	},
-	{
-	  id => $ijirait_next++, # 4
-	  name => "Outside The Tent",
-	  description => "You’re standing in a rocky hollow, somewhat protected from the wind. There’s a large tent, here.",
-	  exits => [
-	    {
-	      id => $ijirait_next++, # 5
-	      name => "A tent flap leads inside.",
-	      direction => "tent",
-	      destination => 2, # The Tent
-	    } ] } ] };
-    } } );
+    ijirait_init();
+  } } );
+
+sub ijirait_init {
+  $ijirait_next = 1;
+  $ijirait_data = {
+    people => [
+      {
+	id => $ijirait_next++, # 1
+	name => "Ijiraq",
+	description => "A shape-shifter with red eyes.",
+	fingerprint => "",
+	location => $ijirait_next, # 2
+	ts => time(),
+      } ],
+    rooms => [
+      {
+	id => $ijirait_next++, # 2
+	name => "The Tent",
+	description => "This is a large tent, illuminated by candles.",
+	exits => [
+	  {
+	    id => $ijirait_next++, # 3
+	    name => "An exit leads outside.",
+	    direction => "out",
+	    destination => $ijirait_next,
+	  } ],
+	words => [
+	  {
+	    text => "Welcome!",
+	    by => 1, # Ijirait
+	    ts => time,
+	  } ],
+      },
+      {
+	id => $ijirait_next++, # 4
+	name => "Outside The Tent",
+	description => "You’re standing in a rocky hollow, somewhat protected from the wind. There’s a large tent, here.",
+	exits => [
+	  {
+	    id => $ijirait_next++, # 5
+	    name => "A tent flap leads inside.",
+	    direction => "tent",
+	    destination => 2, # The Tent
+	  } ] } ] };
+};
 
 # save every half hour
 Mojo::IOLoop->recurring(1800 => \&ijirait_save_world);
@@ -393,24 +398,52 @@ sub ijirait_describe {
       $room->{description} = $description;
       $stream->write("30 /play/ijirait/look\r\n");
       return;
-    } elsif ($description =~ /(^.*) \((\w+)\)$/) {
-      my $name = $1;
-      my $direction = $2;
-      my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
-      my $exit = first { $_->{direction} eq $obj } @{$room->{exits}};
-      if ($exit) {
-	$log->debug("Describing $exit->{name}");
-	$exit->{name} = $name;
-	$exit->{direction} = $direction;
-	$stream->write("30 /play/ijirait/look\r\n");
-	return;
-      }
     }
   }
   success($stream);
   $log->debug("Describing unknown object");
   $stream->write("# I don't know what to describe\n");
   $stream->write(encode_utf8 "The description needs needs to start with what to describe, e.g. “describe me A shape-shifter with red eyes.”\n");
+  $stream->write(encode_utf8 "You can describe yourself (“me”), the room you are in (“room”), or an exit (using its shortcut).\n");
+  $stream->write("=> /play/ijirait Back\n");
+}
+
+sub ijirait_name {
+  my ($stream, $p, $text) = @_;
+  if ($text) {
+    my ($obj, $name) = split(/\s+/, $text, 2);
+    if ($obj eq "me" and $name !~ /\s/) {
+      $log->debug("Name $p->{name}");
+      $p->{name} = $name;
+      $stream->write("30 /play/ijirait/examine?$p->{name}\r\n");
+      return;
+    } elsif ($obj eq "room") {
+      my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+      $log->debug("Name $room->{name}");
+      $room->{name} = $name;
+      $stream->write("30 /play/ijirait/look\r\n");
+      return;
+    } else {
+      my $direction;
+      if ($name =~ /(^.*) \((\w+)\)$/) {
+	$name = $1;
+	$direction = $2;
+      }
+      my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+      my $exit = first { $_->{direction} eq $obj } @{$room->{exits}};
+      if ($exit) {
+	$log->debug("Name $exit->{name}");
+	$exit->{name} = $name;
+	$exit->{direction} = $direction if $direction;
+	$stream->write("30 /play/ijirait/look\r\n");
+	return;
+      }
+    }
+  }
+  success($stream);
+  $log->debug("Naming unknown object");
+  $stream->write("# I don't know what to name\n");
+  $stream->write(encode_utf8 "The command needs needs to start with what to name, e.g. “name me Sogeeran.”\n");
   $stream->write("=> /play/ijirait Back\n");
 }
 

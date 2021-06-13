@@ -78,6 +78,7 @@ our $ijirait_commands = {
   go       => \&ijirait_go,
   examine  => \&ijirait_examine,
   describe => \&ijirait_describe,
+  exit     => \&ijirait_exit,
 };
 
 # load world on startup
@@ -375,8 +376,67 @@ sub ijirait_who {
 
 sub ijirait_describe {
   my ($stream, $p, $text) = @_;
-  $p->{description} = $text;
-  $stream->write("30 /play/ijirait/examine?$p->{name}\r\n");
+  if ($text) {
+    my ($obj, $description) = split(/\s+/, $text, 2);
+    if ($obj eq "me") {
+      $log->debug("Describing $p->{name}");
+      $p->{description} = $text;
+      $stream->write("30 /play/ijirait/examine?$p->{name}\r\n");
+      return;
+    }
+  }
+  success($stream);
+  $log->debug("Describing unknown object");
+  $stream->write("# I don't know what to describe\n");
+  $stream->write(encode_utf8 "The description needs needs to start with what to describe, e.g. “describe me A shape-shifter with red eyes.”\n");
+  $stream->write("=> /play/ijirait Back\n");
+}
+
+sub ijirait_exit {
+  my ($stream, $p, $text) = @_;
+  if ($text and $text =~ /(^.*) \((\w+)\)$/) {
+    my $name = $1;
+    my $direction = $2;
+    $log->debug("New exit: $text");
+    my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+    my $dest = ijirait_new_room();
+    my $exit = ijirait_new_exit($room, $dest);
+    $exit->{name} = $name;
+    $exit->{direction} = $direction;
+    ijirait_new_exit($dest, $room);
+    $stream->write("30 /play/ijirait\r\n");
+  } else {
+    success($stream);
+    $log->debug("Exit needs a description");
+    $stream->write("# Exit needs a description\n");
+    $stream->write(encode_utf8 "The exit needs a description ending with a shortcut in brackets, e.g. “Down to the Marshlands (marsh)”.\n");
+    $stream->write("=> /play/ijirait Back\n");
+  }
+}
+
+sub ijirait_new_room {
+  my $r = {
+    id => $ijirait_next++,
+    name => "Lost in fog",
+    description => "Dense fog surrounds you. Nothing can be discerned in this gloom.",
+    exits => [],
+    ts => time,
+  };
+  push(@{$ijirait_data->{rooms}}, $r);
+  return $r;
+}
+
+sub ijirait_new_exit {
+  # $from and $to are rooms
+  my ($from, $to) = @_;
+  my $e = {
+    id => $ijirait_next++,
+    name => "A tunnel",
+    direction => "tunnel",
+    destination => $to->{id},
+  };
+  push(@{$from->{exits}}, $e);
+  return $e;
 }
 
 1;

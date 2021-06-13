@@ -79,7 +79,7 @@ our $ijirait_commands = {
   examine  => \&ijirait_examine,
   describe => \&ijirait_describe,
   name     => \&ijirait_name,
-  exit     => \&ijirait_exit,
+  create   => \&ijirait_create,
   rooms    => \&ijirait_rooms,
 };
 
@@ -448,31 +448,27 @@ sub ijirait_name {
   $stream->write("=> /play/ijirait Back\n");
 }
 
-sub ijirait_exit {
-  my ($stream, $p, $text) = @_;
-  if ($text and $text =~ /(^.*) \((\w+)\)$/) {
-    my $name = $1;
-    my $direction = $2;
-    $log->debug("New exit: $text");
+sub ijirait_create {
+  my ($stream, $p, $obj) = @_;
+  if ($obj eq "room") {
+    $log->debug("Create room");
     my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
     my $dest = ijirait_new_room();
     my $exit = ijirait_new_exit($room, $dest);
-    $exit->{name} = $name;
-    $exit->{direction} = $direction;
     ijirait_new_exit($dest, $room);
     $stream->write("30 /play/ijirait\r\n");
   } else {
     success($stream);
-    $log->debug("Exit needs a description");
-    $stream->write("# Exit needs a description\n");
-    $stream->write(encode_utf8 "The exit needs a description ending with a shortcut in brackets, e.g. “Down to the Marshlands (marsh)”.\n");
+    $log->debug("Cannot create '$obj'");
+    $stream->write(encode_utf8 "# Cannot create new “$obj”\n");
+    $stream->write("Currently, all you can create a room: “create room”.\n");
     $stream->write("=> /play/ijirait Back\n");
   }
 }
 
 sub ijirait_new_room {
   my $r = {
-    id => $ijirait_next++,
+    id => $ijirait_data->{next}++,
     name => "Lost in fog",
     description => "Dense fog surrounds you. Nothing can be discerned in this gloom.",
     exits => [],

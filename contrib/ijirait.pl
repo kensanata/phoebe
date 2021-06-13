@@ -58,9 +58,6 @@ description for up to 10min as long as your character is still in the room.
 # available
 my $ijirait_data;
 
-# the sequence from where all ids are generated
-my $ijirait_next;
-
 # by default, /play/ijirait on all hosts is the same game
 our $ijirait_host = App::Phoebe::host_regex();
 
@@ -94,28 +91,28 @@ Mojo::IOLoop->next_tick(sub {
   } } );
 
 sub ijirait_init {
-  $ijirait_next = 1;
+  my $next = 1;
   $ijirait_data = {
     people => [
       {
-	id => $ijirait_next++, # 1
+	id => $next++, # 1
 	name => "Ijiraq",
 	description => "A shape-shifter with red eyes.",
 	fingerprint => "",
-	location => $ijirait_next, # 2
+	location => $next, # 2
 	ts => time(),
       } ],
     rooms => [
       {
-	id => $ijirait_next++, # 2
+	id => $next++, # 2
 	name => "The Tent",
 	description => "This is a large tent, illuminated by candles.",
 	exits => [
 	  {
-	    id => $ijirait_next++, # 3
+	    id => $next++, # 3
 	    name => "An exit leads outside.",
 	    direction => "out",
-	    destination => $ijirait_next,
+	    destination => $next,
 	  } ],
 	words => [
 	  {
@@ -125,16 +122,17 @@ sub ijirait_init {
 	  } ],
       },
       {
-	id => $ijirait_next++, # 4
+	id => $next++, # 4
 	name => "Outside The Tent",
 	description => "You’re standing in a rocky hollow, somewhat protected from the wind. There’s a large tent, here.",
 	exits => [
 	  {
-	    id => $ijirait_next++, # 5
+	    id => $next++, # 5
 	    name => "A tent flap leads inside.",
 	    direction => "tent",
 	    destination => 2, # The Tent
 	  } ] } ] };
+  $ijirait_data->{next} = $next;
 };
 
 # save every half hour
@@ -184,7 +182,7 @@ sub ijirait_main {
 sub ijirait_new_person {
   my $fingerprint = shift;
   my $p = {
-    id => $ijirait_next++,
+    id => $ijirait_data->{next}++,
     name => ijirait_person_name(),
     description => "A shape-shifter with red eyes.",
     fingerprint => $fingerprint,
@@ -273,6 +271,7 @@ sub ijirait_help {
   for my $command (sort keys %$ijirait_commands) {
     $stream->write("* $command\n");
   }
+  $stream->write("=> /play/ijirait Back\n");
 }
 
 sub ijirait_type {
@@ -482,7 +481,7 @@ sub ijirait_new_exit {
   # $from and $to are rooms
   my ($from, $to) = @_;
   my $e = {
-    id => $ijirait_next++,
+    id => $ijirait_data->{next}++,
     name => "A tunnel",
     direction => "tunnel",
     destination => $to->{id},

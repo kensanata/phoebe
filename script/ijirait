@@ -101,7 +101,8 @@ while (defined ($_ = shift(@queue) || $term->readline($prompt))) {
       $stream->on(read => sub {
 	my ($stream, $bytes) = @_;
 	my $text = to_text(decode_utf8($bytes));
-	print encode(locale => $text) });
+	print encode(locale => $text);
+	push(@queue, "look") if $bytes =~ /^3/; });
       # Write request to the server
       $stream->write("$talk_url?$text\r\n")});
   # Start event loop if necessary
@@ -112,7 +113,7 @@ while (defined ($_ = shift(@queue) || $term->readline($prompt))) {
 
 sub to_text {
   my $text = shift;
-  $text =~ s/^2.*\n//; # skip headers
+  $text =~ s/^[23].*\n//; # skip headers
   $text =~ s/^=> \S+ (type|Back)\n//gm; # drop type command from the list, and the help page
   my @lines = split(/\n/, $text);
   my $section = "";

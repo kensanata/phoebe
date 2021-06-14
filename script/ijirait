@@ -1,0 +1,109 @@
+#!/usr/bin/env perl
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
+
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>.
+
+=encoding utf8
+
+=head1 Ijirait Client
+
+This is a test client.
+
+First, generate your client certificate for as many or as few days as you like:
+
+    openssl req -new -x509 -newkey ec -subj "/CN=Alex" \
+      -pkeyopt ec_paramgen_curve:prime256v1 -days 100 \
+      -nodes -out cert.pem -keyout key.pem
+
+Then start this program to say something:
+
+    ijirait --cert=cert.pem --key=key.pem \
+      --url=gemini://campaignwiki.org/play/ijirait
+
+=cut
+
+use Modern::Perl '2018';
+use Mojo::IOLoop;
+use Pod::Text;
+use Getopt::Long;
+use Term::ReadLine;
+use URI::Escape;
+use Encode::Locale;
+use Encode qw(decode_utf8 encode_utf8 decode encode);
+
+my $cert;
+my $key;
+my $help;
+my $url;
+
+GetOptions(
+  'help' => \$help,
+  'cert_file=s' => \$cert,
+  'key_file=s' => \$key,
+  'url=s' => \$url)
+    or die("Error in command line arguments\n");
+
+# Help
+if ($help) {
+  my $parser = Pod::Text->new();
+  $parser->parse_file($0);
+  exit;
+}
+
+die "⚠ You must provide --url, e.g. --url=gemini://campaignwiki.org/play/ijirait\n" unless $url;
+die "⚠ You must provide --cert_file, e.g. --cert_file=cert.pem\n" unless $cert;
+die "⚠ You must provide --key_file, e.g. --key_file=key.pem\n" unless $key;
+die "⚠ You must provide an existing --cert_file\n" unless -f $cert;
+die "⚠ You must provide an existing --key_file\n" unless -f $key;
+
+my $talk_url = "$url/type";
+
+my($scheme, $authority, $path, $query, $fragment) =
+    $url =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?|;
+
+die "⚠ The URL '$url' must use the gemini scheme\n" unless $scheme and $scheme eq 'gemini';
+
+my ($host, $port) = split(/:/, $authority, 2);
+$port //= 1965;
+
+say "Use 'quit' to leave the game.";
+
+my @queue = qw(look);
+
+# start read loop for saying stuff
+my $term = Term::ReadLine->new("Ijirait");
+my $prompt = "> ";
+my $OUT = $term->OUT || \*STDOUT;
+while (defined ($_ = shift(@queue) || $term->readline($prompt))) {
+  exit if $_ eq "quit";
+  # create client
+  my $text = uri_escape(encode_utf8(decode(locale => $_)));
+  Mojo::IOLoop->client({
+    address => $host,
+    port => $port,
+    tls => 1,
+    tls_cert => $cert,
+    tls_key => $key,
+    tls_verify => 0x00, } => sub {
+      my ($loop, $err, $stream) = @_;
+      $stream->on(read => sub {
+	my ($stream, $bytes) = @_;
+	print encode(locale => decode_utf8 $bytes) });
+      # Write request to the server
+      $stream->write("$talk_url?$text\r\n")});
+  # Start event loop if necessary
+  Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
+  # Add to history
+  $term->addhistory($_) if /\S/;
+}

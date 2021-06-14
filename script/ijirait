@@ -38,6 +38,7 @@ use Mojo::IOLoop;
 use Pod::Text;
 use Getopt::Long;
 use Term::ReadLine;
+use Term::ANSIColor;
 use URI::Escape;
 use Encode::Locale;
 use Encode qw(decode_utf8 encode_utf8 decode encode);
@@ -99,11 +100,32 @@ while (defined ($_ = shift(@queue) || $term->readline($prompt))) {
       my ($loop, $err, $stream) = @_;
       $stream->on(read => sub {
 	my ($stream, $bytes) = @_;
-	print encode(locale => decode_utf8 $bytes) });
+	my $text = to_text(decode_utf8($bytes));
+	print encode(locale => $text) });
       # Write request to the server
       $stream->write("$talk_url?$text\r\n")});
   # Start event loop if necessary
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
   # Add to history
   $term->addhistory($_) if /\S/;
+}
+
+sub to_text {
+  my $text = shift;
+  $text =~ s/^2.*\n//; # skip headers
+  $text =~ s/^=> \S+ (type|Back)\n//gm; # drop type command from the list, and the help page
+  my @lines = split(/\n/, $text);
+  my $section = "";
+  for (@lines) {
+    $section = $1 if /^## (.*)/;
+    if ($section eq "Exits") {
+      s/^=> \S+\s+(.*?) \((\S+)\)$/"* $1 (" . colored($2, 'bold') . ")"/e;
+    } else {
+      s/^=> \S+\s+(.*)/"* " . colored($1, 'bold')/e;
+    }
+    s/^# (.*)/colored($1, 'bold underline')/e;
+    s/^## (.*)/colored($1, 'underline')/e;
+    s/^### (.*)/colored($1, 'italic')/e;
+  }
+  return join("\n", @lines, "");
 }

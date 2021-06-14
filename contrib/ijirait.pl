@@ -78,6 +78,7 @@ our $ijirait_commands = {
   name     => \&ijirait_name,
   create   => \&ijirait_create,
   rooms    => \&ijirait_rooms,
+  connect  => \&ijirait_connect,
 };
 
 # load world on startup
@@ -502,6 +503,27 @@ sub ijirait_rooms {
   for my $room (sort @{$ijirait_data->{rooms}}) {
     $stream->write(encode_utf8 "* $room->{name}\n");
   }
+  $stream->write("=> /play/ijirait Back\n");
+}
+
+sub ijirait_connect {
+  my ($stream, $p, $name) = @_;
+  if ($name) {
+    my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+    my $dest = first { $_->{name} eq $name } @{$ijirait_data->{rooms}};
+    if ($dest) {
+      $log->debug("Connecting $name");
+      ijirait_new_exit($room, $dest);
+      ijirait_new_exit($dest, $room);
+      $stream->write("30 /play/ijirait\r\n");
+      return;
+    }
+  }
+  success($stream);
+  $log->debug("Cannot connect '$name'");
+  $stream->write(encode_utf8 "# Cannot connect “$name”\n");
+  $stream->write(encode_utf8 "You need to provide the name of an existing room: “connect <room>”.\n");
+  $stream->write(encode_utf8 "You can get a list of all existing rooms using “rooms”.\n");
   $stream->write("=> /play/ijirait Back\n");
 }
 

@@ -213,7 +213,8 @@ sub ijirait_look {
   $stream->write(encode_utf8 $room->{description} . "\n") if $room->{description};
   $stream->write("## Exits\n") if $room->{exits};
   for my $exit (@{$room->{exits}}) {
-    $stream->write(encode_utf8 "=> /play/ijirait/go?$exit->{direction} $exit->{name} ($exit->{direction})\n");
+    my $direction = uri_escape $exit->{direction};
+    $stream->write(encode_utf8 "=> /play/ijirait/go?$direction $exit->{name} ($exit->{direction})\n");
   }
   $stream->write("## People\n");
   my $n = 0;
@@ -222,10 +223,11 @@ sub ijirait_look {
     next unless $o->{location} == $p->{location};
     next if $now - $o->{ts} > 600;      # don't show people inactive for 10min or more
     $n++;
+    my $name = uri_escape $o->{name};
     if ($o->{id} == $p->{id}) {
-      $stream->write(encode_utf8 "=> /play/ijirait/examine?$o->{name} $o->{name} (you)\n");
+      $stream->write(encode_utf8 "=> /play/ijirait/examine?$name $o->{name} (you)\n");
     } else {
-      $stream->write(encode_utf8 "=> /play/ijirait/examine?$o->{name} $o->{name}\n");
+      $stream->write(encode_utf8 "=> /play/ijirait/examine?$name $o->{name}\n");
     }
   }
   my $title = 0;
@@ -376,7 +378,7 @@ sub ijirait_who {
   my ($stream, $p) = @_;
   my $now = time();
   success($stream);
-  $stream->write("# Who are shape shifters?\n");
+  $stream->write("# Who are the shape shifters?\n");
   for my $o (sort { $b->{ts} <=> $a->{ts} } @{$ijirait_data->{people}}) {
     $stream->write(encode_utf8 "* $o->{name}, active " . ijirait_time($now - $o->{ts}) . "\n");
   }
@@ -390,7 +392,8 @@ sub ijirait_describe {
     if ($obj eq "me") {
       $log->debug("Describing $p->{name}");
       $p->{description} = $description;
-      $stream->write("30 /play/ijirait/examine?$p->{name}\r\n");
+      my $name = uri_escape $p->{name};
+      $stream->write("30 /play/ijirait/examine?$name\r\n");
       return;
     } elsif ($obj eq "room") {
       my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
@@ -402,7 +405,7 @@ sub ijirait_describe {
   }
   success($stream);
   $log->debug("Describing unknown object");
-  $stream->write("# I don't know what to describe\n");
+  $stream->write(encode_utf8 "# I don’t know what to describe\n");
   $stream->write(encode_utf8 "The description needs needs to start with what to describe, e.g. “describe me A shape-shifter with red eyes.”\n");
   $stream->write(encode_utf8 "You can describe yourself (“me”), the room you are in (“room”), or an exit (using its shortcut).\n");
   $stream->write("=> /play/ijirait Back\n");
@@ -415,7 +418,8 @@ sub ijirait_name {
     if ($obj eq "me" and $name !~ /\s/) {
       $log->debug("Name $p->{name}");
       $p->{name} = $name;
-      $stream->write("30 /play/ijirait/examine?$p->{name}\r\n");
+      my $nm = uri_escape $p->{name};
+      $stream->write("30 /play/ijirait/examine?$nm\r\n");
       return;
     } elsif ($obj eq "room") {
       my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
@@ -442,7 +446,7 @@ sub ijirait_name {
   }
   success($stream);
   $log->debug("Naming unknown object");
-  $stream->write("# I don't know what to name\n");
+  $stream->write(encode_utf8 "# I don’t know what to name\n");
   $stream->write(encode_utf8 "The command needs needs to start with what to name, e.g. “name me Sogeeran.”\n");
   $stream->write("=> /play/ijirait Back\n");
 }
@@ -460,7 +464,7 @@ sub ijirait_create {
     success($stream);
     $log->debug("Cannot create '$obj'");
     $stream->write(encode_utf8 "# Cannot create new “$obj”\n");
-    $stream->write("Currently, all you can create a room: “create room”.\n");
+    $stream->write(encode_utf8 "Currently, all you can create is a room: “create room”.\n");
     $stream->write("=> /play/ijirait Back\n");
   }
 }

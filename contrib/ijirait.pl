@@ -23,6 +23,7 @@ use Encode qw(encode_utf8 decode_utf8);
 use File::Slurper qw(read_binary write_binary read_text);
 use Mojo::JSON qw(decode_json encode_json);
 use List::Util qw(first);
+use Graph::Easy;
 use URI::Escape;
 use utf8;
 
@@ -79,6 +80,7 @@ our $ijirait_commands = {
   create   => \&ijirait_create,
   rooms    => \&ijirait_rooms,
   connect  => \&ijirait_connect,
+  map      => \&ijirait_map,
 };
 
 # load world on startup
@@ -540,6 +542,31 @@ sub ijirait_connect {
   $stream->write(encode_utf8 "You need to provide the name of an existing room: “connect <room>”.\n");
   $stream->write(encode_utf8 "You can get a list of all existing rooms using “rooms”.\n");
   $stream->write("=> /play/ijirait Back\n");
+}
+
+sub ijirait_map {
+  my ($stream, $p) = @_;
+  success($stream);
+  $log->debug("Drawing a map");
+  my $graph = Graph::Easy->new();
+  my %rooms;
+  for (@{$ijirait_data->{rooms}}) {
+    my $name = "$_->{name} ($_->{id})";
+    $rooms{$_->{id}} = $name;
+    $graph->add_node($name);
+  }
+  for my $room (@{$ijirait_data->{rooms}}) {
+    my $from = $rooms{$room->{id}};
+    for my $exit (@{$room->{exits}}) {
+      my $to = $rooms{$exit->{destination}};
+      my $edge = $graph->add_edge($from, $to);
+      $edge->set_attribute("label", $exit->{direction});
+    }
+  }
+  $stream->write("# Map\n");
+  $stream->write("```\n");
+  $stream->write(encode_utf8 $graph->as_boxart());
+  $stream->write("```\n");
 }
 
 1;

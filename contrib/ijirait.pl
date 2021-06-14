@@ -365,6 +365,7 @@ sub ijirait_save_world {
 
 sub ijirait_cleanup() {
   my $now = time();
+  my %people = map { $_->{location} => 1 } @{$ijirait_data->{people}};
   for my $room (@{$ijirait_data->{rooms}}) {
     my @words;
     for my $word (@{$room->{words}}) {
@@ -372,6 +373,12 @@ sub ijirait_cleanup() {
       push(@words, $word);
     }
     $room->{words} = \@words;
+    # unpopulated rooms get a timestamp
+    if ($people{$room->{id}}) {
+      delete $room->{ts};
+    } elsif (not $room->{ts}) {
+      $room->{ts} = time();
+    }
   }
 }
 
@@ -500,8 +507,16 @@ sub ijirait_rooms {
   $log->debug("Listing all rooms");
   success($stream);
   $stream->write("# Rooms\n");
-  for my $room (sort @{$ijirait_data->{rooms}}) {
-    $stream->write(encode_utf8 "* $room->{name}\n");
+  my $now = time();
+  my %activity;
+  for my $o (@{$ijirait_data->{people}}) {
+    $activity{$o->{location}} = $o->{ts} if not $activity{$o->{location}} or $o->{ts} > $activity{$o->{location}};
+  }
+  for my $room (sort { ($activity{$b->{id}}||$b->{ts}||0) <=> ($activity{$a->{id}}||$a->{ts}||0) } @{$ijirait_data->{rooms}}) {
+    $stream->write(encode_utf8 "* $room->{name}");
+    $stream->write(", last activity " . ijirait_time($now - $activity{$room->{id}})) if $activity{$room->{id}};
+    $stream->write(", last visit more than " . ijirait_time($now - $room->{ts})) if $room->{ts};
+    $stream->write("\n");
   }
   $stream->write("=> /play/ijirait Back\n");
 }

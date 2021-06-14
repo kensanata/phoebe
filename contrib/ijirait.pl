@@ -567,6 +567,7 @@ sub ijirait_map {
   $stream->write("```\n");
   $stream->write(encode_utf8 $graph->as_boxart());
   $stream->write("```\n");
+  $stream->write("=> /play/ijirait Back\n");
 }
 
 1;

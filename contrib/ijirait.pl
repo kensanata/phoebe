@@ -380,7 +380,9 @@ sub ijirait_who {
   success($stream);
   $stream->write("# Who are the shape shifters?\n");
   for my $o (sort { $b->{ts} <=> $a->{ts} } @{$ijirait_data->{people}}) {
-    $stream->write(encode_utf8 "* $o->{name}, active " . ijirait_time($now - $o->{ts}) . "\n");
+    $stream->write(encode_utf8 "* $o->{name}, active " . ijirait_time($now - $o->{ts}));
+    $stream->write(" (" . substr($o->{fingerprint}, 7, 6) . ")") if $o->{fingerprint};
+    $stream->write("\n");
   }
   $stream->write("=> /play/ijirait Back\n");
 }

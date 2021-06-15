@@ -81,6 +81,7 @@ our $ijirait_commands = {
   rooms    => \&ijirait_rooms,
   connect  => \&ijirait_connect,
   map      => \&ijirait_map,
+  inscribe => \&ijirait_inscribe,
 };
 
 our $ijrait_commands_without_cert = {
@@ -216,19 +217,24 @@ sub ijirait_look {
   my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
   $stream->write(encode_utf8 "# " . $room->{name} . "\n");
   $stream->write(encode_utf8 $room->{description} . "\n") if $room->{description};
-  $stream->write("## Exits\n") if $room->{exits};
+  $stream->write("## Things\n") if @{$room->{things}} > 0;
+  for my $thing (@{$room->{things}}) {
+    my $name = uri_escape_utf8 $thing->{name};
+    $stream->write(encode_utf8 "=> /play/ijirait/examine?$name $thing->{name} ($thing->{short})\n");
+  }
+  $stream->write("## Exits\n") if @{$room->{exits}} > 0;
   for my $exit (@{$room->{exits}}) {
-    my $direction = uri_escape $exit->{direction};
+    my $direction = uri_escape_utf8 $exit->{direction};
     $stream->write(encode_utf8 "=> /play/ijirait/go?$direction $exit->{name} ($exit->{direction})\n");
   }
-  $stream->write("## People\n");
+  $stream->write("## People\n"); # there is always at least the observer!
   my $n = 0;
   my $now = time();
   for my $o (@{$ijirait_data->{people}}) {
     next unless $o->{location} == $p->{location};
     next if $now - $o->{ts} > 600;      # don't show people inactive for 10min or more
     $n++;
-    my $name = uri_escape $o->{name};
+    my $name = uri_escape_utf8 $o->{name};
     if ($o->{id} == $p->{id}) {
       $stream->write(encode_utf8 "=> /play/ijirait/examine?$name $o->{name} (you)\n");
     } else {
@@ -341,12 +347,21 @@ sub ijirait_examine {
     $stream->write(encode_utf8 "# $o->{name}\n");
     $stream->write(encode_utf8 "$o->{description}\n");
     $stream->write("=> /play/ijirait Back\n");
-  } else {
-    $log->debug("Unknown target '$name'");
-    $stream->write(encode_utf8 "# Unknown target “$name”\n");
-    $stream->write("No such person or object is visible.\n");
-    $stream->write("=> /play/ijirait Back\n");
+    return;
   }
+  my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+  my $thing = first { $_->{short} eq $name } @{$room->{things}};
+  if ($thing) {
+    $log->debug("Looking at '$thing->{name}'");
+    $stream->write(encode_utf8 "# $thing->{name}\n");
+    $stream->write(encode_utf8 "$thing->{description}\n");
+    $stream->write("=> /play/ijirait Back\n");
+    return;
+  }
+  $log->debug("Unknown target '$name'");
+  $stream->write(encode_utf8 "# Unknown target “$name”\n");
+  $stream->write("No such person or object is visible.\n");
+  $stream->write("=> /play/ijirait Back\n");
 }
 
 sub ijirait_say {
@@ -418,14 +433,23 @@ sub ijirait_describe {
     if ($obj eq "me") {
       $log->debug("Describing $p->{name}");
       $p->{description} = $description;
-      my $name = uri_escape $p->{name};
+      my $name = uri_escape_utf8 $p->{name};
       $stream->write("30 /play/ijirait/examine?$name\r\n");
       return;
-    } elsif ($obj eq "room") {
-      my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+    }
+    my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+    if ($obj eq "room") {
       $log->debug("Describing $room->{name}");
       $room->{description} = $description;
       $stream->write("30 /play/ijirait/look\r\n");
+      return;
+    }
+    my $thing = first { $_->{short} eq $obj } @{$room->{things}};
+    if ($thing) {
+      $log->debug("Describe $thing->{name}");
+      $thing->{description} = $description;
+      my $name = uri_escape_utf8 $thing->{short};
+      $stream->write("30 /play/ijirait/examine?$name\r\n");
       return;
     }
   }
@@ -444,7 +468,7 @@ sub ijirait_name {
     if ($obj eq "me" and $name !~ /\s/) {
       $log->debug("Name $p->{name}");
       $p->{name} = $name;
-      my $nm = uri_escape $p->{name};
+      my $nm = uri_escape_utf8 $p->{name};
       $stream->write("30 /play/ijirait/examine?$nm\r\n");
       return;
     } elsif ($obj eq "room") {
@@ -454,17 +478,25 @@ sub ijirait_name {
       $stream->write("30 /play/ijirait/look\r\n");
       return;
     } else {
-      my $direction;
+      my $short;
       if ($name =~ /(^.*) \((\w+)\)$/) {
 	$name = $1;
-	$direction = $2;
+	$short = $2;
       }
       my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
       my $exit = first { $_->{direction} eq $obj } @{$room->{exits}};
       if ($exit) {
 	$log->debug("Name $exit->{name}");
 	$exit->{name} = $name;
-	$exit->{direction} = $direction if $direction;
+	$exit->{direction} = $short if $short;
+	$stream->write("30 /play/ijirait/look\r\n");
+	return;
+      }
+      my $thing = first { $_->{short} eq $obj } @{$room->{things}};
+      if ($thing) {
+	$log->debug("Name $thing->{short}");
+	$thing->{name} = $name;
+	$thing->{short} = $short if $short;
 	$stream->write("30 /play/ijirait/look\r\n");
 	return;
       }
@@ -486,11 +518,17 @@ sub ijirait_create {
     my $exit = ijirait_new_exit($room, $dest);
     ijirait_new_exit($dest, $room);
     $stream->write("30 /play/ijirait\r\n");
+  } elsif ($obj eq "thing") {
+    $log->debug("Create thing");
+    my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+    ijirait_new_thing($room, $p->{id});
+    $stream->write("30 /play/ijirait\r\n");
   } else {
     success($stream);
     $log->debug("Cannot create '$obj'");
     $stream->write(encode_utf8 "# Cannot create new “$obj”\n");
-    $stream->write(encode_utf8 "Currently, all you can create is a room: “create room”.\n");
+    $stream->write(encode_utf8 "Currently, all you can create is a room, or a thing: “create room” or  “create thing”.\n");
+    $stream->write(encode_utf8 "Use the “name” and “describe” commands to customize it.\n");
     $stream->write("=> /play/ijirait Back\n");
   }
 }
@@ -518,6 +556,20 @@ sub ijirait_new_exit {
   };
   push(@{$from->{exits}}, $e);
   return $e;
+}
+
+sub ijirait_new_thing {
+  my ($room, $owner) = @_;
+  my $t = {
+    id => $ijirait_data->{next}++,
+    short => "stone",
+    name => "A small stone",
+    description => "It’s round.",
+    owner => $owner,
+    ts => time,
+  };
+  push(@{$room->{things}}, $t);
+  return $t;
 }
 
 sub ijirait_rooms {

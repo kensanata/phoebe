@@ -83,6 +83,10 @@ our $ijirait_commands = {
   map      => \&ijirait_map,
 };
 
+our $ijrait_commands_without_cert = {
+  rss      => \&ijirait_rss,
+};
+
 # load world on startup
 Mojo::IOLoop->next_tick(sub {
   my $dir = $server->{wiki_dir};
@@ -151,7 +155,14 @@ sub ijirait_main {
   if ($url =~ m!^gemini://(?:$ijirait_host)(?::$port)?/play/ijirait(?:/([a-z]+))?(?:\?(.*))?!) {
     my $command = ($1 || "look") . ($2 ? " " . decode_utf8 uri_unescape($2) : "");
     $log->debug("Handling $url - $command");
-    # you need a client certificate
+    # some commands require no client certificate (and no person argument!)
+    my $routine = $ijrait_commands_without_cert->{$command};
+    if ($routine) {
+      $log->debug("Running $command");
+      $routine->($stream);
+      return 1;
+    }
+    # otherwise you need a client certificate
     my $fingerprint = $stream->handle->get_fingerprint();
     if (!$fingerprint) {
       $log->info("Requested client certificate");
@@ -573,6 +584,40 @@ sub ijirait_map {
   $stream->write(encode_utf8 $graph->as_boxart());
   $stream->write("```\n");
   $stream->write("=> /play/ijirait Back\n");
+}
+
+sub ijirait_rss {
+  my $stream = shift;
+  success($stream, "application/rss+xml");
+  $stream->write("<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n");
+  $stream->write("<channel>\n");
+  $stream->write("<title>Ijirait</title>\n");
+  $stream->write("<description>Things being said in the game.</description>\n");
+  $stream->write("<link>/play/ijirait</link>\n");
+  $stream->write("<generator>Ijirait</generator>\n");
+  $stream->write("<docs>http://blogs.law.harvard.edu/tech/rss</docs>\n");
+  my @words;
+  for my $room (@{$ijirait_data->{rooms}}) {
+    for my $word (@{$room->{words}}) {
+      push(@words, $word);
+    }
+  }
+  my $now = time();
+  for my $word (sort { $b->{ts} cmp $a->{ts} } @words) {
+    $stream->write("<item>\n");
+    my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};
+    $stream->write("<description>");
+    $stream->write(encode_utf8 ijirait_time($now - $word->{ts}) . ", " . $o->{name} . " said “" . $word->{text} . "”");
+    $stream->write("</description>\n");
+    my ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($word->{ts}); # Sat, 07 Sep 2002 00:00:01 GMT
+    $stream->write("<pubDate>"
+		   . sprintf("%s, %02d %s %04d %02d:%02d:%02d GMT", qw(Sun Mon Tue Wed Thu Fri Sat)[$wday], $mday,
+			     qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[$mon], $year + 1900, $hour, $min, $sec)
+		   . "</pubDate>\n");
+    $stream->write("</item>\n");
+  }
+  $stream->write("</channel>\n");
+  $stream->write("</rss>\n");
 }
 
 1;

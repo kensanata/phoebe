@@ -122,6 +122,7 @@ sub ijirait_init {
 	    direction => "out",
 	    destination => $next,
 	  } ],
+	things => [],
 	words => [
 	  {
 	    text => "Welcome!",
@@ -139,7 +140,10 @@ sub ijirait_init {
 	    name => "A tent flap leads inside.",
 	    direction => "tent",
 	    destination => 2, # The Tent
-	  } ] } ] };
+	  } ],
+      	things => [],
+	words => [],
+      } ] };
   $ijirait_data->{next} = $next;
 };
 
@@ -309,8 +313,9 @@ sub ijirait_type {
     ijirait_go($stream, $p, $str);
     return;
   }
-  # using a name instead of examine
-  if (first { $_->{location} eq $p->{location} and $_->{name} eq $str } @{$ijirait_data->{people}}) {
+  # using the name of a person or thing instead of examine
+  if (first { $_->{location} eq $p->{location} and $_->{name} eq $str } @{$ijirait_data->{people}}
+      or first { $_->{short} eq $str } @{$room->{things}}) {
     ijirait_examine($stream, $p, $str);
     return;
   }
@@ -538,6 +543,7 @@ sub ijirait_new_room {
     id => $ijirait_data->{next}++,
     name => "Lost in fog",
     description => "Dense fog surrounds you. Nothing can be discerned in this gloom.",
+    things => [],
     exits => [],
     ts => time,
   };

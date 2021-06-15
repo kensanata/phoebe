@@ -105,4 +105,22 @@ $page = query_gemini("$base/play/ijirait/who");
 like($page, qr(^\* Ijiraq)m, "Ijiraq");
 like($page, qr(^\* Alex)m, "Alex");
 
+$page = query_gemini("$base/play/ijirait/create?thing");
+like($page, qr(^30)m, "Redirect after thing creation");
+
+$page = query_gemini("$base/play/ijirait/look");
+like($page, qr(A small stone \(stone\))m, "Stone");
+
+$page = query_gemini("$base/play/ijirait/name?stone%20Clay%20Tablet%20%28tablet%29");
+like($page, qr(^30)m, "Redirect after name");
+
+$page = query_gemini("$base/play/ijirait/look");
+like($page, qr(^=> \S+ Clay Tablet \(tablet\))m, "Renamed");
+
+$page = query_gemini("$base/play/ijirait/describe?tablet%20The%20cuneiform%20script%20is%20undecipherable.");
+like($page, qr(^30)m, "Redirect after describe");
+
+$page = query_gemini("$base/play/ijirait/examine?tablet");
+like($page, qr(^The cuneiform script is undecipherable\.)m, "Described");
+
 done_testing();

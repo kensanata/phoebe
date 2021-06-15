@@ -102,7 +102,11 @@ while (defined ($_ = shift(@queue) || $term->readline($prompt))) {
 	my ($stream, $bytes) = @_;
 	my $text = to_text(decode_utf8($bytes));
 	print encode(locale => $text);
-	push(@queue, "look") if $bytes =~ /^3/; });
+	if ($bytes =~ m!^30 /play/ijirait(?:/([a-z]+))?(?:\?(.*))?!) {
+	  my $command = ($1 || "look") . ($2 ? " " . decode_utf8 uri_unescape($2) : "");
+	  $command =~ s/[[:cntrl:]]+//g;
+	  push(@queue, $command);
+	}});
       # Write request to the server
       $stream->write("$talk_url?$text\r\n")});
   # Start event loop if necessary

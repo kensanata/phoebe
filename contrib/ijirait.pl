@@ -149,9 +149,8 @@ sub ijirait_main {
   my $url = shift;
   my $port = App::Phoebe::port($stream);
   if ($url =~ m!^gemini://(?:$ijirait_host)(?::$port)?/play/ijirait(?:/([a-z]+))?(?:\?(.*))?!) {
-    my $command = $1 || "look";
-    my $arg = decode_utf8 uri_unescape($2) || "";
-    $log->debug("Handling $url - $command $arg");
+    my $command = ($1 || "look") . ($2 ? " " . decode_utf8 uri_unescape($2) : "");
+    $log->debug("Handling $url - $command");
     # you need a client certificate
     my $fingerprint = $stream->handle->get_fingerprint();
     if (!$fingerprint) {
@@ -167,38 +166,8 @@ sub ijirait_main {
       return 1;
     }
     $log->info("Successfully identified client certificate: " . $p->{name});
-    # mark activity
-    my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
-    $p->{ts} = $room->{ts} = time();
     # regular commands
-    my $routine = $ijirait_commands->{$command};
-    if ($routine) {
-      $log->debug("Running $command");
-      $routine->($stream, $p, $arg);
-      return 1;
-    }
-    # using exits instead of go, with code from ijirait_go
-    my $exit = first { $_->{direction} eq $arg } @{$room->{exits}};
-    if ($exit) {
-      $log->debug("Taking the exit '$arg'");
-      $p->{location} = $exit->{destination};
-      $stream->write("30 /play/ijirait/look\r\n");
-      return 1;
-    }
-    # using a name instead of examine, with code from ijirait_examine
-    my $o = first { $_->{location} eq $p->{location} and $_->{name} eq $arg } @{$ijirait_data->{people}};
-    if ($o) {
-      $log->debug("Looking at '$arg'");
-      $stream->write(encode_utf8 "# $o->{name}\n");
-      $stream->write(encode_utf8 "$o->{description}\n");
-      $stream->write("=> /play/ijirait Back\n");
-      return 1;
-    }
-    $log->debug("Unknown command '$command'");
-    success($stream);
-    $stream->write("# Unknown command\n");
-    $stream->write(encode_utf8 "“$command” is an unknown command.\n");
-    ijirait_menu($stream);
+    ijirait_type($stream, $p, $command);
     return 1;
   }
   return 0;
@@ -303,22 +272,36 @@ sub ijirait_help {
 
 sub ijirait_type {
   my ($stream, $p, $str) = @_;
-  if ($str) {
-    my ($command, $arg) = split(/\s+/, $str, 2);
-    my $routine = $ijirait_commands->{$command};
-    if ($routine) {
-      $log->debug("Running $command");
-      $routine->($stream, $p, $arg);
-    } else {
-      $log->debug("Unknown command '$command'");
-      success($stream);
-      $stream->write("# Unknown command\n");
-      $stream->write(encode_utf8 "“$command” is an unknown command.\n");
-      ijirait_menu($stream);
-    }
-  } else {
+  if (!$str) {
     $stream->write("10 Type your command\r\n");
+    return;
   }
+  # mark activity
+  my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+  $p->{ts} = $room->{ts} = time();
+  # parse commands
+  my ($command, $arg) = split(/\s+/, $str, 2);
+  my $routine = $ijirait_commands->{$command};
+  if ($routine) {
+    $log->debug("Running $command");
+    $routine->($stream, $p, $arg);
+    return;
+  }
+  # using exits instead of go
+  if (first { $_->{direction} eq $str } @{$room->{exits}}) {
+    ijirait_go($stream, $p, $str);
+    return;
+  }
+  # using a name instead of examine
+  if (first { $_->{location} eq $p->{location} and $_->{name} eq $str } @{$ijirait_data->{people}}) {
+    ijirait_examine($stream, $p, $str);
+    return;
+  }
+  $log->debug("Unknown command '$command'");
+  success($stream);
+  $stream->write("# Unknown command\n");
+  $stream->write(encode_utf8 "“$command” is an unknown command.\n");
+  ijirait_menu($stream);
 }
 
 sub ijirait_go {

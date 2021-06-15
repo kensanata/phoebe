@@ -152,31 +152,53 @@ sub ijirait_main {
     my $command = $1 || "look";
     my $arg = decode_utf8 uri_unescape($2) || "";
     $log->debug("Handling $url - $command $arg");
+    # you need a client certificate
     my $fingerprint = $stream->handle->get_fingerprint();
-    if ($fingerprint) {
-      my $p = first { $_->{fingerprint} eq $fingerprint} @{$ijirait_data->{people}};
-      if ($p) {
-	$log->info("Successfully identified client certificate: " . $p->{name});
-	$p->{ts} = time();
-	my $routine = $ijirait_commands->{$command};
-	if ($routine) {
-	  $log->debug("Running $command");
-	  $routine->($stream, $p, $arg);
-	} else {
-	  $log->debug("Unknown command '$command'");
-	  success($stream);
-	  $stream->write("# Unknown command\n");
-	  $stream->write(encode_utf8 "“$command” is an unknown command.\n");
-	  ijirait_menu($stream);
-	}
-      } else {
-	$log->info("New client certificate $fingerprint");
-	ijirait_look($stream, ijirait_new_person($fingerprint));
-      }
-    } else {
+    if (!$fingerprint) {
       $log->info("Requested client certificate");
       $stream->write("60 You need a client certificate to play\r\n");
+      return 1;
     }
+    # create a new person if we can't find one
+    my $p = first { $_->{fingerprint} eq $fingerprint} @{$ijirait_data->{people}};
+    if (!$p) {
+      $log->info("New client certificate $fingerprint");
+      ijirait_look($stream, ijirait_new_person($fingerprint));
+      return 1;
+    }
+    $log->info("Successfully identified client certificate: " . $p->{name});
+    # mark activity
+    my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+    $p->{ts} = $room->{ts} = time();
+    # regular commands
+    my $routine = $ijirait_commands->{$command};
+    if ($routine) {
+      $log->debug("Running $command");
+      $routine->($stream, $p, $arg);
+      return 1;
+    }
+    # using exits instead of go, with code from ijirait_go
+    my $exit = first { $_->{direction} eq $arg } @{$room->{exits}};
+    if ($exit) {
+      $log->debug("Taking the exit '$arg'");
+      $p->{location} = $exit->{destination};
+      $stream->write("30 /play/ijirait/look\r\n");
+      return 1;
+    }
+    # using a name instead of examine, with code from ijirait_examine
+    my $o = first { $_->{location} eq $p->{location} and $_->{name} eq $arg } @{$ijirait_data->{people}};
+    if ($o) {
+      $log->debug("Looking at '$arg'");
+      $stream->write(encode_utf8 "# $o->{name}\n");
+      $stream->write(encode_utf8 "$o->{description}\n");
+      $stream->write("=> /play/ijirait Back\n");
+      return 1;
+    }
+    $log->debug("Unknown command '$command'");
+    success($stream);
+    $stream->write("# Unknown command\n");
+    $stream->write(encode_utf8 "“$command” is an unknown command.\n");
+    ijirait_menu($stream);
     return 1;
   }
   return 0;

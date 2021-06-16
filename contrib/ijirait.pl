@@ -57,35 +57,35 @@ description for up to 10min as long as your character is still in the room.
 
 # see "load world on startup" for the small world generated if no save file is
 # available
-my $ijirait_data;
+my $data;
 
 # by default, /play/ijirait on all hosts is the same game
-our $ijirait_host = App::Phoebe::host_regex();
+our $host = App::Phoebe::host_regex();
 
 Mojo::IOLoop->next_tick(sub {
-  $log->info("Serving Ijirait on $ijirait_host") });
+  $log->info("Serving Ijirait on $host") });
 
 # global commands
-our $ijirait_commands = {
-  help     => \&ijirait_help,
-  look     => \&ijirait_look,
-  type     => \&ijirait_type,
-  save     => \&ijirait_save,
-  say      => \&ijirait_say,
-  who      => \&ijirait_who,
-  go       => \&ijirait_go,
-  examine  => \&ijirait_examine,
-  describe => \&ijirait_describe,
-  name     => \&ijirait_name,
-  create   => \&ijirait_create,
-  rooms    => \&ijirait_rooms,
-  connect  => \&ijirait_connect,
-  map      => \&ijirait_map,
-  emote    => \&ijirait_emote,
+our $commands = {
+  help     => \&help,
+  look     => \&look,
+  type     => \&type,
+  save     => \&save,
+  say      => \&say,
+  who      => \&who,
+  go       => \&go,
+  examine  => \&examine,
+  describe => \&describe,
+  name     => \&name,
+  create   => \&create,
+  rooms    => \&rooms,
+  connect  => \&connect,
+  map      => \&map,
+  emote    => \&emote,
 };
 
 our $ijrait_commands_without_cert = {
-  rss      => \&ijirait_rss,
+  rss      => \&rss,
 };
 
 # load world on startup
@@ -93,14 +93,14 @@ Mojo::IOLoop->next_tick(sub {
   my $dir = $server->{wiki_dir};
   if (-f "$dir/ijirait.json") {
     my $bytes = read_binary("$dir/ijirait.json");
-    $ijirait_data = decode_json $bytes;
+    $data = decode_json $bytes;
   } else {
-    ijirait_init();
+    init();
   } } );
 
-sub ijirait_init {
+sub init {
   my $next = 1;
-  $ijirait_data = {
+  $data = {
     people => [
       {
 	id => $next++, # 1
@@ -144,20 +144,20 @@ sub ijirait_init {
       	things => [],
 	words => [],
       } ] };
-  $ijirait_data->{next} = $next;
+  $data->{next} = $next;
 };
 
 # save every half hour
-Mojo::IOLoop->recurring(1800 => \&ijirait_save_world);
+Mojo::IOLoop->recurring(1800 => \&save_world);
 
 # main loop
-push(@extensions, \&ijirait_main);
+push(@extensions, \&main);
 
-sub ijirait_main {
+sub main {
   my $stream = shift;
   my $url = shift;
   my $port = App::Phoebe::port($stream);
-  if ($url =~ m!^gemini://(?:$ijirait_host)(?::$port)?/play/ijirait(?:/([a-z]+))?(?:\?(.*))?!) {
+  if ($url =~ m!^gemini://(?:$host)(?::$port)?/play/ijirait(?:/([a-z]+))?(?:\?(.*))?!) {
     my $command = ($1 || "look") . ($2 ? " " . decode_utf8 uri_unescape($2) : "");
     $log->debug("Handling $url - $command");
     # some commands require no client certificate (and no person argument!)
@@ -175,35 +175,35 @@ sub ijirait_main {
       return 1;
     }
     # create a new person if we can't find one
-    my $p = first { $_->{fingerprint} eq $fingerprint} @{$ijirait_data->{people}};
+    my $p = first { $_->{fingerprint} eq $fingerprint} @{$data->{people}};
     if (!$p) {
       $log->info("New client certificate $fingerprint");
-      ijirait_look($stream, ijirait_new_person($fingerprint));
+      look($stream, new_person($fingerprint));
       return 1;
     }
     $log->info("Successfully identified client certificate: " . $p->{name});
     # regular commands
-    ijirait_type($stream, $p, $command);
+    type($stream, $p, $command);
     return 1;
   }
   return 0;
 }
 
-sub ijirait_new_person {
+sub new_person {
   my $fingerprint = shift;
   my $p = {
-    id => $ijirait_data->{next}++,
-    name => ijirait_person_name(),
+    id => $data->{next}++,
+    name => person_name(),
     description => "A shape-shifter with red eyes.",
     fingerprint => $fingerprint,
     location => 2, # The Tent
     ts => time,
   };
-  push(@{$ijirait_data->{people}}, $p);
+  push(@{$data->{people}}, $p);
   return $p;
 }
 
-sub ijirait_person_name {
+sub person_name {
   my $digraphs = "..lexegezacebisousesarmaindire.aeratenberalavetiedorquanteisrion";
   my $max = length($digraphs);
   my $length = 4 + rand(7); # 4-8
@@ -215,10 +215,10 @@ sub ijirait_person_name {
   return ucfirst $name;
 }
 
-sub ijirait_look {
+sub look {
   my ($stream, $p) = @_;
   success($stream);
-  my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+  my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   $stream->write(encode_utf8 "# " . $room->{name} . "\n");
   $stream->write(encode_utf8 $room->{description} . "\n") if $room->{description};
   $stream->write("## Things\n") if @{$room->{things}} > 0;
@@ -234,7 +234,7 @@ sub ijirait_look {
   $stream->write("## People\n"); # there is always at least the observer!
   my $n = 0;
   my $now = time;
-  for my $o (@{$ijirait_data->{people}}) {
+  for my $o (@{$data->{people}}) {
     next unless $o->{location} == $p->{location};
     next if $now - $o->{ts} > 600;      # don't show people inactive for 10min or more
     $n++;
@@ -250,18 +250,18 @@ sub ijirait_look {
     next if $now - $word->{ts} > 600; # don't show messages older than 10min
     $stream->write("## Words\n") unless $title++;
     if ($word->{by}) {
-      my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};
-      $stream->write(encode_utf8 ucfirst ijirait_time($now - $word->{ts})
+      my $o = first { $_->{id} == $word->{by} } @{$data->{people}};
+      $stream->write(encode_utf8 ucfirst timespan($now - $word->{ts})
 		     . ", " . $o->{name} . " said “" . $word->{text} . "”\n");
     } elsif ($word->{text}) {
       # emotes
       $stream->write(encode_utf8 $word->{text} . "\n");
     }
   }
-  ijirait_menu($stream);
+  menu($stream);
 }
 
-sub ijirait_time {
+sub timespan {
   my $seconds = shift;
   return "some time ago" if not defined $seconds;
   return "just now" if $seconds == 0;
@@ -271,7 +271,7 @@ sub ijirait_time {
   return sprintf("%d seconds ago", $seconds);
 }
 
-sub ijirait_menu {
+sub menu {
   my $stream = shift;
   $stream->write("## Commands\n");
   $stream->write("=> /play/ijirait/look look\n");
@@ -279,7 +279,7 @@ sub ijirait_menu {
   $stream->write("=> /play/ijirait/type type\n");
 }
 
-sub ijirait_help {
+sub help {
   my ($stream, $p) = @_;
   success($stream);
   $stream->write("## Help\n");
@@ -291,24 +291,24 @@ sub ijirait_help {
     $stream->write("The help file does not exist.\n");
   }
   $stream->write("## Automatically Generated Command List\n");
-  for my $command (sort keys %$ijirait_commands) {
+  for my $command (sort keys %$commands) {
     $stream->write("* $command\n");
   }
   $stream->write("=> /play/ijirait Back\n");
 }
 
-sub ijirait_type {
+sub type {
   my ($stream, $p, $str) = @_;
   if (!$str) {
     $stream->write("10 Type your command\r\n");
     return;
   }
   # mark activity
-  my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+  my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   $p->{ts} = $room->{ts} = time;
   # parse commands
   my ($command, $arg) = split(/\s+/, $str, 2);
-  my $routine = $ijirait_commands->{$command};
+  my $routine = $commands->{$command};
   if ($routine) {
     $log->debug("Running $command");
     $routine->($stream, $p, $arg);
@@ -316,25 +316,25 @@ sub ijirait_type {
   }
   # using exits instead of go
   if (first { $_->{direction} eq $str } @{$room->{exits}}) {
-    ijirait_go($stream, $p, $str);
+    go($stream, $p, $str);
     return;
   }
   # using the name of a person or thing instead of examine
-  if (first { $_->{location} eq $p->{location} and $_->{name} eq $str } @{$ijirait_data->{people}}
+  if (first { $_->{location} eq $p->{location} and $_->{name} eq $str } @{$data->{people}}
       or first { $_->{short} eq $str } @{$room->{things}}) {
-    ijirait_examine($stream, $p, $str);
+    examine($stream, $p, $str);
     return;
   }
   $log->debug("Unknown command '$command'");
   success($stream);
   $stream->write("# Unknown command\n");
   $stream->write(encode_utf8 "“$command” is an unknown command.\n");
-  ijirait_menu($stream);
+  menu($stream);
 }
 
-sub ijirait_go {
+sub go {
   my ($stream, $p, $direction) = @_;
-  my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+  my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   my $exit = first { $_->{direction} eq $direction } @{$room->{exits}};
   if ($exit) {
     $log->debug("Taking the exit '$direction'");
@@ -349,10 +349,10 @@ sub ijirait_go {
   }
 }
 
-sub ijirait_examine {
+sub examine {
   my ($stream, $p, $name) = @_;
   success($stream);
-  my $o = first { $_->{location} eq $p->{location} and $_->{name} eq $name } @{$ijirait_data->{people}};
+  my $o = first { $_->{location} eq $p->{location} and $_->{name} eq $name } @{$data->{people}};
   if ($o) {
     $log->debug("Looking at '$name'");
     $stream->write(encode_utf8 "# $o->{name}\n");
@@ -360,7 +360,7 @@ sub ijirait_examine {
     $stream->write("=> /play/ijirait Back\n");
     return;
   }
-  my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+  my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   my $thing = first { $_->{short} eq $name } @{$room->{things}};
   if ($thing) {
     $log->debug("Looking at '$thing->{name}'");
@@ -376,7 +376,7 @@ sub ijirait_examine {
   $stream->write("=> /play/ijirait Back\n");
 }
 
-sub ijirait_say {
+sub say {
   my ($stream, $p, $text) = @_;
   $text =~ s/^["“„«]//;
   $text =~ s/["”“»]$//;
@@ -387,58 +387,52 @@ sub ijirait_say {
     by => $p->{id},
     ts => time,
   };
-  my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+  my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   push(@{$room->{words}}, $w);
-  ijirait_look($stream, $p);
+  look($stream, $p);
 }
 
-sub ijirait_save {
+sub save {
   my ($stream, $p) = @_;
-  ijirait_save_world();
+  save_world();
   success($stream);
   $stream->write("# World Save\n");
   $stream->write("Data was saved.\n");
   $stream->write("=> /play/ijirait Back\n");
 }
 
-sub ijirait_save_world {
-  ijirait_cleanup();
-  my $bytes = encode_json $ijirait_data;
+sub save_world {
+  cleanup();
+  my $bytes = encode_json $data;
   my $dir = $server->{wiki_dir};
   write_binary("$dir/ijirait.json", $bytes);
 }
 
-sub ijirait_cleanup() {
+sub cleanup() {
   my $now = time;
-  my %people = map { $_->{location} => 1 } @{$ijirait_data->{people}};
-  for my $room (@{$ijirait_data->{rooms}}) {
+  my %people = map { $_->{location} => 1 } @{$data->{people}};
+  for my $room (@{$data->{rooms}}) {
     my @words;
     for my $word (@{$room->{words}}) {
       next if $now - $word->{ts} > 600; # don't show messages older than 10min
       push(@words, $word);
     }
     $room->{words} = \@words;
-    # unpopulated rooms get a timestamp
-    if ($people{$room->{id}}) {
-      delete $room->{ts};
-    } elsif (not $room->{ts}) {
-      $room->{ts} = time;
-    }
   }
 }
 
-sub ijirait_who {
+sub who {
   my ($stream, $p) = @_;
   my $now = time;
   success($stream);
   $stream->write("# Who are the shape shifters?\n");
-  for my $o (sort { $b->{ts} <=> $a->{ts} } @{$ijirait_data->{people}}) {
-    $stream->write(encode_utf8 "* $o->{name}, active " . ijirait_time($now - $o->{ts}) . "\n");
+  for my $o (sort { $b->{ts} <=> $a->{ts} } @{$data->{people}}) {
+    $stream->write(encode_utf8 "* $o->{name}, active " . timespan($now - $o->{ts}) . "\n");
   }
   $stream->write("=> /play/ijirait Back\n");
 }
 
-sub ijirait_describe {
+sub describe {
   my ($stream, $p, $text) = @_;
   if ($text) {
     my ($obj, $description) = split(/\s+/, $text, 2);
@@ -449,7 +443,7 @@ sub ijirait_describe {
       $stream->write("30 /play/ijirait/examine?$name\r\n");
       return;
     }
-    my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+    my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
     if ($obj eq "room") {
       $log->debug("Describing $room->{name}");
       $room->{description} = $description;
@@ -473,7 +467,7 @@ sub ijirait_describe {
   $stream->write("=> /play/ijirait Back\n");
 }
 
-sub ijirait_name {
+sub name {
   my ($stream, $p, $text) = @_;
   if ($text) {
     my ($obj, $name) = split(/\s+/, $text, 2);
@@ -484,7 +478,7 @@ sub ijirait_name {
       $stream->write("30 /play/ijirait/examine?$nm\r\n");
       return;
     } elsif ($obj eq "room") {
-      my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+      my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
       $log->debug("Name $room->{name}");
       $room->{name} = $name;
       $stream->write("30 /play/ijirait/look\r\n");
@@ -495,7 +489,7 @@ sub ijirait_name {
 	$name = $1;
 	$short = $2;
       }
-      my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+      my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
       my $exit = first { $_->{direction} eq $obj } @{$room->{exits}};
       if ($exit) {
 	$log->debug("Name $exit->{name}");
@@ -521,19 +515,19 @@ sub ijirait_name {
   $stream->write("=> /play/ijirait Back\n");
 }
 
-sub ijirait_create {
+sub create {
   my ($stream, $p, $obj) = @_;
   if ($obj eq "room") {
     $log->debug("Create room");
-    my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
-    my $dest = ijirait_new_room();
-    my $exit = ijirait_new_exit($room, $dest);
-    ijirait_new_exit($dest, $room);
+    my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
+    my $dest = new_room();
+    my $exit = new_exit($room, $dest);
+    new_exit($dest, $room);
     $stream->write("30 /play/ijirait\r\n");
   } elsif ($obj eq "thing") {
     $log->debug("Create thing");
-    my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
-    ijirait_new_thing($room, $p->{id});
+    my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
+    new_thing($room, $p->{id});
     $stream->write("30 /play/ijirait\r\n");
   } else {
     success($stream);
@@ -545,24 +539,24 @@ sub ijirait_create {
   }
 }
 
-sub ijirait_new_room {
+sub new_room {
   my $r = {
-    id => $ijirait_data->{next}++,
+    id => $data->{next}++,
     name => "Lost in fog",
     description => "Dense fog surrounds you. Nothing can be discerned in this gloom.",
     things => [],
     exits => [],
     ts => time,
   };
-  push(@{$ijirait_data->{rooms}}, $r);
+  push(@{$data->{rooms}}, $r);
   return $r;
 }
 
-sub ijirait_new_exit {
+sub new_exit {
   # $from and $to are rooms
   my ($from, $to) = @_;
   my $e = {
-    id => $ijirait_data->{next}++,
+    id => $data->{next}++,
     name => "A tunnel",
     direction => "tunnel",
     destination => $to->{id},
@@ -571,10 +565,10 @@ sub ijirait_new_exit {
   return $e;
 }
 
-sub ijirait_new_thing {
+sub new_thing {
   my ($room, $owner) = @_;
   my $t = {
-    id => $ijirait_data->{next}++,
+    id => $data->{next}++,
     short => "stone",
     name => "A small stone",
     description => "It’s round.",
@@ -585,34 +579,29 @@ sub ijirait_new_thing {
   return $t;
 }
 
-sub ijirait_rooms {
+sub rooms {
   my ($stream, $p) = @_;
   $log->debug("Listing all rooms");
   success($stream);
   $stream->write("# Rooms\n");
   my $now = time;
-  my %activity;
-  for my $o (@{$ijirait_data->{people}}) {
-    $activity{$o->{location}} = $o->{ts} if not $activity{$o->{location}} or $o->{ts} > $activity{$o->{location}};
-  }
-  for my $room (sort { ($activity{$b->{id}}||$b->{ts}||0) <=> ($activity{$a->{id}}||$a->{ts}||0) } @{$ijirait_data->{rooms}}) {
+  for my $room (sort { ($b->{ts}||0) <=> ($a->{ts}||0) } @{$data->{rooms}}) {
     $stream->write(encode_utf8 "* $room->{name}");
-    $stream->write(", last activity " . ijirait_time($now - $activity{$room->{id}})) if $activity{$room->{id}};
-    $stream->write(", last visit more than " . ijirait_time($now - $room->{ts})) if $room->{ts};
+    $stream->write(", last activity " . timespan($now - $room->{ts})) if $room->{ts};
     $stream->write("\n");
   }
   $stream->write("=> /play/ijirait Back\n");
 }
 
-sub ijirait_connect {
+sub connect {
   my ($stream, $p, $name) = @_;
   if ($name) {
-    my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
-    my $dest = first { $_->{name} eq $name } @{$ijirait_data->{rooms}};
+    my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
+    my $dest = first { $_->{name} eq $name } @{$data->{rooms}};
     if ($dest) {
       $log->debug("Connecting $name");
-      ijirait_new_exit($room, $dest);
-      ijirait_new_exit($dest, $room);
+      new_exit($room, $dest);
+      new_exit($dest, $room);
       $stream->write("30 /play/ijirait\r\n");
       return;
     }
@@ -625,18 +614,18 @@ sub ijirait_connect {
   $stream->write("=> /play/ijirait Back\n");
 }
 
-sub ijirait_map {
+sub map {
   my ($stream, $p) = @_;
   success($stream);
   $log->debug("Drawing a map");
   my $graph = Graph::Easy->new();
   my %rooms;
-  for (@{$ijirait_data->{rooms}}) {
+  for (@{$data->{rooms}}) {
     my $name = "$_->{name} ($_->{id})";
     $rooms{$_->{id}} = $name;
     $graph->add_node($name);
   }
-  for my $room (@{$ijirait_data->{rooms}}) {
+  for my $room (@{$data->{rooms}}) {
     my $from = $rooms{$room->{id}};
     for my $exit (@{$room->{exits}}) {
       my $to = $rooms{$exit->{destination}};
@@ -651,7 +640,7 @@ sub ijirait_map {
   $stream->write("=> /play/ijirait Back\n");
 }
 
-sub ijirait_rss {
+sub rss {
   my $stream = shift;
   success($stream, "application/rss+xml");
   $stream->write("<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n");
@@ -662,7 +651,7 @@ sub ijirait_rss {
   $stream->write("<generator>Ijirait</generator>\n");
   $stream->write("<docs>http://blogs.law.harvard.edu/tech/rss</docs>\n");
   my @words;
-  for my $room (@{$ijirait_data->{rooms}}) {
+  for my $room (@{$data->{rooms}}) {
     for my $word (@{$room->{words}}) {
       push(@words, $word);
     }
@@ -672,8 +661,8 @@ sub ijirait_rss {
     $stream->write("<item>\n");
     $stream->write("<description>");
     if ($word->{by}) {
-      my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};
-      $stream->write(encode_utf8 ucfirst ijirait_time($now - $word->{ts})
+      my $o = first { $_->{id} == $word->{by} } @{$data->{people}};
+      $stream->write(encode_utf8 ucfirst timespan($now - $word->{ts})
 		     . ", " . $o->{name} . " said “" . $word->{text} . "”");
     } elsif ($word->{text}) {
       # emotes
@@ -691,16 +680,16 @@ sub ijirait_rss {
   $stream->write("</rss>\n");
 }
 
-sub ijirait_emote {
+sub emote {
   my ($stream, $p, $text) = @_;
   my $w = {
     text => $text,
     author => $p->{id},
     ts => time,
   };
-  my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+  my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   push(@{$room->{words}}, $w);
-  ijirait_look($stream, $p);
+  look($stream, $p);
 }
 
 1;

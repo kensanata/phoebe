@@ -108,7 +108,7 @@ sub ijirait_init {
 	description => "A shape-shifter with red eyes.",
 	fingerprint => "",
 	location => $next, # 2
-	ts => time(),
+	ts => time,
       } ],
     rooms => [
       {
@@ -233,7 +233,7 @@ sub ijirait_look {
   }
   $stream->write("## People\n"); # there is always at least the observer!
   my $n = 0;
-  my $now = time();
+  my $now = time;
   for my $o (@{$ijirait_data->{people}}) {
     next unless $o->{location} == $p->{location};
     next if $now - $o->{ts} > 600;      # don't show people inactive for 10min or more
@@ -299,7 +299,7 @@ sub ijirait_type {
   }
   # mark activity
   my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
-  $p->{ts} = $room->{ts} = time();
+  $p->{ts} = $room->{ts} = time;
   # parse commands
   my ($command, $arg) = split(/\s+/, $str, 2);
   my $routine = $ijirait_commands->{$command};
@@ -378,7 +378,7 @@ sub ijirait_say {
   my $w = {
     text => $text,
     by => $p->{id},
-    ts => time(),
+    ts => time,
   };
   my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
   push(@{$room->{words}}, $w);
@@ -402,7 +402,7 @@ sub ijirait_save_world {
 }
 
 sub ijirait_cleanup() {
-  my $now = time();
+  my $now = time;
   my %people = map { $_->{location} => 1 } @{$ijirait_data->{people}};
   for my $room (@{$ijirait_data->{rooms}}) {
     my @words;
@@ -415,14 +415,14 @@ sub ijirait_cleanup() {
     if ($people{$room->{id}}) {
       delete $room->{ts};
     } elsif (not $room->{ts}) {
-      $room->{ts} = time();
+      $room->{ts} = time;
     }
   }
 }
 
 sub ijirait_who {
   my ($stream, $p) = @_;
-  my $now = time();
+  my $now = time;
   success($stream);
   $stream->write("# Who are the shape shifters?\n");
   for my $o (sort { $b->{ts} <=> $a->{ts} } @{$ijirait_data->{people}}) {
@@ -583,7 +583,7 @@ sub ijirait_rooms {
   $log->debug("Listing all rooms");
   success($stream);
   $stream->write("# Rooms\n");
-  my $now = time();
+  my $now = time;
   my %activity;
   for my $o (@{$ijirait_data->{people}}) {
     $activity{$o->{location}} = $o->{ts} if not $activity{$o->{location}} or $o->{ts} > $activity{$o->{location}};
@@ -660,7 +660,7 @@ sub ijirait_rss {
       push(@words, $word);
     }
   }
-  my $now = time();
+  my $now = time;
   for my $word (sort { $b->{ts} cmp $a->{ts} } @words) {
     $stream->write("<item>\n");
     my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};

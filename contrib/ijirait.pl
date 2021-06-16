@@ -358,6 +358,7 @@ sub ijirait_examine {
   my $thing = first { $_->{short} eq $name } @{$room->{things}};
   if ($thing) {
     $log->debug("Looking at '$thing->{name}'");
+    $thing->{ts} = time;
     $stream->write(encode_utf8 "# $thing->{name}\n");
     $stream->write(encode_utf8 "$thing->{description}\n");
     $stream->write("=> /play/ijirait Back\n");

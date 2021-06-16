@@ -48,7 +48,7 @@ use C<cpan> or C<cpanm> to install them.
 
 =item L<Encode::Locale> from C<libencode-locale-perl>
 
--item L<Text::WrapI18N> from C<libtext-wrapi18n-perl>
+-item L<Text::Wrapper> from C<libtext-wrapper-perl>
 
 =back
 
@@ -63,12 +63,13 @@ use Term::ANSIColor;
 use URI::Escape::XS qw(uri_escape uri_unescape);
 use Encode::Locale;
 use Encode qw(decode_utf8 encode_utf8 decode encode);
-use Text::WrapI18N qw(wrap);
+use Text::Wrapper;
 
 my $cert;
 my $key;
 my $help;
 my $url;
+my $wrapper = Text::Wrapper->new();
 
 GetOptions(
   'help' => \$help,
@@ -145,7 +146,8 @@ sub to_text {
   my @lines = split(/\n/, $text);
   my $section = "";
   for (@lines) {
-    $_ = wrap("", "", $_) unless /^[#=]/;
+    $_ = $wrapper->wrap($_) unless /^[#=]/;
+    s/\n+$//g;
     $section = $1 if /^## (.*)/;
     if ($section eq "Exits" or $section eq "Things") {
       s/^=> \S+\s+(.*?) \((\S+)\)$/"* $1 (" . colored($2, 'bold') . ")"/e;

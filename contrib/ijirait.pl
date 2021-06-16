@@ -251,7 +251,8 @@ sub ijirait_look {
     $stream->write("## Words\n") unless $title++;
     if ($word->{by}) {
       my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};
-      $stream->write(encode_utf8 ijirait_time($now - $word->{ts}) . ", " . $o->{name} . " said “" . $word->{text} . "”\n");
+      $stream->write(encode_utf8 ucfirst ijirait_time($now - $word->{ts})
+		     . ", " . $o->{name} . " said “" . $word->{text} . "”\n");
     } elsif ($word->{text}) {
       # emotes
       $stream->write(encode_utf8 $word->{text} . "\n");
@@ -672,7 +673,8 @@ sub ijirait_rss {
     $stream->write("<description>");
     if ($word->{by}) {
       my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};
-      $stream->write(encode_utf8 ijirait_time($now - $word->{ts}) . ", " . $o->{name} . " said “" . $word->{text} . "”");
+      $stream->write(encode_utf8 ucfirst ijirait_time($now - $word->{ts})
+		     . ", " . $o->{name} . " said “" . $word->{text} . "”");
     } elsif ($word->{text}) {
       # emotes
       $stream->write(encode_utf8 $word->{text});

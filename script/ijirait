@@ -31,15 +31,34 @@ Then start this program to say something:
     ijirait --cert=cert.pem --key=key.pem \
       --url=gemini://campaignwiki.org/play/ijirait
 
+==head2 Dependencies
+
+Here are the Debian package names to satisfy the dependencies. Alternatively,
+use C<cpan> or C<cpanm> to install them.
+
+=over
+
+=item L<Modern::Perl> from C<libmodern-perl-perl>
+
+=item L<Mojo::IOLoop> from C<libmojolicious-perl>
+
+=item L<Term::ReadLine::Gnu> from C<libterm-readline-gnu-perl>
+
+=item L<URI::Escape::XS> from C<liburi-escape-xs-perl>
+
+=item L<Encode::Locale> from C<libencode-locale-perl>
+
+=back
+
 =cut
 
 use Modern::Perl '2018';
 use Mojo::IOLoop;
 use Pod::Text;
 use Getopt::Long;
-use Term::ReadLine;
+use Term::ReadLine; # install Term::ReadLine::Gnu
 use Term::ANSIColor;
-use URI::Escape;
+use URI::Escape::XS qw(uri_escape uri_unescape);
 use Encode::Locale;
 use Encode qw(decode_utf8 encode_utf8 decode encode);
 
@@ -123,7 +142,7 @@ sub to_text {
   my $section = "";
   for (@lines) {
     $section = $1 if /^## (.*)/;
-    if ($section eq "Exits") {
+    if ($section eq "Exits" or $section eq "Things") {
       s/^=> \S+\s+(.*?) \((\S+)\)$/"* $1 (" . colored($2, 'bold') . ")"/e;
     } else {
       s/^=> \S+\s+(.*)/"* " . colored($1, 'bold')/e;

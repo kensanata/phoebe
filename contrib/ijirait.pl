@@ -81,7 +81,7 @@ our $ijirait_commands = {
   rooms    => \&ijirait_rooms,
   connect  => \&ijirait_connect,
   map      => \&ijirait_map,
-  inscribe => \&ijirait_inscribe,
+  emote    => \&ijirait_emote,
 };
 
 our $ijrait_commands_without_cert = {
@@ -249,8 +249,13 @@ sub ijirait_look {
   for my $word (@{$room->{words}}) {
     next if $now - $word->{ts} > 600; # don't show messages older than 10min
     $stream->write("## Words\n") unless $title++;
-    my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};
-    $stream->write(encode_utf8 ijirait_time($now - $word->{ts}) . ", " . $o->{name} . " said “" . $word->{text} . "”\n");
+    if ($word->{by}) {
+      my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};
+      $stream->write(encode_utf8 ijirait_time($now - $word->{ts}) . ", " . $o->{name} . " said “" . $word->{text} . "”\n");
+    } elsif ($word->{text}) {
+      # emotes
+      $stream->write(encode_utf8 $word->{text} . "\n");
+    }
   }
   ijirait_menu($stream);
 }
@@ -373,7 +378,7 @@ sub ijirait_examine {
 sub ijirait_say {
   my ($stream, $p, $text) = @_;
   $text =~ s/^["“„«]//;
-  $text =~ s/["”»]$//;
+  $text =~ s/["”“»]$//;
   $text =~ s/^\s+//;
   $text =~ s/\s+$//;
   my $w = {
@@ -664,9 +669,14 @@ sub ijirait_rss {
   my $now = time;
   for my $word (sort { $b->{ts} cmp $a->{ts} } @words) {
     $stream->write("<item>\n");
-    my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};
     $stream->write("<description>");
-    $stream->write(encode_utf8 ijirait_time($now - $word->{ts}) . ", " . $o->{name} . " said “" . $word->{text} . "”");
+    if ($word->{by}) {
+      my $o = first { $_->{id} == $word->{by} } @{$ijirait_data->{people}};
+      $stream->write(encode_utf8 ijirait_time($now - $word->{ts}) . ", " . $o->{name} . " said “" . $word->{text} . "”");
+    } elsif ($word->{text}) {
+      # emotes
+      $stream->write(encode_utf8 $word->{text});
+    }
     $stream->write("</description>\n");
     my ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($word->{ts}); # Sat, 07 Sep 2002 00:00:01 GMT
     $stream->write("<pubDate>"
@@ -677,6 +687,18 @@ sub ijirait_rss {
   }
   $stream->write("</channel>\n");
   $stream->write("</rss>\n");
+}
+
+sub ijirait_emote {
+  my ($stream, $p, $text) = @_;
+  my $w = {
+    text => $text,
+    author => $p->{id},
+    ts => time,
+  };
+  my $room = first { $_->{id} == $p->{location} } @{$ijirait_data->{rooms}};
+  push(@{$room->{words}}, $w);
+  ijirait_look($stream, $p);
 }
 
 1;

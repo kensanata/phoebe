@@ -223,7 +223,7 @@ sub look {
   $stream->write(encode_utf8 $room->{description} . "\n") if $room->{description};
   $stream->write("## Things\n") if @{$room->{things}} > 0;
   for my $thing (@{$room->{things}}) {
-    my $name = uri_escape_utf8 $thing->{name};
+    my $name = uri_escape_utf8 $thing->{short};
     $stream->write(encode_utf8 "=> /play/ijirait/examine?$name $thing->{name} ($thing->{short})\n");
   }
   $stream->write("## Exits\n") if @{$room->{exits}} > 0;

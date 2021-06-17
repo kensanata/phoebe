@@ -1966,7 +1966,7 @@ sub search {
   my $found = 0;
   for my $id (@pages) {
     my $text = text($host, $space, $id);
-    if ($id =~ /$str/ or $text =~ /$str/) {
+    if ($id =~ /$str/i or $text =~ /$str/i) {
       $func->($host, $space, $id, $text, $str);
       $found++;
     }

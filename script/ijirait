@@ -64,6 +64,7 @@ use URI::Escape::XS qw(uri_escape uri_unescape);
 use Encode::Locale;
 use Encode qw(decode_utf8 encode_utf8 decode encode);
 use Text::Wrapper;
+use utf8;
 
 my $cert;
 my $key;
@@ -151,8 +152,12 @@ sub to_text {
     $section = $1 if /^## (.*)/;
     if ($section eq "Exits" or $section eq "Things") {
       s/^=> \S+\s+(.*?) \((\S+)\)$/"* $1 (" . colored($2, 'bold') . ")"/e;
-    } else {
+    } elsif (/^=> \/play\/ijirait/) {
       s/^=> \S+\s+(.*)/"* " . colored($1, 'bold')/e;
+    } elsif (/^=> \/\//) {
+      s/^=> (\S+)\s+(.*)/"* " . colored($2, 'italic') . " → gemini:\/\/$1"/e;
+    } else {
+      s/^=> (\S+)\s+(.*)/"* " . colored($2, 'italic') . " → $1"/e;
     }
     s/^# (.*)/colored($1, 'bold underline')/e;
     s/^## (.*)/colored($1, 'underline')/e;

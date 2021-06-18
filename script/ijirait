@@ -70,13 +70,15 @@ my $cert;
 my $key;
 my $help;
 my $url;
+my $stream;
 my $wrapper = Text::Wrapper->new();
 
 GetOptions(
-  'help' => \$help,
   'cert_file=s' => \$cert,
   'key_file=s' => \$key,
-  'url=s' => \$url)
+  'help' => \$help,
+  'url=s' => \$url,
+  'stream' => \$stream)
     or die("Error in command line arguments\n");
 
 # Help
@@ -92,6 +94,8 @@ die "⚠ You must provide --key_file, e.g. --key_file=key.pem\n" unless $key;
 die "⚠ You must provide an existing --cert_file\n" unless -f $cert;
 die "⚠ You must provide an existing --key_file\n" unless -f $key;
 
+$stream = 1 if $url =~ /\/stream$/;
+
 my $talk_url = "$url/type";
 
 my($scheme, $authority, $path, $query, $fragment) =
@@ -102,42 +106,76 @@ die "⚠ The URL '$url' must use the gemini scheme\n" unless $scheme and $scheme
 my ($host, $port) = split(/:/, $authority, 2);
 $port //= 1965;
 
-say "Use 'quit' to leave the game.";
+if ($stream) {
+  stream();
+} else {
+  play();
+}
 
-my @queue = qw(look);
-
-# start read loop for saying stuff
-my $term = Term::ReadLine->new("Ijirait");
-my $prompt = "> ";
-my $OUT = $term->OUT || \*STDOUT;
-while (defined ($_ = shift(@queue) || $term->readline($prompt))) {
-  exit if $_ eq "quit";
-  # create client
-  my $text = uri_escape(encode_utf8(decode(locale => $_)));
+sub stream {
+  say "Use 'Ctrl+C' to quit.";
+  # Start client for listening
   Mojo::IOLoop->client({
     address => $host,
     port => $port,
     tls => 1,
     tls_cert => $cert,
     tls_key => $key,
-    tls_options => { SSL_verify_mode => 0x00 }, } => sub {
+    tls_options => { SSL_verify_mode => 0x00 }} => sub {
       my ($loop, $err, $stream) = @_;
-      return say $err unless $stream;
+      # 1h timeout (for chat)
+      $stream->timeout(3600);
       $stream->on(read => sub {
 	my ($stream, $bytes) = @_;
 	my $text = to_text(decode_utf8($bytes));
-	print encode(locale => $text);
-	if ($bytes =~ m!^30 /play/ijirait(?:/([a-z]+))?(?:\?(.*))?!) {
-	  my $command = ($1 || "look") . ($2 ? " " . decode_utf8 uri_unescape($2) : "");
-	  $command =~ s/[[:cntrl:]]+//g;
-	  push(@queue, $command);
-	}});
+	print encode(locale => $text) });
+      $stream->on(close => sub {
+	say "Connection closed";
+	exit });
       # Write request to the server
-      $stream->write("$talk_url?$text\r\n")});
+      $stream->write("$url\r\n")});
   # Start event loop if necessary
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
-  # Add to history
-  $term->addhistory($_) if /\S/;
+}
+
+sub play {
+  say "Use 'quit' to leave the game.";
+
+  my @queue = qw(look);
+
+  # start read loop for saying stuff
+  my $term = Term::ReadLine->new("Ijirait");
+  my $prompt = "> ";
+  my $OUT = $term->OUT || \*STDOUT;
+  while (defined ($_ = shift(@queue) || $term->readline($prompt))) {
+    exit if $_ eq "quit";
+    # create client
+    my $text = uri_escape(encode_utf8(decode(locale => $_)));
+    Mojo::IOLoop->client({
+      address => $host,
+      port => $port,
+      tls => 1,
+      tls_cert => $cert,
+      tls_key => $key,
+      tls_options => { SSL_verify_mode => 0x00 }, } => sub {
+	my ($loop, $err, $stream) = @_;
+	return say $err unless $stream;
+	$stream->on(read => sub {
+	  my ($stream, $bytes) = @_;
+	  my $text = to_text(decode_utf8($bytes));
+	  print encode(locale => $text);
+	  if ($bytes =~ m!^30 /play/ijirait(?:/([a-z]+))?(?:\?(.*))?!) {
+	    my $command = ($1 || "look") . ($2 ? " " . decode_utf8 uri_unescape($2) : "");
+	    $command =~ s/[[:cntrl:]]+//g;
+	    push(@queue, $command);
+	  }});
+	# Write request to the server
+	$stream->write("$talk_url?$text\r\n")});
+    # Start event loop if necessary
+    Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
+    # Add to history
+    $term->addhistory($_) if /\S/;
+  }
 }
 
 sub to_text {

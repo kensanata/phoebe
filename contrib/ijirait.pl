@@ -15,7 +15,7 @@
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
 package App::Phoebe;
-our (@extensions, $log, $server);
+our (@extensions, $log, $server, @request_handlers);
 
 package App::Phoebe::Ijirait;
 use Modern::Perl;
@@ -55,12 +55,15 @@ description for up to 10min as long as your character is still in the room.
 
 =cut
 
-# see "load world on startup" for the small world generated if no save file is
-# available
+# See "load world on startup" for the small world generated if no save file is
+# available.
 my $data;
 
-# by default, /play/ijirait on all hosts is the same game
+# By default, /play/ijirait on all hosts is the same game.
 our $host = App::Phoebe::host_regex();
+
+# Streamers are people connecting to /stream/ijirait.
+my @streamers;
 
 Mojo::IOLoop->next_tick(sub {
   $log->info("Serving Ijirait on $host") });
@@ -71,7 +74,7 @@ our $commands = {
   look     => \&look,
   type     => \&type,
   save     => \&save,
-  say      => \&say,
+  say      => \&speak, # can't use say!
   who      => \&who,
   go       => \&go,
   examine  => \&examine,
@@ -147,8 +150,72 @@ sub init {
   $data->{next} = $next;
 };
 
-# save every half hour
+# Save the world every half hour.
 Mojo::IOLoop->recurring(1800 => \&save_world);
+
+# Streaming needs a special handler because the stream never closes.
+unshift(@request_handlers, "^gemini://(?:$host)(?:\\d+)?/play/ijirait/stream" => \&add_streamer);
+
+sub add_streamer {
+  my $stream = shift;
+  my $data = shift;
+  $log->debug("Handle streaming request");
+  $log->debug("Discarding " . length($data->{buffer}) . " bytes")
+      if $data->{buffer};
+  my $url = $data->{request};
+  my $port = App::Phoebe::port($stream);
+  if ($url =~ m!^(?:gemini:)?//($host)(?::$port)?/play/ijirait/stream$!) {
+    my $p = login($stream);
+    if ($p) {
+      # 1h timeout
+      $stream->timeout(3600);
+      # remove from channel members if an error happens
+      $stream->on(close => sub { my $stream = shift; logout($stream, $p, "Connection closed") });
+      $stream->on(error => sub { my ($stream, $err) = @_; logout($stream, $p, $err) });
+      push(@streamers, { stream => $stream, person => $p });
+      success($stream);
+      $stream->write(encode_utf8 "# Streaming $p->{name}\n");
+      $stream->write(encode_utf8 "Make sure you connect to game using a different client "
+		     . "(with the same client certificate!) in order to play $p->{name}.\n");
+      $stream->write(encode_utf8 "=> /play/ijirait Play $p->{name}.");
+      # don't close the stream!
+    } else {
+      $stream->close_gracefully();
+    }
+  } else {
+    $stream->write("59 Don't know how to handle $url\r\n");
+    $stream->close_gracefully();
+  }
+}
+
+sub logout {
+  my ($stream, $p, $msg) = @_;
+  $log->debug("Disconnected $p->{name}: $msg");
+  @streamers = grep { $_->{stream} ne $stream and $_->{person} ne $p } @streamers;
+}
+
+# run every minute and print a timestamp every 5 minutes
+Mojo::IOLoop->recurring(60 => sub {
+  my $loop = shift;
+  my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
+  return unless $min % 5 == 0;
+  return unless @streamers > 0;
+  $log->debug("Ijirait streamer ping");
+  my $ts = sprintf("%02d:%02d UTC\n", $hour, $min);
+  for (@streamers) {
+      $_->{stream}->write($ts);
+  }});
+
+# notify every streamer in the same room
+sub notify {
+  my ($p, $msg) = @_;
+  for my $s (grep { $_->{person}->{location} == $p->{location} } @streamers) {
+    my $stream = $s->{stream};
+    my $o = $_->{person};
+    $stream->write(encode_utf8 $msg);
+    $stream->write("\n");
+  }
+}
 
 # main loop
 push(@extensions, \&main);
@@ -165,28 +232,37 @@ sub main {
     if ($routine) {
       $log->debug("Running $command");
       $routine->($stream);
-      return 1;
+      return;
     }
-    # otherwise you need a client certificate
-    my $fingerprint = $stream->handle->get_fingerprint();
-    if (!$fingerprint) {
-      $log->info("Requested client certificate");
-      $stream->write("60 You need a client certificate to play\r\n");
-      return 1;
-    }
-    # create a new person if we can't find one
-    my $p = first { $_->{fingerprint} eq $fingerprint} @{$data->{people}};
-    if (!$p) {
-      $log->info("New client certificate $fingerprint");
-      look($stream, new_person($fingerprint));
-      return 1;
-    }
-    $log->info("Successfully identified client certificate: " . $p->{name});
     # regular commands
-    type($stream, $p, $command);
+    my $p = login($stream);
+    if ($p) {
+      type($stream, $p, $command);
+    }
     return 1;
   }
   return 0;
+}
+
+sub login {
+  my ($stream) = @_;
+  # you need a client certificate
+  my $fingerprint = $stream->handle->get_fingerprint();
+  if (!$fingerprint) {
+    $log->info("Requested client certificate");
+    $stream->write("60 You need a client certificate to play\r\n");
+    return;
+  }
+  # find the right person
+  my $p = first { $_->{fingerprint} eq $fingerprint} @{$data->{people}};
+  if (!$p) {
+    # create a new person if we can't find one
+    $log->info("New client certificate $fingerprint");
+    $p = new_person($fingerprint);
+  } else {
+    $log->info("Successfully identified client certificate: " . $p->{name});
+  }
+  return $p;
 }
 
 sub new_person {
@@ -338,7 +414,9 @@ sub go {
   my $exit = first { $_->{direction} eq $direction } @{$room->{exits}};
   if ($exit) {
     $log->debug("Taking the exit '$direction'");
+    notify($p, "$p->{name} leaves ($direction).");
     $p->{location} = $exit->{destination};
+    notify($p, "$p->{name} arrives.");
     $stream->write("30 /play/ijirait/look\r\n");
   } else {
     success($stream);
@@ -355,6 +433,7 @@ sub examine {
   my $o = first { $_->{location} eq $p->{location} and $_->{name} eq $name } @{$data->{people}};
   if ($o) {
     $log->debug("Looking at '$name'");
+    notify($p, "$p->{name} examines $name.");
     $stream->write(encode_utf8 "# $o->{name}\n");
     $stream->write(encode_utf8 "$o->{description}\n");
     $stream->write("=> /play/ijirait Back\n");
@@ -363,7 +442,8 @@ sub examine {
   my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   my $thing = first { $_->{short} eq $name } @{$room->{things}};
   if ($thing) {
-    $log->debug("Looking at '$thing->{name}'");
+    $log->debug("Looking at '$name'");
+    notify($p, "$p->{name} examines $name.");
     $thing->{ts} = time;
     $stream->write(encode_utf8 "# $thing->{name}\n");
     $stream->write(encode_utf8 "$thing->{description}\n");
@@ -376,7 +456,7 @@ sub examine {
   $stream->write("=> /play/ijirait Back\n");
 }
 
-sub say {
+sub speak {
   my ($stream, $p, $text) = @_;
   $text =~ s/^["“„«]//;
   $text =~ s/["”“»]$//;
@@ -389,6 +469,7 @@ sub say {
   };
   my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   push(@{$room->{words}}, $w);
+  notify($p, "$p->{name} says: “$text”");
   look($stream, $p);
 }
 
@@ -438,6 +519,7 @@ sub describe {
     my ($obj, $description) = split(/\s+/, $text, 2);
     if ($obj eq "me") {
       $log->debug("Describing $p->{name}");
+      notify($p, "$p->{name} changes appearance.");
       $p->{description} = $description;
       my $name = uri_escape_utf8 $p->{name};
       $stream->write("30 /play/ijirait/examine?$name\r\n");
@@ -446,6 +528,7 @@ sub describe {
     my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
     if ($obj eq "room") {
       $log->debug("Describing $room->{name}");
+      notify($p, "$p->{name} changes the room’s description.");
       $room->{description} = $description;
       $stream->write("30 /play/ijirait/look\r\n");
       return;
@@ -453,6 +536,7 @@ sub describe {
     my $thing = first { $_->{short} eq $obj } @{$room->{things}};
     if ($thing) {
       $log->debug("Describe $thing->{name}");
+      notify($p, "$p->{name} changes the description of $thing->{name}.");
       $thing->{description} = $description;
       my $name = uri_escape_utf8 $thing->{short};
       $stream->write("30 /play/ijirait/examine?$name\r\n");
@@ -473,6 +557,7 @@ sub name {
     my ($obj, $name) = split(/\s+/, $text, 2);
     if ($obj eq "me" and $name !~ /\s/) {
       $log->debug("Name $p->{name}");
+      notify($p, "$p->{name} changes their name to $name.");
       $p->{name} = $name;
       my $nm = uri_escape_utf8 $p->{name};
       $stream->write("30 /play/ijirait/examine?$nm\r\n");
@@ -480,6 +565,7 @@ sub name {
     } elsif ($obj eq "room") {
       my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
       $log->debug("Name $room->{name}");
+      notify($p, "$p->{name} changes the room’s name to $name.");
       $room->{name} = $name;
       $stream->write("30 /play/ijirait/look\r\n");
       return;
@@ -493,6 +579,7 @@ sub name {
       my $exit = first { $_->{direction} eq $obj } @{$room->{exits}};
       if ($exit) {
 	$log->debug("Name $exit->{name}");
+	notify($p, "$p->{name} renames $exit->{direction} to $name ($short).");
 	$exit->{name} = $name;
 	$exit->{direction} = $short if $short;
 	$stream->write("30 /play/ijirait/look\r\n");
@@ -501,6 +588,7 @@ sub name {
       my $thing = first { $_->{short} eq $obj } @{$room->{things}};
       if ($thing) {
 	$log->debug("Name $thing->{short}");
+	notify($p, "$p->{name} renames $thing->{name} to $name ($short).");
 	$thing->{name} = $name;
 	$thing->{short} = $short if $short;
 	$stream->write("30 /play/ijirait/look\r\n");
@@ -523,11 +611,13 @@ sub create {
     my $dest = new_room();
     my $exit = new_exit($room, $dest);
     new_exit($dest, $room);
+    notify($p, "$p->{name} creates a new room.");
     $stream->write("30 /play/ijirait\r\n");
   } elsif ($obj eq "thing") {
     $log->debug("Create thing");
     my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
     new_thing($room, $p->{id});
+    notify($p, "$p->{name} creates a new thing.");
     $stream->write("30 /play/ijirait\r\n");
   } else {
     success($stream);
@@ -602,6 +692,7 @@ sub connect {
       $log->debug("Connecting $name");
       new_exit($room, $dest);
       new_exit($dest, $room);
+      notify($p, "$p->{name} creates an exit to $dest->{name}.");
       $stream->write("30 /play/ijirait\r\n");
       return;
     }
@@ -689,6 +780,7 @@ sub emote {
   };
   my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   push(@{$room->{words}}, $w);
+  notify($p, $text);
   look($stream, $p);
 }
 

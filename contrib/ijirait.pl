@@ -413,7 +413,7 @@ sub go {
   my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   my $exit = first { $_->{direction} eq $direction } @{$room->{exits}};
   if ($exit) {
-    $log->debug("Taking the exit '$direction'");
+    $log->debug("Taking the exit $direction");
     notify($p, "$p->{name} leaves ($direction).");
     $p->{location} = $exit->{destination};
     notify($p, "$p->{name} arrives.");
@@ -432,8 +432,8 @@ sub examine {
   success($stream);
   my $o = first { $_->{location} eq $p->{location} and $_->{name} eq $name } @{$data->{people}};
   if ($o) {
-    $log->debug("Looking at '$name'");
-    notify($p, "$p->{name} examines $name.");
+    $log->debug("Looking at $name");
+    notify($p, "$p->{name} examines $o->{name}.") unless $p->{id} == $o->{id};
     $stream->write(encode_utf8 "# $o->{name}\n");
     $stream->write(encode_utf8 "$o->{description}\n");
     $stream->write("=> /play/ijirait Back\n");
@@ -442,8 +442,8 @@ sub examine {
   my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   my $thing = first { $_->{short} eq $name } @{$room->{things}};
   if ($thing) {
-    $log->debug("Looking at '$name'");
-    notify($p, "$p->{name} examines $name.");
+    $log->debug("Looking at $name");
+    notify($p, "$p->{name} examines $thing->{name}.");
     $thing->{ts} = time;
     $stream->write(encode_utf8 "# $thing->{name}\n");
     $stream->write(encode_utf8 "$thing->{description}\n");

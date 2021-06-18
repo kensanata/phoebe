@@ -26,10 +26,15 @@ First, generate your client certificate for as many or as few days as you like:
       -pkeyopt ec_paramgen_curve:prime256v1 -days 100 \
       -nodes -out cert.pem -keyout key.pem
 
-Then start this program to say something:
+Then start this program to play:
 
     ijirait --cert=cert.pem --key=key.pem \
       --url=gemini://campaignwiki.org/play/ijirait
+
+You can also use it to stream, i.e. get notified of events in real time:
+
+    ijirait --cert=cert.pem --key=key.pem --stream \
+      --url=gemini://campaignwiki.org/play/ijirait/stream
 
 ==head2 Dependencies
 

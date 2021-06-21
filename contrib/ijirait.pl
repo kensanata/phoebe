@@ -88,7 +88,7 @@ our $commands = {
 };
 
 our $ijrait_commands_without_cert = {
-  rss      => \&rss,
+  who      => \&who,
 };
 
 # load world on startup
@@ -507,7 +507,7 @@ sub cleanup() {
 }
 
 sub who {
-  my ($stream, $p) = @_;
+  my ($stream) = @_;
   my $now = time;
   success($stream);
   $stream->write("# Who are the shape shifters?\n");
@@ -733,38 +733,6 @@ sub map {
   $stream->write(encode_utf8 $graph->as_boxart());
   $stream->write("```\n");
   $stream->write("=> /play/ijirait Back\n");
-}
-
-sub rss {
-  my $stream = shift;
-  success($stream, "application/rss+xml");
-  $stream->write("<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n");
-  $stream->write("<channel>\n");
-  $stream->write("<title>Ijirait</title>\n");
-  $stream->write("<description>Recent activity.</description>\n");
-  $stream->write("<link>/play/ijirait</link>\n");
-  $stream->write("<generator>Ijirait</generator>\n");
-  $stream->write("<docs>http://blogs.law.harvard.edu/tech/rss</docs>\n");
-  my $now = time;
-  my ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($now); # Sat, 07 Sep 2002 00:00:01 GMT
-  $stream->write("<pubDate>"
-		 . sprintf("%s, %02d %s %04d %02d:%02d:%02d GMT", qw(Sun Mon Tue Wed Thu Fri Sat)[$wday], $mday,
-			   qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[$mon], $year + 1900, $hour, $min, $sec)
-		 . "</pubDate>\n");
-  for my $o (sort { $b->{ts} <=> $a->{ts} } @{$data->{people}}) {
-    $stream->write("<item>\n");
-    $stream->write("<description>");
-    $stream->write(encode_utf8 "$o->{name} was active " . timespan($now - $o->{ts}) . "\n");
-    $stream->write("</description>\n");
-    ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($o->{ts}); # Sat, 07 Sep 2002 00:00:01 GMT
-    $stream->write("<pubDate>"
-		   . sprintf("%s, %02d %s %04d %02d:%02d:%02d GMT", qw(Sun Mon Tue Wed Thu Fri Sat)[$wday], $mday,
-			     qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[$mon], $year + 1900, $hour, $min, $sec)
-		   . "</pubDate>\n");
-    $stream->write("</item>\n");
-  }
-  $stream->write("</channel>\n");
-  $stream->write("</rss>\n");
 }
 
 sub emote {

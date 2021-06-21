@@ -209,12 +209,16 @@ Mojo::IOLoop->recurring(60 => sub {
 # notify every streamer in the same room
 sub notify {
   my ($p, $msg) = @_;
-  for my $s (grep { $_->{person}->{location} == $p->{location} } @streamers) {
-    my $stream = $s->{stream};
-    my $o = $_->{person};
-    $stream->write(encode_utf8 $msg);
-    $stream->write("\n");
-  }
+  eval {
+    for my $s (grep { $_->{person}->{location} == $p->{location} } @streamers) {
+      my $stream = $s->{stream};
+      next unless $stream;
+      my $o = $_->{person};
+      $stream->write(encode_utf8 $msg);
+      $stream->write("\n");
+    }
+  };
+  $log->error("Error notifying people of '$msg': $@") if $@;
 }
 
 # main loop
@@ -232,7 +236,7 @@ sub main {
     if ($routine) {
       $log->debug("Running $command");
       $routine->($stream);
-      return;
+      return 1;
     }
     # regular commands
     my $p = login($stream);
@@ -737,30 +741,22 @@ sub rss {
   $stream->write("<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n");
   $stream->write("<channel>\n");
   $stream->write("<title>Ijirait</title>\n");
-  $stream->write("<description>Things being said in the game.</description>\n");
+  $stream->write("<description>Recent activity.</description>\n");
   $stream->write("<link>/play/ijirait</link>\n");
   $stream->write("<generator>Ijirait</generator>\n");
   $stream->write("<docs>http://blogs.law.harvard.edu/tech/rss</docs>\n");
-  my @words;
-  for my $room (@{$data->{rooms}}) {
-    for my $word (@{$room->{words}}) {
-      push(@words, $word);
-    }
-  }
   my $now = time;
-  for my $word (sort { $b->{ts} cmp $a->{ts} } @words) {
+  my ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($now); # Sat, 07 Sep 2002 00:00:01 GMT
+  $stream->write("<pubDate>"
+		 . sprintf("%s, %02d %s %04d %02d:%02d:%02d GMT", qw(Sun Mon Tue Wed Thu Fri Sat)[$wday], $mday,
+			   qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[$mon], $year + 1900, $hour, $min, $sec)
+		 . "</pubDate>\n");
+  for my $o (sort { $b->{ts} <=> $a->{ts} } @{$data->{people}}) {
     $stream->write("<item>\n");
     $stream->write("<description>");
-    if ($word->{by}) {
-      my $o = first { $_->{id} == $word->{by} } @{$data->{people}};
-      $stream->write(encode_utf8 ucfirst timespan($now - $word->{ts})
-		     . ", " . $o->{name} . " said “" . $word->{text} . "”");
-    } elsif ($word->{text}) {
-      # emotes
-      $stream->write(encode_utf8 $word->{text});
-    }
+    $stream->write(encode_utf8 "$o->{name} was active " . timespan($now - $o->{ts}) . "\n");
     $stream->write("</description>\n");
-    my ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($word->{ts}); # Sat, 07 Sep 2002 00:00:01 GMT
+    ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($o->{ts}); # Sat, 07 Sep 2002 00:00:01 GMT
     $stream->write("<pubDate>"
 		   . sprintf("%s, %02d %s %04d %02d:%02d:%02d GMT", qw(Sun Mon Tue Wed Thu Fri Sat)[$wday], $mday,
 			     qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[$mon], $year + 1900, $hour, $min, $sec)

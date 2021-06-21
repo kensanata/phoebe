@@ -201,7 +201,7 @@ sub to_text {
     } elsif (/^=> \/play\/ijirait/) {
       s/^=> \S+\s+(.*)/"* " . colored($1, 'bold')/e;
     } elsif (/^=> \/\//) {
-      s/^=> (\S+)\s+(.*)/"* " . colored($2, 'italic') . " → gemini:\/\/$1"/e;
+      s/^=> \/\/(\S+)\s+(.*)/"* " . colored($2, 'italic') . " → gemini:\/\/$1"/e;
     } else {
       s/^=> (\S+)\s+(.*)/"* " . colored($2, 'italic') . " → $1"/e;
     }

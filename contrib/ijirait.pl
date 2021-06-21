@@ -85,6 +85,9 @@ our $commands = {
   connect  => \&connect,
   map      => \&map,
   emote    => \&emote,
+  hide     => \&hide,
+  reveal   => \&reveal,
+  secrets  => \&secrets,
 };
 
 our $ijrait_commands_without_cert = {
@@ -301,8 +304,9 @@ sub look {
   my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   $stream->write(encode_utf8 "# " . $room->{name} . "\n");
   $stream->write(encode_utf8 $room->{description} . "\n") if $room->{description};
-  $stream->write("## Things\n") if @{$room->{things}} > 0;
-  for my $thing (@{$room->{things}}) {
+  my @things = grep { not $_->{hidden} } @{$room->{things}};
+  $stream->write("## Things\n") if @things > 0;
+  for my $thing (@things) {
     my $name = uri_escape_utf8 $thing->{short};
     $stream->write(encode_utf8 "=> /play/ijirait/examine?$name $thing->{name} ($thing->{short})\n");
   }
@@ -550,7 +554,7 @@ sub describe {
   success($stream);
   $log->debug("Describing unknown object");
   $stream->write(encode_utf8 "# I don’t know what to describe\n");
-  $stream->write(encode_utf8 "The description needs needs to start with what to describe, e.g. “describe me A shape-shifter with red eyes.”\n");
+  $stream->write(encode_utf8 "The description needs to start with what to describe, e.g. “describe me A shape-shifter with red eyes.”\n");
   $stream->write(encode_utf8 "You can describe yourself (“me”), the room you are in (“room”), or an exit (using its shortcut).\n");
   $stream->write("=> /play/ijirait Back\n");
 }
@@ -603,7 +607,7 @@ sub name {
   success($stream);
   $log->debug("Naming unknown object");
   $stream->write(encode_utf8 "# I don’t know what to name\n");
-  $stream->write(encode_utf8 "The command needs needs to start with what to name, e.g. “name me Sogeeran.”\n");
+  $stream->write(encode_utf8 "The command needs to start with what to name, e.g. “name me Sogeeran.”\n");
   $stream->write("=> /play/ijirait Back\n");
 }
 
@@ -746,6 +750,75 @@ sub emote {
   push(@{$room->{words}}, $w);
   notify($p, $text);
   look($stream, $p);
+}
+
+sub hide {
+  my ($stream, $p, $obj) = @_;
+  if ($obj) {
+    my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
+    my $thing = first { $_->{short} eq $obj } @{$room->{things}};
+    if ($thing) {
+      $log->debug("Hide $thing->{short}");
+      notify($p, "$p->{name} hides $thing->{name}.");
+      $thing->{hidden} = 1;
+      $stream->write("30 /play/ijirait/look\r\n");
+      return;
+    }
+  }
+  success($stream);
+  $log->debug("Hiding unknown object");
+  $stream->write(encode_utf8 "# I don’t know what to hide\n");
+  $stream->write(encode_utf8 "The command needs to use the shortcut of a thing, e.g. “hide stone”\n");
+  $stream->write("=> /play/ijirait Back\n");
+}
+
+sub reveal {
+  my ($stream, $p, $obj) = @_;
+  if ($obj) {
+    my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
+    my $thing = first { $_->{short} eq $obj } @{$room->{things}};
+    if ($thing) {
+      if ($thing->{hidden}) {
+	$log->debug("Reveal $thing->{short}");
+	notify($p, "$p->{name} reveals $thing->{name}.");
+	delete $thing->{hidden};
+      }
+      $stream->write("30 /play/ijirait/look\r\n");
+      return;
+    }
+  }
+  success($stream);
+  $log->debug("Revealing unknown object");
+  $stream->write(encode_utf8 "# I don’t know what to reveal\n");
+  $stream->write(encode_utf8 "The command needs to use the shortcut of a hidden thing, e.g. “reveal bird”.\n");
+  $stream->write(encode_utf8 "To list all the hidden things: “secrets”.\n");
+  $stream->write("=> /play/ijirait Back\n");
+}
+
+sub secrets {
+  my ($stream, $p, $phrase) = @_;
+  if ($phrase and $phrase eq "are something I do not care for!") {
+    $log->debug("Secrets");
+    my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
+    my @things = grep { $_->{hidden} } @{$room->{things}};
+    if (@things > 0) {
+      $stream->write("## Hidden Things\n");
+      for my $thing (@things) {
+	my $name = uri_escape_utf8 $thing->{short};
+	$stream->write(encode_utf8 "=> /play/ijirait/examine?$name $thing->{name} ($thing->{short})\n");
+      }
+    } else {
+      $stream->write("## No secrets\n");
+      $stream->write("There are no hidden objects, here\n");
+      $stream->write("=> /play/ijirait Back\n");
+    }
+    return;
+  }
+  success($stream);
+  $log->debug("Secrets without a passphrase");
+  $stream->write(encode_utf8 "# Secrets\n");
+  $stream->write(encode_utf8 "Are you sure you want all the secrets to be revealed? If you are, please use the full command: “secrets are something I do not care for!”\n");
+  $stream->write("=> /play/ijirait Back\n");
 }
 
 1;

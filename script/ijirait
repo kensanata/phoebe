@@ -76,6 +76,7 @@ my $key;
 my $help;
 my $url;
 my $stream;
+my $debug;
 my $wrapper = Text::Wrapper->new();
 
 GetOptions(
@@ -83,6 +84,7 @@ GetOptions(
   'key_file=s' => \$key,
   'help' => \$help,
   'url=s' => \$url,
+  'debug' => \$debug,
   'stream' => \$stream)
     or die("Error in command line arguments\n");
 
@@ -175,6 +177,7 @@ sub play {
 	    push(@queue, $command);
 	  }});
 	# Write request to the server
+	say "$talk_url?$text" if $debug;
 	$stream->write("$talk_url?$text\r\n")});
     # Start event loop if necessary
     Mojo::IOLoop->start unless Mojo::IOLoop->is_running;

@@ -424,6 +424,7 @@ sub go {
   if ($exit) {
     $log->debug("Taking the exit $direction");
     notify($p, "$p->{name} leaves ($direction).");
+    $exit->{ts} = time;
     $p->{location} = $exit->{destination};
     notify($p, "$p->{name} arrives.");
     $stream->write("30 /play/ijirait/look\r\n");
@@ -618,8 +619,8 @@ sub create {
     $log->debug("Create room");
     my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
     my $dest = new_room();
-    my $exit = new_exit($room, $dest);
-    new_exit($dest, $room);
+    my $exit = new_exit($room, $dest, $p);
+    new_exit($dest, $room, $p);
     notify($p, "$p->{name} creates a new room.");
     $stream->write("30 /play/ijirait\r\n");
   } elsif ($obj eq "thing") {
@@ -653,12 +654,14 @@ sub new_room {
 
 sub new_exit {
   # $from and $to are rooms
-  my ($from, $to) = @_;
+  my ($from, $to, $owner) = @_;
   my $e = {
     id => $data->{next}++,
     name => "A tunnel",
     direction => "tunnel",
     destination => $to->{id},
+    owner => $owner,
+    ts => time,
   };
   push(@{$from->{exits}}, $e);
   return $e;
@@ -725,8 +728,8 @@ sub connect {
     my $dest = first { $_->{name} eq $name } @{$data->{rooms}};
     if ($dest) {
       $log->debug("Connecting $name");
-      new_exit($room, $dest);
-      new_exit($dest, $room);
+      new_exit($room, $dest, $p);
+      new_exit($dest, $room, $p);
       notify($p, "$p->{name} creates an exit to $dest->{name}.");
       $stream->write("30 /play/ijirait\r\n");
       return;

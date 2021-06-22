@@ -81,6 +81,7 @@ our $commands = {
   describe => \&describe,
   name     => \&name,
   create   => \&create,
+  delete   => \&delete,
   rooms    => \&rooms,
   connect  => \&connect,
   map      => \&map,
@@ -675,6 +676,32 @@ sub new_thing {
   };
   push(@{$room->{things}}, $t);
   return $t;
+}
+
+sub delete {
+  my ($stream, $p, $str) = @_;
+  my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
+  # try to delete an exit
+  if (first { $_->{direction} eq $str } @{$room->{exits}}) {
+    $log->debug("Delete '$str'");
+    @{$room->{exits}} = grep { $_->{direction} ne $str } @{$room->{exits}};
+    notify($p, "$p->{name} deletes $str");
+    $stream->write("30 /play/ijirait\r\n");
+    return;
+  }
+  # try to delete a thing
+  if (first { $_->{short} eq $str } @{$room->{things}}) {
+    $log->debug("Delete '$str'");
+    @{$room->{things}} = grep { $_->{short} ne $str } @{$room->{things}};
+    notify($p, "$p->{name} deletes $str");
+    $stream->write("30 /play/ijirait\r\n");
+    return;
+  }
+  $log->debug("Cannot delete '$str'");
+  success($stream);
+  $stream->write(encode_utf8 "# Cannot delete “$str”\n");
+  $stream->write(encode_utf8 "Only things and exits can be deleted.\n");
+  menu($stream);
 }
 
 sub rooms {

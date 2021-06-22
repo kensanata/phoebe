@@ -198,7 +198,7 @@ sub to_text {
     $_ = $wrapper->wrap($_) unless /^[#=]/;
     s/\n+$//g;
     $section = $1 if /^## (.*)/;
-    if ($section =~ /^(Exits|(Hidden )?Things)$/) {
+    if ($section =~ /^(Hidden )?(Exits|Things)$/) {
       s/^=> \S+\s+(.*?) \((\S+)\)$/"* $1 (" . colored($2, 'bold') . ")"/e;
     } elsif (/^=> \/play\/ijirait/) {
       s/^=> \S+\s+(.*)/"* " . colored($1, 'bold')/e;

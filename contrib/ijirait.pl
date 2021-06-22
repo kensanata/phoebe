@@ -311,8 +311,9 @@ sub look {
     my $name = uri_escape_utf8 $thing->{short};
     $stream->write(encode_utf8 "=> /play/ijirait/examine?$name $thing->{name} ($thing->{short})\n");
   }
-  $stream->write("## Exits\n") if @{$room->{exits}} > 0;
-  for my $exit (@{$room->{exits}}) {
+  my @exits = grep { not $_->{hidden} } @{$room->{exits}};
+  $stream->write("## Exits\n") if @exits > 0;
+  for my $exit (@exits) {
     my $direction = uri_escape_utf8 $exit->{direction};
     $stream->write(encode_utf8 "=> /play/ijirait/go?$direction $exit->{name} ($exit->{direction})\n");
   }
@@ -788,10 +789,18 @@ sub hide {
     my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
     my $thing = first { $_->{short} eq $obj } @{$room->{things}};
     if ($thing) {
-      $log->debug("Hide $thing->{short}");
+      $log->debug("Hide '$obj'");
       notify($p, "$p->{name} hides $thing->{name}.");
       $thing->{hidden} = 1;
       $stream->write("30 /play/ijirait/look\r\n");
+      return;
+    }
+    my $exit = first { $_->{direction} eq $obj } @{$room->{exits}};
+    if ($exit) {
+      $log->debug("Hide '$obj'");
+      notify($p, "$p->{name} hides $exit->{name}.");
+      $exit->{hidden} = 1;
+      $stream->write("30 /play/ijirait\r\n");
       return;
     }
   }
@@ -809,11 +818,21 @@ sub reveal {
     my $thing = first { $_->{short} eq $obj } @{$room->{things}};
     if ($thing) {
       if ($thing->{hidden}) {
-	$log->debug("Reveal $thing->{short}");
+	$log->debug("Reveal '$obj'");
 	notify($p, "$p->{name} reveals $thing->{name}.");
 	delete $thing->{hidden};
       }
       $stream->write("30 /play/ijirait/look\r\n");
+      return;
+    }
+    my $exit = first { $_->{direction} eq $obj } @{$room->{exits}};
+    if ($exit) {
+      if ($exit->{hidden}) {
+	$log->debug("Reveal '$obj'");
+	notify($p, "$p->{name} reveals $exit->{name}.");
+	delete $exit->{hidden};
+      }
+      $stream->write("30 /play/ijirait\r\n");
       return;
     }
   }
@@ -831,17 +850,26 @@ sub secrets {
     $log->debug("Secrets");
     my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
     my @things = grep { $_->{hidden} } @{$room->{things}};
+    my @exits = grep { $_->{hidden} } @{$room->{exits}};
     if (@things > 0) {
       $stream->write("## Hidden Things\n");
       for my $thing (@things) {
 	my $name = uri_escape_utf8 $thing->{short};
 	$stream->write(encode_utf8 "=> /play/ijirait/examine?$name $thing->{name} ($thing->{short})\n");
       }
-    } else {
-      $stream->write("## No secrets\n");
-      $stream->write("There are no hidden objects, here\n");
-      $stream->write("=> /play/ijirait Back\n");
     }
+    if (@exits > 0) {
+      $stream->write("## Hidden Exits\n");
+      for my $exit (@exits) {
+	my $direction = uri_escape_utf8 $exit->{direction};
+	$stream->write(encode_utf8 "=> /play/ijirait/go?$direction $exit->{name} ($exit->{direction})\n");
+      }
+    }
+    if (@things + @exits == 0) {
+      $stream->write("## No secrets\n");
+      $stream->write("There are neither hidden things nor hidden exists, here\n");
+    }
+    $stream->write("=> /play/ijirait Back\n");
     return;
   }
   success($stream);

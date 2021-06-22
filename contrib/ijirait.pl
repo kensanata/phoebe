@@ -686,18 +686,20 @@ sub delete {
   my ($stream, $p, $str) = @_;
   my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
   # try to delete an exit
-  if (first { $_->{direction} eq $str } @{$room->{exits}}) {
+  my $exit = first { $_->{direction} eq $str } @{$room->{exits}};
+  if ($exit) {
     $log->debug("Delete '$str'");
     @{$room->{exits}} = grep { $_->{direction} ne $str } @{$room->{exits}};
-    notify($p, "$p->{name} deletes $str");
+    notify($p, "$p->{name} deletes $exit->{name}");
     $stream->write("30 /play/ijirait\r\n");
     return;
   }
   # try to delete a thing
-  if (first { $_->{short} eq $str } @{$room->{things}}) {
+  my $thing = first { $_->{short} eq $str } @{$room->{things}};
+  if ($thing) {
     $log->debug("Delete '$str'");
     @{$room->{things}} = grep { $_->{short} ne $str } @{$room->{things}};
-    notify($p, "$p->{name} deletes $str");
+    notify($p, "$p->{name} deletes $thing->{name}");
     $stream->write("30 /play/ijirait\r\n");
     return;
   }

@@ -146,7 +146,7 @@ sub stream {
 }
 
 sub play {
-  say "Use 'quit' to leave the game.";
+  say "Use 'quit' to leave the game. Use '\\' to send a newline.";
 
   my @queue = qw(look);
 
@@ -157,7 +157,6 @@ sub play {
   while (defined ($_ = shift(@queue) || $term->readline($prompt))) {
     exit if $_ eq "quit";
     # create client
-    my $text = uri_escape(encode_utf8(decode(locale => $_)));
     Mojo::IOLoop->client({
       address => $host,
       port => $port,
@@ -177,8 +176,11 @@ sub play {
 	    push(@queue, $command);
 	  }});
 	# Write request to the server
+	my $text = decode(locale => $_);
 	say "$talk_url?$text" if $debug;
-	$stream->write("$talk_url?$text\r\n")});
+	$text =~ s/\\\\/\n/;
+	my $bytes = uri_escape(encode_utf8($text));
+	$stream->write("$talk_url?$bytes\r\n")});
     # Start event loop if necessary
     Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
     # Add to history

@@ -178,7 +178,7 @@ sub play {
 	# Write request to the server
 	my $text = decode(locale => $_);
 	say "$talk_url?$text" if $debug;
-	$text =~ s/\\\\/\n/;
+	$text =~ s/\\\\/\n/g;
 	my $bytes = uri_escape(encode_utf8($text));
 	$stream->write("$talk_url?$bytes\r\n")});
     # Start event loop if necessary
@@ -195,21 +195,35 @@ sub to_text {
   my @lines = split(/\n/, $text);
   my $section = "";
   for (@lines) {
-    $_ = $wrapper->wrap($_) unless /^[#=]/;
-    s/\n+$//g;
-    $section = $1 if /^## (.*)/;
-    if ($section =~ /^(Hidden )?(Exits|Things)$/) {
-      s/^=> \S+\s+(.*?) \((\S+)\)$/"* $1 (" . colored($2, 'bold') . ")"/e;
-    } elsif (/^=> \/play\/ijirait/) {
-      s/^=> \S+\s+(.*)/"* " . colored($1, 'bold')/e;
-    } elsif (/^=> \/\//) {
-      s/^=> \/\/(\S+)\s+(.*)/"* " . colored($2, 'italic') . " → gemini:\/\/$1"/e;
+    if ($section =~ /^(Hidden )?(Exits|Things)$/
+	and s/^=> \S+\s+(.*?) \((\S+)\)$/"* $1 (" . colored($2, 'bold') . ")"/e) {
+      # exits and things come in lists and their shortcuts are bold
+    } elsif (s/^=> \/play\/ijirait\S*\s+(.*)/"* " . colored($1, 'bold')/e) {
+      # internal links are commands, come in lists, and they are all bold
+    } elsif (s/^=> \/\/(\S+)\s+(.*)/"* " . colored($2, 'italic') . " → gemini:\/\/$1"/e) {
+      # external links without protocol come in lists, italic, and the URL
+      # is printed separately for clicking in a terminal emulator, with gemini:
+      # scheme added
+    } elsif (s/^=> (\S+)\s+(.*)/"* " . colored($2, 'italic') . " → $1"/e) {
+      # external links are treated as above but gemini: is not prefixed to the
+      # URL
+    } elsif (s/^# (.*)/colored($1, 'bold underline')/e) {
+      $_ = $wrapper->wrap($_);
+    } elsif (s/^## (.*)/colored($1, 'underline')/e) {
+      $section = $1;
+      $_ = $wrapper->wrap($_);
+    } elsif (s/^### (.*)/colored($1, 'italic')/e) {
+      $_ = $wrapper->wrap($_);
+    } elsif (s/^> *(.*)/colored($1, 'italic')/e) {
+      $wrapper->par_start("  ");
+      $wrapper->body_start("  ");
+      $_ = $wrapper->wrap($_);
+      $wrapper->par_start("");
+      $wrapper->body_start("");
     } else {
-      s/^=> (\S+)\s+(.*)/"* " . colored($2, 'italic') . " → $1"/e;
+      $_ = $wrapper->wrap($_);
     }
-    s/^# (.*)/colored($1, 'bold underline')/e;
-    s/^## (.*)/colored($1, 'underline')/e;
-    s/^### (.*)/colored($1, 'italic')/e;
+    s/\n+$//g; # the wrapper adds extra whitespace at the end
   }
   return join("\n", @lines, "");
 }

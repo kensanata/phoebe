@@ -1257,10 +1257,11 @@ if ($0 eq __FILE__) {
       }
     }
   }
+
+  # Start event loop if necessary
+  Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 }
 
-# Start event loop if necessary
-Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 
 sub configure {
   # config file with extra code; restart server if you change it
@@ -1571,6 +1572,7 @@ sub print_link {
 }
 
 sub pages {
+  my $stream = shift; # used by contributions like oddmuse.pl
   my $host = shift;
   my $space = shift;
   my $re = shift;
@@ -1587,9 +1589,10 @@ sub pages {
 }
 
 sub blog_pages {
+  my $stream = shift; # used by contributions like oddmuse.pl
   my $host = shift;
   my $space = shift;
-  return sort { $b cmp $a } pages($host, $space, '^\d\d\d\d-\d\d-\d\d');
+  return sort { $b cmp $a } pages($stream, $host, $space, '^\d\d\d\d-\d\d-\d\d');
 }
 
 sub blog {
@@ -1597,7 +1600,7 @@ sub blog {
   my $host = shift;
   my $space = shift;
   my $n = shift || 10;
-  my @blog = blog_pages($host, $space);
+  my @blog = blog_pages($stream, $host, $space);
   return unless @blog;
   $stream->write("Blog:\n");
   # we should check for pages marked for deletion!
@@ -1615,7 +1618,7 @@ sub blog_html {
   my $host = shift;
   my $space = shift;
   my $n = shift || 10;
-  my @blog = blog_pages($host, $space);
+  my @blog = blog_pages($stream, $host, $space);
   return unless @blog;
   $stream->write("<p>Blog:\n");
   $stream->write("<ul>\n");
@@ -1634,7 +1637,7 @@ sub serve_main_menu {
   success($stream);
   my $page = $server->{wiki_main_page};
   if ($page) {
-    $stream->write(encode_utf8 text($host, $space, $page) . "\n");
+    $stream->write(encode_utf8 text($stream, $host, $space, $page) . "\n");
   } else {
     $stream->write("# Welcome to Phoebe!\n");
     $stream->write("\n");
@@ -1684,7 +1687,7 @@ sub serve_main_menu_via_http {
   $stream->write("</head>\n");
   $stream->write("<body>\n");
   if ($page) {
-    $stream->write(encode_utf8 to_html(text($host, $space, $page)) . "\n");
+    $stream->write(encode_utf8 to_html(text($stream, $host, $space, $page)) . "\n");
   } else {
     $stream->write("<h1>Welcome to Phoebe!</h1>\n");
   }
@@ -1735,7 +1738,7 @@ sub serve_blog {
   success($stream);
   $log->info("Serving blog");
   $stream->write("# Blog\n");
-  my @blog = blog_pages($host, $space);
+  my @blog = blog_pages($stream, $host, $space);
   if (not @blog) {
     $stream->write("There are no blog pages.\n");
     return;
@@ -1754,7 +1757,7 @@ sub serve_index {
   success($stream);
   $log->info("Serving index of all pages");
   $stream->write("# All Pages\n");
-  my @pages = pages($host, $space);
+  my @pages = pages($stream, $host, $space);
   $stream->write("There are no pages.\n") unless @pages;
   for my $id (sort { newest_first($stream, $a, $b) } @pages) {
     print_link($stream, $host, $space, $id);
@@ -1779,7 +1782,7 @@ sub serve_index_via_http {
   $stream->write("</head>\n");
   $stream->write("<body>\n");
   $stream->write("<h1>All Pages</h1>\n");
-  my @pages = pages($host, $space);
+  my @pages = pages($stream, $host, $space);
   if (@pages) {
     $stream->write("<ul>\n");
     for my $id (sort { newest_first($stream, $a, $b) } @pages) {
@@ -1930,7 +1933,7 @@ sub serve_match {
   $log->info("Serving pages matching $match");
   $stream->write(encode_utf8 "# Search page titles for $match\n");
   $stream->write("Use a Perl regular expression to match page titles.\n");
-  my @pages = pages($host, $space, $match);
+  my @pages = pages($stream, $host, $space, $match);
   $stream->write("No matching page names found.\n") unless @pages;
   for my $id (sort { newest_first($stream, $a, $b) } @pages) {
     print_link($stream, $host, $space, $id);
@@ -1961,11 +1964,11 @@ sub search {
   my $space = shift;
   my $str = shift;
   my $func = shift;
-  my @pages = sort { newest_first($stream, $a, $b) } pages($host, $space);
+  my @pages = sort { newest_first($stream, $a, $b) } pages($stream, $host, $space);
   return unless @pages;
   my $found = 0;
   for my $id (@pages) {
-    my $text = text($host, $space, $id);
+    my $text = text($stream, $host, $space, $id);
     if ($id =~ /$str/i or $text =~ /$str/i) {
       $func->($host, $space, $id, $text, $str);
       $found++;
@@ -2416,7 +2419,7 @@ sub rss {
       my $link = to_url($stream, $host, $space, "page/$id", $scheme);
       $stream->write("<link>$link</link>\n");
       $stream->write("<guid>$link</guid>\n");
-      $stream->write(encode_utf8 "<description>" . quote_html(text($host, $space, $id)) . "</description>\n");
+      $stream->write(encode_utf8 "<description>" . quote_html(text($stream, $host, $space, $id)) . "</description>\n");
       my ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($ts); # Sat, 07 Sep 2002 00:00:01 GMT
       $stream->write("<pubDate>"
 		     . sprintf("%s, %02d %s %04d %02d:%02d:%02d GMT", qw(Sun Mon Tue Wed Thu Fri Sat)[$wday], $mday,
@@ -2454,7 +2457,7 @@ sub blog_rss {
   $stream->write("<generator>Phoebe</generator>\n");
   $stream->write("<docs>http://blogs.law.harvard.edu/tech/rss</docs>\n");
   my $dir = wiki_dir($host, $space);
-  my @blog = blog_pages($host, $space);
+  my @blog = blog_pages($stream, $host, $space);
   my $ts = changes_for($host, $space, @blog);
   # hard coded: 10 pages blog RSS, no pagination
   for my $id (@blog[0 .. min($#blog, 9)]) {
@@ -2463,7 +2466,7 @@ sub blog_rss {
     my $link = to_url($stream, $host, $space, "page/$id", $scheme);
     $stream->write("<link>$link</link>\n");
     $stream->write("<guid>$link</guid>\n");
-    $stream->write(encode_utf8 "<description>" . quote_html(text($host, $space, $id)) . "</description>\n");
+    $stream->write(encode_utf8 "<description>" . quote_html(text($stream, $host, $space, $id)) . "</description>\n");
     my ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($ts->{$id}); # Sat, 07 Sep 2002 00:00:01 GMT
     $stream->write("<pubDate>"
 		   . sprintf("%s, %02d %s %04d %02d:%02d:%02d GMT", qw(Sun Mon Tue Wed Thu Fri Sat)[$wday], $mday,
@@ -2601,7 +2604,7 @@ sub atom {
       my $link = to_url($stream, $host, $space, "page/$id", $scheme);
       $stream->write("<link href=\"$link\"/>\n");
       $stream->write("<id>$link</id>\n");
-      $stream->write(encode_utf8 "<content type=\"text\">" . quote_html(text($host, $space, $id)) . "</content>\n");
+      $stream->write(encode_utf8 "<content type=\"text\">" . quote_html(text($stream, $host, $space, $id)) . "</content>\n");
       $seen{$name} = 1;
     } else {
       # a file
@@ -2651,7 +2654,7 @@ sub blog_atom {
   my $feed_ts = "0001-01-01T00:00:00Z";
   $stream->write("<generator uri=\"https://alexschroeder.ch/cgit/phoebe/about/\" version=\"1.0\">Phoebe</generator>\n");
   my $dir = wiki_dir($host, $space);
-  my @blog = blog_pages($host, $space);
+  my @blog = blog_pages($stream, $host, $space);
   my $changes = changes_for($host, $space, @blog);
   # hard coded: 10 pages blog ATOM, no pagination
   for my $id (@blog[0 .. min($#blog, 9)]) {
@@ -2660,7 +2663,7 @@ sub blog_atom {
     my $link = to_url($stream, $host, $space, "page/$id", $scheme);
     $stream->write("<link href=\"$link\"/>\n");
     $stream->write("<id>$link</id>\n");
-    $stream->write(encode_utf8 "<content type=\"text\">" . quote_html(text($host, $space, $id)) . "</content>\n");
+    $stream->write(encode_utf8 "<content type=\"text\">" . quote_html(text($stream, $host, $space, $id)) . "</content>\n");
     my ($sec, $min, $hour, $mday, $mon, $year) = gmtime($changes->{$id}); # 2003-12-13T18:30:02Z
     my $ts = sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", $year + 1900, $mon + 1, $mday, $hour, $min, $sec);
     $stream->write("<updated>$ts</updated>\n");
@@ -2679,7 +2682,7 @@ sub serve_raw {
   my $revision = shift;
   $log->info("Serving raw $id");
   success($stream, 'text/plain; charset=UTF-8');
-  $stream->write(encode_utf8 text($host, $space, $id, $revision));
+  $stream->write(encode_utf8 text($stream, $host, $space, $id, $revision));
 }
 
 sub serve_raw_via_http {
@@ -2692,7 +2695,7 @@ sub serve_raw_via_http {
   $stream->write("HTTP/1.1 200 OK\r\n");
   $stream->write("Content-Type: text/plain; charset=UTF-8\r\n");
   $stream->write("\r\n");
-  $stream->write(encode_utf8 text($host, $space, $id, $revision));
+  $stream->write(encode_utf8 text($stream, $host, $space, $id, $revision));
 }
 
 sub serve_diff {
@@ -2708,8 +2711,8 @@ sub serve_diff {
   if (not $style) { print_link($stream, $host, $space, "Colour diff", "diff/$id/$revision/colour") }
   else { print_link($stream, $host, $space, "Normal diff", "diff/$id/$revision") }
   $stream->write("Showing the differences between revision $revision and the current revision.\n");
-  my $new = text($host, $space, $id);
-  my $old = text($host, $space, $id, $revision);
+  my $new = text($stream, $host, $space, $id);
+  my $old = text($stream, $host, $space, $id, $revision);
   if (not $style) {
     diff($old, $new,
 	 sub { $stream->write(encode_utf8 "$_\n") for @_ },
@@ -2746,8 +2749,8 @@ sub serve_diff_via_http {
   $stream->write("<body>\n");
   $stream->write(encode_utf8 "<h1>Differences for " . quote_html($id) . "</h1>\n");
   $stream->write("<p>Showing the differences between revision $revision and the current revision.\n");
-  my $new = text($host, $space, $id);
-  my $old = text($host, $space, $id, $revision);
+  my $new = text($stream, $host, $space, $id);
+  my $old = text($stream, $host, $space, $id, $revision);
   diff($old, $new,
        sub { $stream->write(encode_utf8 "<p>$_\n") for @_ },
        sub { $stream->write(encode_utf8 "<p style=\"color: rgb(222,56,43)\">" . join("<br>", map { $_||"⏎" } @_) . "\n") },
@@ -2851,7 +2854,7 @@ sub html_page {
   $stream->write("</head>\n");
   $stream->write("<body>\n");
   $stream->write(encode_utf8 "<h1>" . quote_html($id) . "</h1>\n");
-  $stream->write(encode_utf8 to_html(text($host, $space, $id, $revision)) . "\n");
+  $stream->write(encode_utf8 to_html(text($stream, $host, $space, $id, $revision)) . "\n");
   $stream->write(encode_utf8 to_html(html_footer($stream, $host, $space, $id, $revision)) . "\n");
   $stream->write("</body>\n");
   $stream->write("</html>\n");
@@ -3046,11 +3049,12 @@ sub serve_page {
   $log->info("Serve Gemini page $id");
   success($stream);
   $stream->write(encode_utf8 "# $id\n");
-  $stream->write(encode_utf8 text($host, $space, $id, $revision));
+  $stream->write(encode_utf8 text($stream, $host, $space, $id, $revision));
   $stream->write(encode_utf8 footer($stream, $host, $space, $id, $revision));
 }
 
 sub text {
+  my $stream = shift; # used by contributions like oddmuse.pl
   my $host = shift;
   my $space = shift;
   my $id = shift;

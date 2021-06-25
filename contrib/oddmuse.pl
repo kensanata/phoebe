@@ -75,7 +75,6 @@ sub oddmuse_new_space {
   return oddmuse_old_space($stream, $host, $space);
 }
 
-
 *oddmuse_old_save_page = \&save_page;
 *save_page = \&oddmuse_new_save_page;
 
@@ -161,7 +160,7 @@ sub oddmuse_process_request {
     $stream->write("31 gemini://$host" . ($n ? ":$port" : "") . "/" . ($space ? $space : "") . "\r\n"); # this supports "up"
   } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/page/([^/]+)(?:/(\d+))?$!
 	   and $id ne $server->{wiki_main_page}) {
-    oddmuse_serve_page($stream, $host, $space, decode_utf8(uri_unescape($id)), $n);
+    oddmuse_serve_page($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), $n);
   } elsif (($host, $space, $id) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/tag/([^/]+)$!) {
     oddmuse_serve_tag($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))));
   } elsif (($host, $space, $id) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/raw/([^/]+)$!
@@ -252,6 +251,19 @@ sub oddmuse_serve_page {
     oddmuse_serve_file_page($stream, $id, $type, $data);
   } else {
     oddmuse_serve_gemini_page($stream, $host, $space, $id, $page, $revision);
+  }
+}
+
+# this is required when combining gopher with oddmuse!
+*oddmuse_text_old = \&text;
+*text = \&oddmuse_text_new;
+
+sub oddmuse_text_new {
+  my ($stream, $host) = @_;
+  if (exists $oddmuse_wikis{$host}) {
+    return oddmuse_get_page(@_);
+  } else {
+    return oddmuse_text_old(@_);
   }
 }
 
@@ -538,7 +550,7 @@ sub oddmuse_serve_main_menu {
   success($stream);
   my $page = $server->{wiki_main_page};
   if ($page) {
-    $stream->write(encode_utf8 text($host, $space, $page) . "\n");
+    $stream->write(encode_utf8 text($stream, $host, $space, $page) . "\n");
   } else {
     $stream->write("# Welcome!\n");
     $stream->write("\n");
@@ -564,13 +576,28 @@ sub oddmuse_serve_main_menu {
   print_link($stream, $host, $space, "Config file", "do/config");
 }
 
+# this is required when combining gopher with oddmuse!
+*oddmuse_blog_pages_old = \&blog_pages;
+*blog_pages = \&oddmuse_blog_pages_new;
+
+sub oddmuse_blog_pages_new {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  my $n = shift;
+  if (exists $oddmuse_wikis{$host}) {
+    my $url = "$oddmuse_wikis{$host}?raw=1;action=index;match=^\\d\\d\\d\\d\\-\\d\\d-\\d\\d;n=$n";
+    return map { s/_/ /g; $_ } split(/\n/, oddmuse_get_raw($stream, $url));
+  }
+  return oddmuse_blog_pages_old(@_);
+}
+
 sub oddmuse_blog {
   my $stream = shift;
   my $host = shift;
   my $space = shift;
   my $n = shift;
-  my $url = "$oddmuse_wikis{$host}?raw=1;action=index;match=^\\d\\d\\d\\d\\-\\d\\d-\\d\\d;n=$n";
-  my @pages = split(/\n/, oddmuse_get_raw($stream, $url)) or return;
+  my @pages = blog_pages($stream, $host, $space, $n);
   return unless @pages;
   for my $id (@pages) {
     print_link($stream, $host, $space, normal_to_free($id), "page/$id");
@@ -597,13 +624,27 @@ sub oddmuse_serve_index {
   $log->info("Serving all pages for $host");
   success($stream);
   $stream->write("# All Pages\n");
-  my $url = "$oddmuse_wikis{$host}?raw=1;action=index";
-  $url .= ";ns=$space" if $space;
-  my @pages = split(/\n/, oddmuse_get_raw($stream, $url)) or return;
+  my @pages = pages($stream, $host, $space);
   return unless @pages;
   for my $id (@pages) {
     print_link($stream, $host, $space, normal_to_free($id), "page/$id");
   }
+}
+
+# this is required when combining gopher with oddmuse!
+*oddmuse_pages_old = \&pages;
+*pages = \&oddmuse_pages_new;
+
+sub oddmuse_pages_new {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  if (exists $oddmuse_wikis{$host}) {
+    my $url = "$oddmuse_wikis{$host}?raw=1;action=index";
+    $url .= ";ns=$space" if $space;
+    return split(/\n/, oddmuse_get_raw($stream, $url));
+  }
+  return oddmuse_pages_old(@_);
 }
 
 sub oddmuse_serve_changes {

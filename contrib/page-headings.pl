@@ -56,7 +56,7 @@ sub blog_with_headers {
   my $host = shift;
   my $space = shift;
   my $n = shift || 10;
-  my @blog = blog_pages($host, $space);
+  my @blog = blog_pages($stream, $host, $space, $n);
   return unless @blog;
   $stream->write("Blog:\n");
   for my $id (@blog[0 .. min($#blog, $n - 1)]) {

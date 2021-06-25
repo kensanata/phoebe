@@ -131,6 +131,7 @@ sub query_gemini {
     } => sub {
       my ($loop, $err, $stream) = @_;
       die "Client creation failed: $err\n" if $err;
+      $stream->timeout(2);
       $stream->on(error => sub {
 	my ($stream, $err) = @_;
 	die "Stream error: $err\n" if $err });

@@ -213,7 +213,7 @@ sub gopher_main_menu {
   $log->info("Serving main menu via Gopher");
   my $page = $server->{wiki_main_page};
   if ($page) {
-    $stream->write(encode_utf8 text($host, $space, $page) . "\n");
+    $stream->write(encode_utf8 text($stream, $host, $space, $page) . "\n");
   } else {
     $stream->write("iWelcome to Phoebe!\n");
     $stream->write("i\n");
@@ -244,7 +244,7 @@ sub gopher_blog {
   my $host = shift;
   my $space = shift;
   my $n = shift || 10;
-  my @blog = blog_pages($host, $space);
+  my @blog = blog_pages($stream, $host, $space, $n);
   return unless @blog;
   $stream->write("iBlog:\n");
   # we should check for pages marked for deletion!
@@ -262,7 +262,7 @@ sub gopher_serve_page {
   my $id = shift;
   my $revision = shift;
   $log->info("Serve Gopher page $id");
-  $stream->write(encode_utf8 text($host, $space, $id, $revision));
+  $stream->write(encode_utf8 text($stream, $host, $space, $id, $revision));
 }
 
 sub gopher_serve_index {
@@ -270,7 +270,7 @@ sub gopher_serve_index {
   my $host = shift;
   my $space = shift;
   $log->info("Serving index of all pages via Gopher");
-  my @pages = pages($host, $space);
+  my @pages = pages($stream, $host, $space);
   $stream->write("There are no pages.\n") unless @pages;
   for my $id (sort { newest_first($stream, $a, $b) } @pages) {
     gopher_link($stream, $host, $space, $id);
@@ -284,7 +284,7 @@ sub gopher_serve_blog {
   my $n = shift;
   $log->info("Serving blog via Gopher");
   $stream->write($gopher_header);
-  my @blog = blog_pages($host, $space);
+  my @blog = blog_pages($stream, $host, $space, $n);
   if (not @blog) {
     $stream->write("iThere are no blog pages.\n");
     return;

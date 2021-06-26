@@ -68,11 +68,13 @@ package App::Phoebe;
 use Modern::Perl;
 use Encode qw(encode_utf8 decode_utf8 decode);
 use Text::Wrapper;
+use utf8;
 
 our $gopher_header = "iBlog\n"; # must start with 'i'
 our $gopher_port ||= 70;
 our $gophers_port = [];
 our $gopher_host;
+our $gopher_main_page;
 our ($server, $log, @main_menu);
 
 use Mojo::IOLoop;
@@ -227,9 +229,10 @@ sub gopher_main_menu {
   my $host = shift;
   my $space = shift||"";
   $log->info("Serving main menu via Gopher");
-  my $page = $server->{wiki_main_page};
+  my $page = $gopher_main_page || $server->{wiki_main_page};
   if ($page) {
-    $stream->write(encode_utf8 text($stream, $host, $space, $page) . "\n");
+    my $text = gopher_plain_text(text($stream, $host, $space, $page)) . "\n\n";
+    $stream->write(encode_utf8 gopher_menu($text));
   } else {
     $stream->write("iWelcome to Phoebe!\n");
     $stream->write("i\n");
@@ -301,6 +304,12 @@ sub gopher_plain_text {
   }
   # drop trailing newlines added to paragraphs by the Text::Wrapper code
   my $text = join("\n", map { s/\n+$//; $_ } @lines);
+  return $text;
+}
+
+sub gopher_menu {
+  my $text = shift;
+  $text =~ s/^/i/gm;
   return $text;
 }
 

@@ -126,7 +126,8 @@ sub serve_gopher {
     $log->debug("Serving Gopher on $host for spaces $spaces");
     $log->info("Looking at " . ($selector||"the empty selector"));
     my ($space, $id, $n, $style, $filter);
-    if (($space) = $selector =~ m!^($spaces)?$!) {
+    if (($space) = $selector =~ m!^($spaces)?(?:/page)?/?$!) {
+      # "up" from /page/Alex gives us /page or /page/ which is undefined… treat it as /
       gopher_main_menu($stream, $host, space($stream, $host, $space));
     } elsif (($space, $n) = $selector =~ m!^(?:($spaces)/)?do/more(?:/(\d+))?$!) {
       gopher_serve_blog($stream, $host, space($stream, $host, $space), $n);
@@ -179,7 +180,8 @@ sub serve_gopher {
     #   serve_raw($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
     # } elsif (($space, $id, $n) = $url =~ m!^(?:($spaces)/)?html/([^/]*)(?:/(\d+))?$!) {
     #   serve_html($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
-    } elsif (($space, $id, $n) = $selector =~ m!^(?:($spaces)/)?page/([^/]+)(?:/(\d+))?$!) {
+    } elsif (($space, $id, $n) = $selector =~ m!^(?:($spaces)/)?(?:page/)?([^/]+)(?:/(\d+))?$!) {
+      # the /page is optional: makes finger possible
       gopher_serve_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
     # } elsif (($space, $id) = $url =~ m!^(?:($spaces)/)?file/([^/]+)?$!) {
     #   serve_file($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)));

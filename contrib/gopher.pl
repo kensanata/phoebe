@@ -52,6 +52,16 @@ ports.
     our $gophers_port = 7443; # listen on port 7443 using TLS
     our $gophers_port = [7070,7079]; # listen on port 7070 and 7079 using TLS
 
+If you are virtual hosting note that the Gopher protocol is incapable of doing
+that: the server does not know what hostname the client used to look up the IP
+number it eventually contacted. This works for HTTP and Gemini because HTTP/1.0
+and later added a Host header to pass this information along, and because Gemini
+uses a URL including a hostname in its request.
+
+This is why you need to specify the hostname to use in this situation:
+
+    our $gopher_host = "alexschroeder.ch";
+
 =cut
 
 package App::Phoebe;
@@ -62,6 +72,7 @@ use Text::Wrapper;
 our $gopher_header = "iBlog\n"; # must start with 'i'
 our $gopher_port ||= 70;
 our $gophers_port = [];
+our $gopher_host;
 our ($server, $log, @main_menu);
 
 use Mojo::IOLoop;
@@ -110,7 +121,7 @@ sub serve_gopher {
     };
     alarm(10); # timeout
     my $port = port($stream);
-    my $host = $server->{address}->{$stream->handle->sockhost};
+    my $host = $gopher_host || $server->{address}->{$stream->handle->sockhost};
     my $spaces = space_regex();
     my $reserved = reserved_regex($stream);
     $log->debug("Serving Gopher on $host for spaces $spaces");

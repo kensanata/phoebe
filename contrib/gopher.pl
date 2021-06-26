@@ -101,7 +101,7 @@ sub gopher_startup {
 	  $log->debug("Received " . length($bytes) . " bytes via Gopher");
 	  $buffer .= $bytes;
 	  if ($buffer =~ /^(.*)\r\n/) {
-	    $log->debug("Looking at " . ($1|"an empty selector"));
+	    $log->debug("Looking at " . ($1 || "an empty selector"));
 	    serve_gopher($stream, $1);
 	  } else {
 	    $log->debug("Waiting for more bytes...");
@@ -124,7 +124,7 @@ sub serve_gopher {
     my $spaces = space_regex();
     my $reserved = reserved_regex($stream);
     $log->debug("Serving Gopher on $host for spaces $spaces");
-    $log->info("Looking at " . ($selector||"the empty selector"));
+    $log->info("Looking at " . ($selector || "an empty selector"));
     my ($space, $id, $n, $style, $filter);
     if (($space) = $selector =~ m!^($spaces)?(?:/page)?/?$!) {
       # "up" from /page/Alex gives us /page or /page/ which is undefined… treat it as /

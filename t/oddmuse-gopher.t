@@ -104,7 +104,7 @@ a blackbird singing
 EOT
 
 $res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Haiku&text="
-		. uri_escape("```\n$haiku\n```"))->result;
+		. uri_escape("```\n$haiku```"))->result;
 is($res->code, 302, "Oddmuse save page");
 $res = $ua->get("http://localhost:$oddmuse_port/wiki/raw/Haiku")->result;
 is($res->code, 200, "Oddmuse update");
@@ -168,7 +168,7 @@ Double check and read again
 The flat so silent
 EOT
 
-$page = query_gemini("$titan/raw/2021-06-26%20Haiku;size=70;mime=text/plain;token=hello", $haiku);
+$page = query_gemini("$titan/raw/2021-06-26%20Haiku;size=78;mime=text/plain;token=hello", "```\n$haiku```\n");
 like($page, qr/^30 $base\/page\/2021-06-26%20Haiku\r$/, "Titan Haiku");
 
 $page = query_gopher("page/2021-06-26%20Haiku");
@@ -178,6 +178,6 @@ $page = query_gopher("page/2021-06-26%20Haiku");
 like($page, qr/$haiku/, "Gopher Haiku");
 
 $page = query_gopher("");
-like($page, qr/^12021-06-26 Haiku\tpage\/2021-06-26 Haiku\t$host\t$gopher_port/m, "Blog link in the main menu");
+like($page, qr/^02021-06-26 Haiku\tpage\/2021-06-26 Haiku\t$host\t$gopher_port/m, "Blog link in the main menu");
 
 done_testing();

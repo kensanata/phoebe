@@ -57,6 +57,8 @@ ports.
 package App::Phoebe;
 use Modern::Perl;
 use Encode qw(encode_utf8 decode_utf8 decode);
+use Text::Wrapper;
+
 our $gopher_header = "iBlog\n"; # must start with 'i'
 our $gopher_port ||= 70;
 our $gophers_port = [];
@@ -248,7 +250,7 @@ sub gopher_blog {
   my $n = shift || 10;
   my @blog = blog_pages($stream, $host, $space, $n);
   return unless @blog;
-  $stream->write("iBlog:\n");
+  $stream->write("iPhlog:\n");
   # we should check for pages marked for deletion!
   for my $id (@blog[0 .. min($#blog, $n - 1)]) {
     gopher_link($stream, $host, $space, $id);
@@ -264,7 +266,23 @@ sub gopher_serve_page {
   my $id = shift;
   my $revision = shift;
   $log->info("Serve Gopher page $id");
-  $stream->write(encode_utf8 text($stream, $host, $space, $id, $revision));
+  $stream->write(gopher_plain_text("# $id\n" . encode_utf8 text($stream, $host, $space, $id, $revision)));
+}
+
+sub gopher_plain_text {
+  $_ = shift;
+  my $text_wrapper = Text::Wrapper->new;
+  my $link_wrapper = Text::Wrapper->new(par_start => "→ ", body_start => "  ");
+  my $bullet_wrapper = Text::Wrapper->new(par_start => "• ", body_start => "  ");
+  my $quote_wrapper = Text::Wrapper->new(par_start => "> ", body_start => "> ");
+  s/^# (.*)\n+/"$1\n" . '=' x length($1) . "\n\n"/gem;
+  s/^## (.*)\n+/"$1\n" . '-' x length($1) . "\n\n"/gem;
+  s/^### (.*)\n+/"$1\n" . '·' x length($1) . "\n\n"/gem;
+  s/^\* (.*\n*)/$bullet_wrapper->wrap($1)/gem;
+  s/^=> \S+\s+(\S.*\n*)/$link_wrapper->wrap($1)/gem; # drop URL
+  s/^> (.*\n*)/$quote_wrapper->wrap($1)/gem;
+  s/^(?!#|>|\*|=>)(.*\n*)/$text_wrapper->wrap($1)/gem;
+  return $_;
 }
 
 sub gopher_serve_index {

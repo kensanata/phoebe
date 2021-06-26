@@ -247,11 +247,14 @@ sub oddmuse_serve_page {
   my $space = shift;
   my $id = shift;
   my $revision = shift;
+  # cannot use text() because we don't know if we're serving a file or plain
+  # text when querying Oddmuse
   my $page = oddmuse_get_page($stream, $host, $space, $id, $revision) or return;
   if (my ($type, $data) = $page =~ /^#FILE (\S+) ?(?:\S+)?\n(.*)/s) {
     oddmuse_serve_file_page($stream, $id, $type, $data);
   } else {
-    oddmuse_serve_gemini_page($stream, $host, $space, $id, $page, $revision);
+    my $text = oddmuse_gemini_text($stream, $host, $space, $page);
+    oddmuse_serve_gemini_page($stream, $host, $space, $id, $text, $revision);
   }
 }
 
@@ -260,9 +263,10 @@ sub oddmuse_serve_page {
 *text = \&oddmuse_text_new;
 
 sub oddmuse_text_new {
-  my ($stream, $host) = @_;
+  my ($stream, $host, $space, $id, $revision) = @_;
   if (exists $oddmuse_wikis{$host}) {
-    return oddmuse_get_page(@_);
+    my $text = oddmuse_get_page(@_);
+    return oddmuse_gemini_text($stream, $host, $space, $text);
   } else {
     return oddmuse_text_old(@_);
   }
@@ -288,8 +292,10 @@ sub oddmuse_get_raw {
   $log->debug("Requesting $url");
   my $ua = Mojo::UserAgent->new;
   my $res = $ua->get($url => {'X-Forwarded-For' => $stream->handle->peerhost})->result;
-  if ($res->is_success or $res->code == 404) {
+  if ($res->is_success) {
     return $res->text;
+  } elsif ($res->code == 404) {
+    return "";
   }
   oddmuse_http_error($stream, $res->code, $res->message, $url); # false
 }
@@ -336,7 +342,7 @@ sub oddmuse_serve_gemini_page {
   $log->info("Serve page $id");
   success($stream);
   $stream->write(encode_utf8 "# " . normal_to_free($id) . "\n");
-  $stream->write(encode_utf8 oddmuse_gemini_text($stream, $host, $space, $text));
+  $stream->write(encode_utf8 $text);
   if (not $revision and $id !~ /^Comments_on_(.*)/) {
     my $comments = oddmuse_get_page($stream, $host, $space, "Comments_on_$id");
     if ($comments) {
@@ -344,7 +350,7 @@ sub oddmuse_serve_gemini_page {
       $stream->write(encode_utf8 oddmuse_gemini_text($stream, $host, $space, $comments));
     }
   }
-  $stream->write(encode_utf8 oddmuse_footer($stream, $host, $space, $id, $text));
+  $stream->write(encode_utf8 oddmuse_footer($stream, $host, $space, $id));
 }
 
 sub oddmuse_gemini_text {
@@ -363,8 +369,11 @@ sub oddmuse_gemini_text {
   # the trailing newline and fit right in.
   $text =~ s/^(```.*?\n```)\n/push(@escaped, $1); "\x03" . $ref++ . "\x04\n"/mesg;
   $text =~ s/^((\|.*\|\n)*\|.*\|)/push(@escaped, "```\n$1\n```"); "\x03" . $ref++ . "\x04\n"/meg;
-  my @blocks = split(/\n\n+|\\\\|\n(?=\*)|\n\> *\n/, $text);
+  my @blocks = split(/\n\n+|(?=\\\\\n)|\n(?=\*)|\n\> *\n/, $text);
   for my $block (@blocks) {
+    $block =~ s/\s+/ /g; # unwrap lines
+    $block =~ s/^\s+//; # trim
+    $block =~ s/\s+$//; # trim
     my @links;
     $block =~ s/^(=>.*)\n?/push(@links, $1); ""/gem;
     $block =~ s/\[([^]]+)\]\($full_url_regex\)/push(@links, oddmuse_gemini_link($stream, $host, $space, $1, $2)); $1/ge;
@@ -404,13 +413,11 @@ sub oddmuse_gemini_text {
     $block =~ s/<\/[a-z]+>//g;
     $block =~ s/^((?:> .*\n?)+)$/join(" ", split("\n> ", $1))/ge; # unwrap quotes
     $block =~ s/#(\w+) */push(@links, oddmuse_gemini_link($stream, $host, $space, normal_to_free($1), "tag\/$1")); ""/ge; # hashtags at the end
-    $block =~ s/\s+/ /g; # unwrap lines
-    $block =~ s/^\s+//; # trim
-    $block =~ s/\s+$//; # trim
     $block .= "\n" if $block and @links; # no empty line if the block was all links
     $block .= join("\n", uniq(@links));
   }
-  $text = join("\n\n", @blocks);
+  $text = join("\n\n", @blocks); # add paragraph separation
+  $text =~ s/\n\\\\ //g; # remove paragraph separation for linebreaks
   $text =~ s/^\* (.*)\n(=> \S+ \1)/$2/mg; # remove list items that are just links
   $text =~ s/^(=>.*\n)\n(?==>)/$1/mg; # remove empty lines between links
   $text =~ s/^Tags: .*/Tags:/m;
@@ -640,12 +647,14 @@ sub oddmuse_pages_new {
   my $stream = shift;
   my $host = shift;
   my $space = shift;
+  my $re = shift;
   if (exists $oddmuse_wikis{$host}) {
     my $url = "$oddmuse_wikis{$host}?raw=1;action=index";
     $url .= ";ns=$space" if $space;
+    $url .= ";match=" . uri_escape($re) if $re;
     return map { s/_/ /g; $_ } split(/\n/, oddmuse_get_raw($stream, $url));
   }
-  return oddmuse_pages_old($stream, $host, $space);
+  return oddmuse_pages_old($stream, $host, $space, $re);
 }
 
 sub oddmuse_serve_changes {
@@ -880,7 +889,7 @@ sub oddmuse_serve_rss {
     $link = "gemini://$host:$port/" . ($ns ? "$ns/" : "") . "page/Comments_on_" . uri_escape_utf8(free_to_normal($title));
     $stream->write("<comments>$link</comments>\n");
     my $summary = quote_html(oddmuse_gemini_text($stream, $host, $space, $data->{description}));
-    $stream->write(encode_utf8 "<description>$summary</description>") if $summary;
+    $stream->write(encode_utf8 "<description>$summary</description>\n") if $summary;
     # timestamp from 2020-07-22T20:59Z back to a number
     my $ts = $data->{"last-modified"};
     $ts =~ s/Z/:00Z/; # apparently seconds are mandatory?

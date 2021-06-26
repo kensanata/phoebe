@@ -65,20 +65,23 @@ write_text("$dir/page/2021-02-05.gmi", "yo");
 
 my $page = query_gopher("");
 like($page, qr/^iWelcome to Phoebe/m, "Main menu");
-like($page, qr/^iBlog:/m, "Main menu (Blog section)");
-like($page, qr/^12021-02-05\tpage\/2021-02-05\tlocalhost\t$gopher_port$/m, "Main menu (Blog link)");
-like($page, qr(^0Index of all pages\tdo/index\tlocalhost\t$gopher_port$)m, "Page index link");
+like($page, qr/^iPhlog:/m, "Main menu (Blog section)");
+like($page, qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gopher_port$/m, "Main menu (Blog link)");
+like($page, qr(^1Index of all pages\tdo/index\tlocalhost\t$gopher_port$)m, "Page index link");
 
 $page = query_gopher("", 1);
 like($page, qr/^iWelcome to Phoebe/m, "Main menu via TLS");
-like($page, qr/^iBlog:/m, "Main menu (Blog section) via TLS");
-like($page, qr/^12021-02-05\tpage\/2021-02-05\tlocalhost\t$gophers_port$/m, "Main menu (Blog link) via TLS");
-like($page, qr(^0Index of all pages\tdo/index\tlocalhost\t$gophers_port$)m, "Page index link via TLS");
+like($page, qr/^iPhlog:/m, "Main menu (Blog section) via TLS");
+like($page, qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gophers_port$/m, "Main menu (Blog link) via TLS");
+like($page, qr(^1Index of all pages\tdo/index\tlocalhost\t$gophers_port$)m, "Page index link via TLS");
 
-like(query_gopher("page/2021-02-05"), qr(^yo$), "Page");
-like(query_gopher("page/2021-02-05", 1), qr(^yo$), "Page via TLS");
+$page = query_gopher("page/2021-02-05");
+like($page, qr(^2021-02-05$)m, "Page Title");
+like($page, qr(^==========$)m, "Page Title Unterline");
+like($page, qr(^yo$)m, "Page Text");
+like(query_gopher("page/2021-02-05", 1), qr(^yo$)m, "Page via TLS");
 
-like(query_gopher("do/index"), qr/^12021-02-05\tpage\/2021-02-05\tlocalhost\t$gopher_port$/m, "Index");
-like(query_gopher("do/index", 1), qr/^12021-02-05\tpage\/2021-02-05\tlocalhost\t$gophers_port$/m, "Index via TLS");
+like(query_gopher("do/index"), qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gopher_port$/m, "Index");
+like(query_gopher("do/index", 1), qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gophers_port$/m, "Index via TLS");
 
 done_testing();

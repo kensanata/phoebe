@@ -159,7 +159,7 @@ sub speed_bump_add {
   if ($cidr) {
     my $count = 0;
     for (keys %$speed_data) {
-      $count++ if $speed_data->{$_}->{cidr} eq $cidr;
+      $count++ if exists $speed_data->{$_}->{cidr} and $speed_data->{$_}->{cidr} eq $cidr;
     }
     speed_bump_add_cidr($cidr, $now + $seconds) if $count >= 3;
   }

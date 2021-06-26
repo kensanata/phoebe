@@ -81,34 +81,32 @@ use Mojo::IOLoop;
 Mojo::IOLoop->next_tick(\&gopher_startup);
 
 sub gopher_startup {
-  for my $host (keys %{$server->{host}}) {
-    for my $address (get_ip_numbers($host)) {
-      my @ports = ref $gopher_port ? @$gopher_port : ($gopher_port);
-      my %tls = map { push(@ports, $_); $_ => 1 } ref $gophers_port ? @$gophers_port : ($gophers_port);
-      for my $port (@ports) {
-	$log->info("$host: listening on $address:$port (Gopher)");
-	Mojo::IOLoop->server({
-	  address => $address,
-	  port => $port,
-	  tls => $tls{$port},
-	  tls_cert => $server->{cert_file},
-	  tls_key  => $server->{key_file},
-        } => sub {
-	  my ($loop, $stream) = @_;
-	  my $buffer;
-	  $stream->on(read => sub {
-	    my ($stream, $bytes) = @_;
-	    $log->debug("Received " . length($bytes) . " bytes via Gopher");
-	    $buffer .= $bytes;
-	    if ($buffer =~ /^(.*)\r\n/) {
-	      $log->debug("Looking at " . ($1|"an empty selector"));
-	      serve_gopher($stream, $1);
-	    } else {
-	      $log->debug("Waiting for more bytes...");
-	    }
-	  });
-        });
-      }
+  for my $address (get_ip_numbers($gopher_host)) {
+    my @ports = ref $gopher_port ? @$gopher_port : ($gopher_port);
+    my %tls = map { push(@ports, $_); $_ => 1 } ref $gophers_port ? @$gophers_port : ($gophers_port);
+    for my $port (@ports) {
+      $log->info("$gopher_host: listening on $address:$port (Gopher)");
+      Mojo::IOLoop->server({
+	address => $address,
+	port => $port,
+	tls => $tls{$port},
+	tls_cert => $server->{cert_file},
+	tls_key  => $server->{key_file},
+      } => sub {
+	my ($loop, $stream) = @_;
+	my $buffer;
+	$stream->on(read => sub {
+	  my ($stream, $bytes) = @_;
+	  $log->debug("Received " . length($bytes) . " bytes via Gopher");
+	  $buffer .= $bytes;
+	  if ($buffer =~ /^(.*)\r\n/) {
+	    $log->debug("Looking at " . ($1|"an empty selector"));
+	    serve_gopher($stream, $1);
+	  } else {
+	    $log->debug("Waiting for more bytes...");
+	  }
+	});
+      });
     }
   }
 }

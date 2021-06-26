@@ -81,6 +81,7 @@ use Mojo::IOLoop;
 Mojo::IOLoop->next_tick(\&gopher_startup);
 
 sub gopher_startup {
+  $gopher_host ||= (keys %{$server->{host}})[0];
   for my $address (get_ip_numbers($gopher_host)) {
     my @ports = ref $gopher_port ? @$gopher_port : ($gopher_port);
     my %tls = map { push(@ports, $_); $_ => 1 } ref $gophers_port ? @$gophers_port : ($gophers_port);
@@ -119,7 +120,7 @@ sub serve_gopher {
     };
     alarm(10); # timeout
     my $port = port($stream);
-    my $host = $gopher_host || $server->{address}->{$stream->handle->sockhost};
+    my $host = $gopher_host;
     my $spaces = space_regex();
     my $reserved = reserved_regex($stream);
     $log->debug("Serving Gopher on $host for spaces $spaces");

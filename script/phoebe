@@ -1230,7 +1230,7 @@ if ($0 eq __FILE__) {
     for my $address (get_ip_numbers($host)) {
       $server->{address}->{$address} = $host;
       for my $port (@{$server->{port}}) {
-	$log->info("$host: listening on $address:$port");
+	$log->info("$host: listening on $address:$port (Gemini)");
 	Mojo::IOLoop->server({
 	  address => $address,
 	  port => $port,
@@ -1571,6 +1571,15 @@ sub print_link {
   $stream->write(encode_utf8 gemini_link($stream, $host, $space, $title, $id) . "\n");
 }
 
+sub newest_first {
+  my ($date_a, $article_a) = $a =~ /^(\d\d\d\d-\d\d(?:-\d\d)? ?)?(.*)/;
+  my ($date_b, $article_b) = $b =~ /^(\d\d\d\d-\d\d(?:-\d\d)? ?)?(.*)/;
+  return (($date_b and $date_a and $date_b cmp $date_a)
+	  || ($article_a cmp $article_b)
+	  # this last one should be unnecessary
+	  || ($a cmp $b));
+}
+
 sub pages {
   my $stream = shift; # used by contributions like oddmuse.pl
   my $host = shift;
@@ -1582,10 +1591,11 @@ sub pages {
     return if not -d "$dir/page";
     my @pages = map { s/\.gmi$//; $_ } read_dir("$dir/page");
     write_text($index, join("\n", @pages, ""));
-    return @pages;
+    return sort { newest_first($stream, $host, $a, $b) } @pages;
   }
-  return grep /$re/i, read_lines $index if $re;
-  return read_lines $index;
+  my @lines = sort { newest_first($stream, $host, $a, $b) } read_lines $index;
+  return grep /$re/i, @lines if $re;
+  return @lines;
 }
 
 sub blog_pages {
@@ -1759,7 +1769,7 @@ sub serve_index {
   $stream->write("# All Pages\n");
   my @pages = pages($stream, $host, $space);
   $stream->write("There are no pages.\n") unless @pages;
-  for my $id (sort { newest_first($stream, $a, $b) } @pages) {
+  for my $id (@pages) {
     print_link($stream, $host, $space, $id);
   }
 }
@@ -1785,7 +1795,7 @@ sub serve_index_via_http {
   my @pages = pages($stream, $host, $space);
   if (@pages) {
     $stream->write("<ul>\n");
-    for my $id (sort { newest_first($stream, $a, $b) } @pages) {
+    for my $id (@pages) {
       $stream->write(encode_utf8 "<li>" . link_html($stream, $host, $space, $id) . "\n");
     }
     $stream->write("</ul>\n");
@@ -1935,7 +1945,7 @@ sub serve_match {
   $stream->write("Use a Perl regular expression to match page titles.\n");
   my @pages = pages($stream, $host, $space, $match);
   $stream->write("No matching page names found.\n") unless @pages;
-  for my $id (sort { newest_first($stream, $a, $b) } @pages) {
+  for my $id (@pages) {
     print_link($stream, $host, $space, $id);
   }
 }
@@ -1964,7 +1974,7 @@ sub search {
   my $space = shift;
   my $str = shift;
   my $func = shift;
-  my @pages = sort { newest_first($stream, $a, $b) } pages($stream, $host, $space);
+  my @pages = pages($stream, $host, $space);
   return unless @pages;
   my $found = 0;
   for my $id (@pages) {
@@ -3160,16 +3170,6 @@ sub serve_file_via_http {
   $stream->write("Content-Type: " . $meta{'content-type'} ."\r\n");
   $stream->write("\r\n");
   $stream->write(read_binary($file));
-}
-
-sub newest_first {
-  my $stream = shift;
-  my ($date_a, $article_a) = $a =~ /^(\d\d\d\d-\d\d(?:-\d\d)? ?)?(.*)/;
-  my ($date_b, $article_b) = $b =~ /^(\d\d\d\d-\d\d(?:-\d\d)? ?)?(.*)/;
-  return (($date_b and $date_a and $date_b cmp $date_a)
-	  || ($article_a cmp $article_b)
-	  # this last one should be unnecessary
-	  || ($a cmp $b));
 }
 
 sub bogus_hash {

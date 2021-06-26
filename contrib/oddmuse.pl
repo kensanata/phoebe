@@ -58,7 +58,8 @@ our $oddmuse_namespace_regex = '[\p{Uppercase}\d][\w_  ]*';
 
 sub oddmuse_new_space_regex {
   my $spaces = oddmuse_old_space_regex();
-  return "$spaces|$oddmuse_namespace_regex";
+  return "$spaces|$oddmuse_namespace_regex" if $spaces;
+  return $oddmuse_namespace_regex;
 }
 
 *oddmuse_old_space = \&space;
@@ -589,7 +590,7 @@ sub oddmuse_blog_pages_new {
     my $url = "$oddmuse_wikis{$host}?raw=1;action=index;match=^\\d\\d\\d\\d\\-\\d\\d-\\d\\d;n=$n";
     return map { s/_/ /g; $_ } split(/\n/, oddmuse_get_raw($stream, $url));
   }
-  return oddmuse_blog_pages_old(@_);
+  return oddmuse_blog_pages_old($stream, $host, $space, $n);
 }
 
 sub oddmuse_blog {
@@ -642,9 +643,9 @@ sub oddmuse_pages_new {
   if (exists $oddmuse_wikis{$host}) {
     my $url = "$oddmuse_wikis{$host}?raw=1;action=index";
     $url .= ";ns=$space" if $space;
-    return split(/\n/, oddmuse_get_raw($stream, $url));
+    return map { s/_/ /g; $_ } split(/\n/, oddmuse_get_raw($stream, $url));
   }
-  return oddmuse_pages_old(@_);
+  return oddmuse_pages_old($stream, $host, $space);
 }
 
 sub oddmuse_serve_changes {

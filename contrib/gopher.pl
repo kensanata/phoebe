@@ -39,6 +39,10 @@ If you want to undo this:
 
 The alternative is to use a port number above 1024.
 
+If you don't do any of the above, you'll get a permission error on startup:
+"Mojo::Reactor::Poll: Timer failed: Can't create listen socket: Permission
+denied…"
+
 You can set the normal Gopher and the encrypted Gopher ports by setting the
 appropriate variables. These variables either be a single port, or an array of
 ports.
@@ -69,7 +73,7 @@ sub gopher_startup {
       my @ports = ref $gopher_port ? @$gopher_port : ($gopher_port);
       my %tls = map { push(@ports, $_); $_ => 1 } ref $gophers_port ? @$gophers_port : ($gophers_port);
       for my $port (@ports) {
-	$log->info("Listening on $address:$port");
+	$log->info("$host: listening on $address:$port (Gopher)");
 	Mojo::IOLoop->server({
 	  address => $address,
 	  port => $port,
@@ -84,7 +88,7 @@ sub gopher_startup {
 	    $log->debug("Received " . length($bytes) . " bytes via Gopher");
 	    $buffer .= $bytes;
 	    if ($buffer =~ /^(.*)\r\n/) {
-	      $log->debug("Looking at $1");
+	      $log->debug("Looking at " . ($1|"an empty selector"));
 	      serve_gopher($stream, $1);
 	    } else {
 	      $log->debug("Waiting for more bytes...");
@@ -105,12 +109,10 @@ sub serve_gopher {
     alarm(10); # timeout
     my $port = port($stream);
     my $host = $server->{address}->{$stream->handle->sockhost};
-    my $hosts = host_regex();
     my $spaces = space_regex();
     my $reserved = reserved_regex($stream);
-    $log->debug("Serving ($hosts)(?::$port)?");
-    $log->debug("Spaces $spaces");
-    $log->info("Looking at $selector");
+    $log->debug("Serving Gopher on $host for spaces $spaces");
+    $log->info("Looking at " . ($selector||"the empty selector"));
     my ($space, $id, $n, $style, $filter);
     if (($space) = $selector =~ m!^($spaces)?$!) {
       gopher_main_menu($stream, $host, space($stream, $host, $space));
@@ -193,7 +195,7 @@ sub gopher_link {
   my $title = shift;
   my $id = shift || "page/$title";
   my $port = port($stream);
-  $stream->write(encode_utf8 join("\t", "1" . $title, $id, $host, $port) . "\n");
+  $stream->write(encode_utf8 join("\t", "0" . $title, $id, $host, $port) . "\n");
 }
 
 sub gopher_menu_link {
@@ -203,7 +205,7 @@ sub gopher_menu_link {
   my $title = shift;
   my $selector = shift;
   my $port = port($stream);
-  $stream->write(encode_utf8 join("\t", "0" . $title, $selector, $host, $port) . "\n");
+  $stream->write(encode_utf8 join("\t", "1" . $title, $selector, $host, $port) . "\n");
 }
 
 sub gopher_main_menu {
@@ -272,7 +274,7 @@ sub gopher_serve_index {
   $log->info("Serving index of all pages via Gopher");
   my @pages = pages($stream, $host, $space);
   $stream->write("There are no pages.\n") unless @pages;
-  for my $id (sort { newest_first($stream, $a, $b) } @pages) {
+  for my $id (@pages) {
     gopher_link($stream, $host, $space, $id);
   }
 }

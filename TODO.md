@@ -1,10 +1,8 @@
 # TODO
 
+- Remove %oddmuse_wiki_dirs
 - colour changes ignores the current space, where as changes for all spaces does not
 - add a footer
-- save speed-bump data every hour or so; remove unblocked IP numbers
-  from the data when we save
-- write tests for the contributions (currently: oddmuse.pl)
 - add table processing for Wikipedia contribution back
 - diff with previous version
 - fix the missing client notification on SSL shutdown (according to

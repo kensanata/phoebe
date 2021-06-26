@@ -287,14 +287,21 @@ sub gopher_plain_text {
   my $link_wrapper = Text::Wrapper->new(par_start => "→ ", body_start => "  ");
   my $bullet_wrapper = Text::Wrapper->new(par_start => "• ", body_start => "  ");
   my $quote_wrapper = Text::Wrapper->new(par_start => "> ", body_start => "> ");
-  s/^# (.*)\n+/"$1\n" . '=' x length($1) . "\n\n"/gem;
-  s/^## (.*)\n+/"$1\n" . '-' x length($1) . "\n\n"/gem;
-  s/^### (.*)\n+/"$1\n" . '·' x length($1) . "\n\n"/gem;
-  s/^\* (.*\n*)/$bullet_wrapper->wrap($1)/gem;
-  s/^=> \S+\s+(\S.*\n*)/$link_wrapper->wrap($1)/gem; # drop URL
-  s/^> (.*\n*)/$quote_wrapper->wrap($1)/gem;
-  s/^(?!#|>|\*|=>)(.*\n*)/$text_wrapper->wrap($1)/gem;
-  return $_;
+  my @lines = split(/\n/);
+  for (@lines) {
+    next if /^\s*$/;
+    next if s/^```.*//;
+    next if s/^=> \S+\s+(\S.*\n*)/$link_wrapper->wrap($1)/e; # drop URL
+    next if s/^\* (.*)/$bullet_wrapper->wrap($1)/e;
+    next if s/^> (.*)/$quote_wrapper->wrap($1)/e;
+    next if s/^## (.*)/"$1\n" . '-' x length($1) . "\n\n"/e;
+    next if s/^### (.*)/"$1\n" . '·' x length($1) . "\n\n"/e;
+    next if s/^# (.*)/"$1\n" . '=' x length($1) . "\n\n"/e;
+    $_ = $text_wrapper->wrap($_);
+  }
+  # drop trailing newlines added to paragraphs by the Text::Wrapper code
+  my $text = join("\n", map { s/\n+$//; $_ } @lines);
+  return $text;
 }
 
 sub gopher_serve_index {

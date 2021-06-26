@@ -81,6 +81,10 @@ like($page, qr(^==========$)m, "Page Title Unterline");
 like($page, qr(^yo$)m, "Page Text");
 like(query_gopher("page/2021-02-05", 1), qr(^yo$)m, "Page via TLS");
 
+# finger compatibility
+$page = query_gopher("2021-02-05");
+like($page, qr(^2021-02-05$)m, "Page Title");
+
 like(query_gopher("do/index"), qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gopher_port$/m, "Index");
 like(query_gopher("do/index", 1), qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gophers_port$/m, "Index via TLS");
 

@@ -281,7 +281,7 @@ sub gopher_serve_page {
   my $id = shift;
   my $revision = shift;
   $log->info("Serve Gopher page $id");
-  $stream->write(gopher_plain_text("# $id\n" . encode_utf8 text($stream, $host, $space, $id, $revision)));
+  $stream->write(encode_utf8 gopher_plain_text("# $id\n" . text($stream, $host, $space, $id, $revision)));
 }
 
 sub gopher_plain_text {

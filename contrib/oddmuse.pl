@@ -369,7 +369,7 @@ sub oddmuse_gemini_text {
   # the trailing newline and fit right in.
   $text =~ s/^(```.*?\n```)\n/push(@escaped, $1); "\x03" . $ref++ . "\x04\n"/mesg;
   $text =~ s/^((\|.*\|\n)*\|.*\|)/push(@escaped, "```\n$1\n```"); "\x03" . $ref++ . "\x04\n"/meg;
-  my @blocks = split(/\n\n+|(?=\\\\\n)|\n(?=\*)|\n\> *\n/, $text);
+  my @blocks = split(/\n\n+|(?=\\\\\n)|\n(?=\*|=>)|\n\> *\n/, $text);
   for my $block (@blocks) {
     $block =~ s/\s+/ /g; # unwrap lines
     $block =~ s/^\s+//; # trim

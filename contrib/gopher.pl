@@ -70,7 +70,7 @@ use Encode qw(encode_utf8 decode_utf8 decode);
 use Text::Wrapper;
 use utf8;
 
-our $gopher_header = "iBlog\n"; # must start with 'i'
+our $gopher_header = "iPhlog:\n"; # must start with 'i'
 our $gopher_port ||= 70;
 our $gophers_port = [];
 our $gopher_host;
@@ -125,6 +125,7 @@ sub serve_gopher {
     my $host = $gopher_host;
     my $spaces = space_regex();
     my $reserved = reserved_regex($stream);
+    my $query;
     $log->debug("Serving Gopher on $host for spaces $spaces");
     $log->info("Looking at " . ($selector || "an empty selector"));
     my ($space, $id, $n, $style, $filter);
@@ -145,43 +146,14 @@ sub serve_gopher {
       seek DATA, 0, 0;
       local $/ = undef; # slurp
       $stream->write(encode_utf8 <DATA>);
-    # } elsif ($url =~ m!^(?:($spaces)/)?do/match$!) {
-    #   $stream->write("10 Find page by name (Perl regex)\r\n");
-    # } elsif ($query and ($space) = $url =~ m!^(?:($spaces)/)?do/match\?!) {
-    #   serve_match($stream, $host, map {decode_utf8(uri_unescape($_))} $space, $query);
-    # } elsif ($url =~ m!^(?:($spaces)/)?do/search$!) {
-    #   $stream->write("10 Find page by content (Perl regex)\r\n");
-    # } elsif ($query and ($space) = $url =~ m!^(?:($spaces)/)?do/search\?!) {
-    #   serve_search($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($query))); # search terms include spaces
-    # } elsif ($url =~ m!^(?:($spaces)/)?do/new$!) {
-    #   $stream->write("10 New page\r\n");
-    #   # no URI escaping required
-    # } elsif ($query and ($space) = $url =~ m!^(?:($spaces)/)?do/new\?!) {
-    #   if ($space) {
-    # 	$stream->write("30 gemini://$host:$port/$space/raw/$query\r\n");
-    #   } else {
-    # 	$stream->write("30 gemini://$host:$port/raw/$query\r\n");
-    #   }
-    # } elsif (($space, $n, $style) = $url =~ m!^(?:($spaces)/)?do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
-    #   serve_changes($stream, $host, space($stream, $host, $space), $n||100, $style);
-    # } elsif (($filter, $n, $style) = $url =~ m!^do/all(?:/(latest))?/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
-    #   serve_all_changes($stream, $host, $n||100, $style||"", $filter||"");
-    # } elsif (($space) = $url =~ m!^(?:($spaces)/)?do/rss$!) {
-    #   serve_rss($stream, $host, space($stream, $host, $space));
-    # } elsif (($space) = $url =~ m!^(?:($spaces)/)?do/atom$!) {
-    #   serve_atom($stream, $host, space($stream, $host, $space));
-    # } elsif (($space) = $url =~ m!^(?:($spaces)/)?do/all/atom$!) {
-    #   serve_all_atom($stream, $host);
+    } elsif (($space, $query) = $selector =~ m!^(?:($spaces)/)?do/match\t(.+)!) {
+      gopher_serve_match($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($query)));
+    } elsif (($space, $query) = $selector =~ m!^(?:($spaces)/)?do/search\t(.+)!) {
+      gopher_serve_search($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($query)));
     # } elsif (($host) = $url =~ m!^/robots.txt(?:[#?].*)?$!) {
     #   serve_raw($stream, $host, undef, "robots");
-    # } elsif (($space, $id, $n, $style) = $url =~ m!^(?:($spaces)/)?history/([^/]*)(?:/(\d+))?(?:/(colour|fancy))?$!) {
-    #   serve_history($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n||10, $style);
-    # } elsif (($space, $id, $n, $style) = $url =~ m!^(?:($spaces)/)?diff/([^/]*)(?:/(\d+))?(?:/(colour))?$!) {
-    #   serve_diff($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n, $style);
     # } elsif (($space, $id, $n) = $url =~ m!^(?:($spaces)/)?raw/([^/]*)(?:/(\d+))?$!) {
     #   serve_raw($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
-    # } elsif (($space, $id, $n) = $url =~ m!^(?:($spaces)/)?html/([^/]*)(?:/(\d+))?$!) {
-    #   serve_html($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($space, $id, $n) = $selector =~ m!^(?:($spaces)/)?(?:page/)?([^/]+)(?:/(\d+))?$!) {
       # the /page is optional: makes finger possible
       gopher_serve_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
@@ -190,9 +162,6 @@ sub serve_gopher {
     # } elsif (($host) = $url =~ m!^(/|$)!) {
     #   $log->info("Unknown path for $url\r");
     #   $stream->write("51 Path not found for $url\r\n");
-    # } elsif ($authority) {
-    #   $log->info("Unsupported proxy request for $url");
-    #   $stream->write("53 Unsupported proxy request for $url\r\n");
     } else {
       $log->info("No handler for $selector via gopher");
       $stream->write("Don't know how to handle $selector\r\n");
@@ -210,8 +179,9 @@ sub gopher_link {
   my $space = shift;
   my $title = shift;
   my $id = shift || "page/$title";
+  my $type = shift || 0;
   my $port = port($stream);
-  $stream->write(encode_utf8 join("\t", "0" . $title, $id, $host, $port) . "\n");
+  $stream->write(encode_utf8 join("\t", $type . $title, $id, $host, $port) . "\n");
 }
 
 sub gopher_menu_link {
@@ -242,11 +212,11 @@ sub gopher_main_menu {
     gopher_link($stream, $host, $space, $id);
   }
   for my $line (@main_menu) {
-    $stream->write(encode_utf8 $line . "\n");
+    $stream->write(encode_utf8 "i$line\n");
   }
   # gopher_link($stream, $host, $space, "Changes", "do/changes");
-  # gopher_link($stream, $host, $space, "Search matching page names", "do/match");
-  # gopher_link($stream, $host, $space, "Search matching page content", "do/search");
+  gopher_link($stream, $host, $space, "Search matching page names", "do/match", "7");
+  gopher_link($stream, $host, $space, "Search matching page content", "do/search", "7");
   $stream->write("i\n");
   gopher_menu_link($stream, $host, $space, "Index of all pages", "do/index");
   # gopher_link($stream, $host, $space, "Index of all files", "do/files");
@@ -263,15 +233,16 @@ sub gopher_blog {
   my $host = shift;
   my $space = shift;
   my $n = shift || 10;
-  my @blog = blog_pages($stream, $host, $space, $n);
+  my @blog = blog_pages($stream, $host, $space, $n + 1); # for More...
   return unless @blog;
-  $stream->write("iPhlog:\n");
+  $stream->write($gopher_header);
   # we should check for pages marked for deletion!
   for my $id (@blog[0 .. min($#blog, $n - 1)]) {
     gopher_link($stream, $host, $space, $id);
   }
-  gopher_link($stream, $host, $space, "More...", "do/more/" . ($n * 10)) if @blog > $n;
+  gopher_menu_link($stream, $host, $space, "More...", "do/more/" . ($n * 10)) if @blog > $n;
   $stream->write("i\n");
+  return @blog;
 }
 
 sub gopher_serve_page {
@@ -319,7 +290,7 @@ sub gopher_serve_index {
   my $space = shift;
   $log->info("Serving index of all pages via Gopher");
   my @pages = pages($stream, $host, $space);
-  $stream->write("There are no pages.\n") unless @pages;
+  $stream->write("iThere are no pages.\n") unless @pages;
   for my $id (@pages) {
     gopher_link($stream, $host, $space, $id);
   }
@@ -331,17 +302,34 @@ sub gopher_serve_blog {
   my $space = shift;
   my $n = shift;
   $log->info("Serving blog via Gopher");
-  $stream->write($gopher_header);
-  my @blog = blog_pages($stream, $host, $space, $n);
-  if (not @blog) {
-    $stream->write("iThere are no blog pages.\n");
-    return;
-  }
-  $stream->write("Serving up to $n entries.\n");
-  for my $id (@blog[0 .. min($#blog, $n - 1)]) {
+  return if gopher_blog($stream, $host, $space, 10);
+  $stream->write("iThere are no blog pages.\n");
+}
+
+sub gopher_serve_match {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  my $query = shift;
+  $log->info("Serving index of all pages matching $query via Gopher");
+  my @pages = pages($stream, $host, $space, $query);
+  $stream->write("There are no pages.\n") unless @pages;
+  for my $id (@pages) {
     gopher_link($stream, $host, $space, $id);
   }
-  gopher_link($stream, $host, $space, "More...", "do/more/" . ($n * 10)) if @blog > $n;
+}
+
+sub gopher_serve_search {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  my $query = shift;
+  $log->info("Serving search for $query via Gopher");
+  my @pages = search($stream, $host, $space, $query, sub { highlight($stream, @_) });
+  $stream->write("There are no pages.\n") unless @pages;
+  for my $id (@pages) {
+    gopher_link($stream, $host, $space, $id);
+  }
 }
 
 1;

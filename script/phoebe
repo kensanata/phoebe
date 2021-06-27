@@ -1602,6 +1602,7 @@ sub blog_pages {
   my $stream = shift; # used by contributions like oddmuse.pl
   my $host = shift;
   my $space = shift;
+  my $n = shift; # used by contributions like oddmuse.pl
   return sort { $b cmp $a } pages($stream, $host, $space, '^\d\d\d\d-\d\d-\d\d');
 }
 
@@ -1610,7 +1611,7 @@ sub blog {
   my $host = shift;
   my $space = shift;
   my $n = shift || 10;
-  my @blog = blog_pages($stream, $host, $space);
+  my @blog = blog_pages($stream, $host, $space, $n);
   return unless @blog;
   $stream->write("Blog:\n");
   # we should check for pages marked for deletion!
@@ -1628,7 +1629,7 @@ sub blog_html {
   my $host = shift;
   my $space = shift;
   my $n = shift || 10;
-  my @blog = blog_pages($stream, $host, $space);
+  my @blog = blog_pages($stream, $host, $space, $n);
   return unless @blog;
   $stream->write("<p>Blog:\n");
   $stream->write("<ul>\n");
@@ -1748,7 +1749,7 @@ sub serve_blog {
   success($stream);
   $log->info("Serving blog");
   $stream->write("# Blog\n");
-  my @blog = blog_pages($stream, $host, $space);
+  my @blog = blog_pages($stream, $host, $space, $n);
   if (not @blog) {
     $stream->write("There are no blog pages.\n");
     return;
@@ -2467,7 +2468,7 @@ sub blog_rss {
   $stream->write("<generator>Phoebe</generator>\n");
   $stream->write("<docs>http://blogs.law.harvard.edu/tech/rss</docs>\n");
   my $dir = wiki_dir($host, $space);
-  my @blog = blog_pages($stream, $host, $space);
+  my @blog = blog_pages($stream, $host, $space, 10);
   my $ts = changes_for($host, $space, @blog);
   # hard coded: 10 pages blog RSS, no pagination
   for my $id (@blog[0 .. min($#blog, 9)]) {
@@ -2664,7 +2665,7 @@ sub blog_atom {
   my $feed_ts = "0001-01-01T00:00:00Z";
   $stream->write("<generator uri=\"https://alexschroeder.ch/cgit/phoebe/about/\" version=\"1.0\">Phoebe</generator>\n");
   my $dir = wiki_dir($host, $space);
-  my @blog = blog_pages($stream, $host, $space);
+  my @blog = blog_pages($stream, $host, $space, 10);
   my $changes = changes_for($host, $space, @blog);
   # hard coded: 10 pages blog ATOM, no pagination
   for my $id (@blog[0 .. min($#blog, 9)]) {
@@ -3769,7 +3770,7 @@ sub process_gemini {
     } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/match$!) {
       $stream->write("10 Find page by name (Perl regex)\r\n");
     } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/match\?!) {
-      serve_match($stream, $host, map {decode_utf8(uri_unescape($_))} $space, $query);
+      serve_match($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($query)));
     } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/search$!) {
       $stream->write("10 Find page by content (Perl regex)\r\n");
     } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/search\?!) {

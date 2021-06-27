@@ -155,8 +155,6 @@ sub oddmuse_process_request {
   if ($url =~ m!^gemini://$hosts(?::$port)?/robots\.txt$!) {
     # must come before redirection to regular pages since it contains no slash
     oddmuse_serve_robots($stream);
-  } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?/(?:/($spaces))?$!) {
-    oddmuse_serve_main_menu($stream, $host, $space);
   } elsif (($host, $n, $space) = $url =~ m!^gemini://$hosts(:$port)?(?:/($spaces))?/(?:$reserved)$!) {
     $stream->write("31 gemini://$host" . ($n ? ":$port" : "") . "/" . ($space ? $space : "") . "\r\n"); # this supports "up"
   } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/page/([^/]+)(?:/(\d+))?$!
@@ -550,40 +548,6 @@ sub normal_to_free {
   return $title;
 }
 
-sub oddmuse_serve_main_menu {
-  my $stream = shift;
-  my $host = shift;
-  my $space = shift;
-  $log->info("Serving main menu");
-  success($stream);
-  my $page = $server->{wiki_main_page};
-  if ($page) {
-    $stream->write(encode_utf8 text($stream, $host, $space, $page) . "\n");
-  } else {
-    $stream->write("# Welcome!\n");
-    $stream->write("\n");
-  }
-  $stream->write("Blog:\n");
-  oddmuse_blog($stream, $host, $space, 10);
-  $stream->write("\n");
-  for my $id (@{$server->{wiki_page}}) {
-    print_link($stream, $host, $space, $id);
-  }
-  print_link($stream, $host, $space, "Atom Feed", "do/blog/atom");
-  print_link($stream, $host, $space, "RSS Feed", "do/blog/rss");
-  for my $line (@main_menu) {
-    $stream->write(encode_utf8 "$line\n");
-  }
-  print_link($stream, $host, $space, "Changes", "do/changes");
-  print_link($stream, $host, $space, "Search matching page names", "do/match");
-  print_link($stream, $host, $space, "Search matching page content", "do/search");
-  print_link($stream, $host, $space, "New page", "do/new");
-  $stream->write("\n");
-  # a requirement of the GNU Affero General Public License
-  print_link($stream, $host, $space, "Source code", "do/source");
-  print_link($stream, $host, $space, "Config file", "do/config");
-}
-
 # this is required when combining gopher with oddmuse!
 *oddmuse_blog_pages_old = \&blog_pages;
 *blog_pages = \&oddmuse_blog_pages_new;
@@ -655,6 +619,24 @@ sub oddmuse_pages_new {
     return map { s/_/ /g; $_ } split(/\n/, oddmuse_get_raw($stream, $url));
   }
   return oddmuse_pages_old($stream, $host, $space, $re);
+}
+
+# this is required when combining gopher with oddmuse!
+*oddmuse_search_old = \&search;
+*search = \&oddmuse_search_new;
+
+sub oddmuse_search_new {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  my $re = shift;
+  if (exists $oddmuse_wikis{$host}) {
+    my $url = "$oddmuse_wikis{$host}?raw=1";
+    $url .= ";ns=$space" if $space;
+    $url .= ";context=0;search=" . uri_escape($re) if $re;
+    return map { s/_/ /g; $_ } split(/\n/, oddmuse_get_raw($stream, $url));
+  }
+  return oddmuse_search_old($stream, $host, $space, $re, @_);
 }
 
 sub oddmuse_serve_changes {

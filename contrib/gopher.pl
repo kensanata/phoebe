@@ -212,7 +212,7 @@ sub gopher_main_menu {
     gopher_link($stream, $host, $space, $id);
   }
   for my $line (@main_menu) {
-    $stream->write(encode_utf8 "i$line\n");
+    $stream->write(encode_utf8 join("\n", map { "i$_" } split(/\n/, gopher_plain_text($line))) . "\ni\n");
   }
   # gopher_link($stream, $host, $space, "Changes", "do/changes");
   gopher_link($stream, $host, $space, "Search matching page names", "do/match", "7");

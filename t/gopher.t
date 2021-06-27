@@ -24,12 +24,12 @@ use utf8; # tests contain UTF-8 characters and it matters
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 
 our $host;
-our $base;
-our $dir;
+our @hosts = qw(localhost 127.0.0.1); # localhost must come first
+our @spaces = qw(localhost/alex);
 our $port;
+our $dir;
+our $base;
 our @config = qw(gopher.pl);
-our @spaces = qw(alex berta chris);
-our @pages = qw(Alex Berta Chris);
 
 my $gopher_port = Mojo::IOLoop::Server->generate_port; # new port for Gopher
 my $gophers_port = Mojo::IOLoop::Server->generate_port; # new port for Gophers
@@ -38,6 +38,7 @@ my $gophers_port = Mojo::IOLoop::Server->generate_port; # new port for Gophers
 push(@config, <<"EOF");
 \$gopher_port = $gopher_port;
 \$gophers_port = $gophers_port;
+\$gopher_host = $hosts[0];
 EOF
 
 require './t/test.pl';
@@ -61,17 +62,19 @@ sub query_gopher {
   return <$socket>;
 }
 
-mkdir("$dir/page");
-write_text("$dir/page/2021-02-05.gmi", "yo");
-mkdir("$dir/alex");
-mkdir("$dir/alex/page");
-write_text("$dir/alex/page/2021-02-05.gmi", "lo");
+mkdir("$dir/localhost");
+mkdir("$dir/localhost/page");
+write_text("$dir/localhost/page/2021-02-05.gmi", "yo");
+mkdir("$dir/localhost/alex");
+mkdir("$dir/localhost/alex/page");
+write_text("$dir/localhost/alex/page/2021-02-05.gmi", "lo");
 
 my $page = query_gopher("");
 like($page, qr/^iWelcome to Phoebe/m, "Main menu");
 like($page, qr/^iPhlog:/m, "Main menu (Blog section)");
 like($page, qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gopher_port$/m, "Main menu (Blog link)");
 like($page, qr(^1Index of all pages\tdo/index\tlocalhost\t$gopher_port$)m, "Page index link");
+unlike($page, qr(=>), "No Gemini link on the main menu");
 
 $page = query_gopher("", 1);
 like($page, qr/^iWelcome to Phoebe/m, "Main menu via TLS");
@@ -97,5 +100,11 @@ like(query_gopher("alex/page/2021-02-05", 1), qr(^lo$)m, "Different Page Text in
 # page list
 like(query_gopher("do/index"), qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gopher_port$/m, "Index");
 like(query_gopher("do/index", 1), qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gophers_port$/m, "Index via TLS");
+
+# verify that gemini still works
+$page = query_gemini("$base/");
+like($page, qr/Welcome to Phoebe/, "Main menu via Gemini");
+like($page, qr/^Blog:/m, "Main menu (Blog section) via Gemini");
+like($page, qr/^=> $base\/page\/2021-02-05 2021-02-05/m, "Main menu contains 2021-02-05 via Gemini");
 
 done_testing();

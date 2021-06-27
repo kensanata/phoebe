@@ -88,7 +88,7 @@ sub serve_edit_via_http {
   $stream->write("<p><label for=\"token\">Token:</label>\n");
   $stream->write("<br><input type=\"text\" id=\"token\" name=\"token\" required>\n");
   $stream->write("<p><label for=\"text\">Text:</label>\n");
-  my $text = text($host, $space, $id);
+  my $text = text($stream, $host, $space, $id);
   # textarea can be empty in order to delete a page
   $stream->write(encode_utf8 "<br><textarea style=\"width: 100%; height: 20em;\" id=\"text\" name=\"text\">$text</textarea>\n");
   $stream->write("<p><input type=\"submit\" value=\"Save\">\n");

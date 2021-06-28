@@ -560,7 +560,7 @@ sub oddmuse_blog_pages_new {
   my $n = shift;
   if (exists $oddmuse_wikis{$host}) {
     my $url = "$oddmuse_wikis{$host}?raw=1;action=index;match=^\\d\\d\\d\\d\\-\\d\\d-\\d\\d;n=$n";
-    return map { s/_/ /g; $_ } split(/\n/, oddmuse_get_raw($stream, $url));
+    return map { s/_/ /g; $_ } split(/\n/, oddmuse_get_raw($stream, $url) || '');
   }
   return oddmuse_blog_pages_old($stream, $host, $space, $n);
 }

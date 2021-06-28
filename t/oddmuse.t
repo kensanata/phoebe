@@ -19,6 +19,7 @@ use Mojo::IOLoop;
 use Mojo::UserAgent;
 use Encode;
 use Encode::Locale;
+use File::Slurper qw(write_text);
 use Test::More;
 use utf8; # tests contain UTF-8 characters and it matters
 
@@ -42,6 +43,7 @@ my $oddmuse_dir = "./" . sprintf("test-%04d", int(rand(10000)));
 mkdir $oddmuse_dir; # required so that the server can write the error log
 mkdir "$oddmuse_dir/modules";
 link "./t/oddmuse-namespaces.pl", "$oddmuse_dir/modules/namespaces.pl";
+write_text("$oddmuse_dir/config", "\$SurgeProtection = 0;\n");
 
 my $oddmuse_pid = fork();
 

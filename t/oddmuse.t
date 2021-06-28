@@ -119,9 +119,10 @@ is($res->body, "Berta\n", "Oddmuse page content from namespace");
 # Start Phoebe
 
 my $config = <<"EOT";
-our %oddmuse_wikis = ("localhost" => "http://localhost:$oddmuse_port/wiki");
-our %oddmuse_wiki_names = ("localhost" => "Test");
-our %oddmuse_wiki_dirs = ("localhost" => "$oddmuse_dir");
+our \%oddmuse_wikis = ("localhost" => "http://localhost:$oddmuse_port/wiki");
+our \%oddmuse_wiki_names = ("localhost" => "Test");
+our \%oddmuse_wiki_dirs = ("localhost" => "$oddmuse_dir");
+our \$server->{wiki_main_page} = "Welcome";
 EOT
 
 our @config = ('oddmuse.pl', $config);
@@ -227,6 +228,14 @@ $page = query_gemini("$titan/Travels/raw/Haiku;size=66;mime=text/plain;token=hel
 like($page, qr/^30 $base\/Travels\/page\/Haiku\r$/, "Titan Haiku");
 
 like(query_gemini("$base/Travels/page/Haiku"), qr(drumming), "Gemini proxy for Oddmuse");
+
+# Formatting the main page
+
+$res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Welcome&text=Hello")->result;
+is($res->code, 302, "Oddmuse save Welcome page");
+$res = $ua->get("http://localhost:$oddmuse_port/wiki?title=2021-06-28&text=Hoi")->result;
+is($res->code, 302, "Oddmuse save blog page");
+like(query_gemini("$base"), qr(^Hello\n\nBlog:\n)m, "Main page including Welcome");
 
 # Unit testing of text formatting rules
 

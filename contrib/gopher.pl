@@ -129,7 +129,9 @@ sub serve_gopher {
     $log->debug("Serving Gopher on $host for spaces $spaces");
     $log->info("Looking at " . ($selector || "an empty selector"));
     my ($space, $id, $n, $style, $filter);
-    if (($space) = $selector =~ m!^($spaces)?(?:/page)?/?$!) {
+    if (run_extensions($stream, $selector)) {
+      # config file goes first
+    } elsif (($space) = $selector =~ m!^($spaces)?(?:/page)?/?$!) {
       # "up" from page/Alex gives us page or page/ → show main menu
       gopher_main_menu($stream, $host, space($stream, $host, $space));
     } elsif (($space, $n) = $selector =~ m!^(?:($spaces)/)?do/more(?:/(\d+))?$!) {

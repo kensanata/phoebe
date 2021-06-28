@@ -26,6 +26,6 @@ push(@extensions, \&block_fediverse);
 sub block_fediverse {
   my ($stream, $url, $headers) = @_;
   # quit as quickly as possible: return 1 means the request has been handled
-  return 1 if $headers and $headers->{"user-agent"} =~ m!Mastodon|Friendica|Pleroma!i;
+  return 1 if $headers and $headers->{"user-agent"} and $headers->{"user-agent"} =~ m!Mastodon|Friendica|Pleroma!i;
   return 0;
 }

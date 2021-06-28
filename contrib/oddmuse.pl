@@ -421,7 +421,7 @@ sub oddmuse_gemini_text {
   $text =~ s/^(=>.*\n)\n(?==>)/$1/mg; # remove empty lines between links
   $text =~ s/^Tags: .*/Tags:/m;
   $text =~ s/\x03(\d+)\x04/$escaped[$1]/ge;
-  return $text;
+  return $text . "\n";
 }
 
 sub oddmuse_gemini_link {

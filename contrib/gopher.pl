@@ -130,7 +130,7 @@ sub serve_gopher {
     $log->info("Looking at " . ($selector || "an empty selector"));
     my ($space, $id, $n, $style, $filter);
     if (($space) = $selector =~ m!^($spaces)?(?:/page)?/?$!) {
-      # "up" from /page/Alex gives us /page or /page/ which is undefined… treat it as /
+      # "up" from page/Alex gives us page or page/ → show main menu
       gopher_main_menu($stream, $host, space($stream, $host, $space));
     } elsif (($space, $n) = $selector =~ m!^(?:($spaces)/)?do/more(?:/(\d+))?$!) {
       gopher_serve_blog($stream, $host, space($stream, $host, $space), $n);
@@ -261,10 +261,9 @@ sub gopher_plain_text {
   my $link_wrapper = Text::Wrapper->new(par_start => "→ ", body_start => "  ");
   my $bullet_wrapper = Text::Wrapper->new(par_start => "• ", body_start => "  ");
   my $quote_wrapper = Text::Wrapper->new(par_start => "> ", body_start => "> ");
-  my @lines = split(/\n/);
+  my @lines = grep { !/^```/ } split(/\n/);
   for (@lines) {
     next if /^\s*$/;
-    next if s/^```.*//;
     next if s/^=> \S+\s+(\S.*\n*)/$link_wrapper->wrap($1)/e; # drop URL
     next if s/^\* (.*)/$bullet_wrapper->wrap($1)/e;
     next if s/^> (.*)/$quote_wrapper->wrap($1)/e;
@@ -273,8 +272,8 @@ sub gopher_plain_text {
     next if s/^# (.*)/"$1\n" . '=' x length($1) . "\n\n"/e;
     $_ = $text_wrapper->wrap($_);
   }
-  # drop trailing newlines added to paragraphs by the Text::Wrapper code
-  my $text = join("\n", map { s/\n+$//; $_ } @lines);
+  # drop trailing newlines added to paragraphs by the Text::Wrapper code, except for the last one
+  my $text = join("\n", map { s/\n+$//; $_ } @lines) . "\n";
   return $text;
 }
 

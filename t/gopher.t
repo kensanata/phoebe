@@ -92,6 +92,17 @@ like(query_gopher("page/2021-02-05", 1), qr(^yo$)m, "Page via TLS");
 $page = query_gopher("2021-02-05");
 like($page, qr(^2021-02-05$)m, "Page Title");
 
+# handling of ```
+my $haiku = <<'EOT';
+Through open windows
+Hear the garbage truck's engine
+Rattle in the heat
+EOT
+write_text("$dir/localhost/page/2021-06-28.gmi", "```\n$haiku```\n");
+$page = query_gopher("2021-06-28");
+# in the following regex the * makes the final \n in $haiku optional
+like($page, qr(^2021-06-28\n==========\n$haiku*$), "No empty lines");
+
 # spaces
 $page = query_gopher("alex/page/2021-02-05");
 like($page, qr(^lo$)m, "Different Page Text in a Space");

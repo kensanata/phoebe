@@ -217,7 +217,6 @@ sub notify {
     for my $s (grep { $_->{person}->{location} == $p->{location} } @streamers) {
       my $stream = $s->{stream};
       next unless $stream;
-      my $o = $_->{person};
       $stream->write(encode_utf8 $msg);
       $stream->write("\n");
     }

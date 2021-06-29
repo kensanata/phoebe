@@ -475,7 +475,7 @@ sub speak {
   $text =~ s/^\s+//;
   $text =~ s/\s+$//;
   if (not $text) {
-    $stream->write("10 Type your command\r\n");
+    $stream->write("10 You say\r\n");
     return;
   }
   my $w = {
@@ -780,7 +780,7 @@ sub map {
 sub emote {
   my ($stream, $p, $text) = @_;
   if (not $text) {
-    $stream->write("10 Type your command\r\n");
+    $stream->write("10 What happens\r\n");
     return;
   }
   my $w = {

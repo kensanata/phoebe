@@ -360,6 +360,8 @@ sub menu {
   my $stream = shift;
   $stream->write("## Commands\n");
   $stream->write("=> /play/ijirait/look look\n");
+  $stream->write("=> /play/ijirait/say say\n");
+  $stream->write("=> /play/ijirait/emote emote\n");
   $stream->write("=> /play/ijirait/help help\n");
   $stream->write("=> /play/ijirait/type type\n");
 }
@@ -472,6 +474,10 @@ sub speak {
   $text =~ s/["”“»]$//;
   $text =~ s/^\s+//;
   $text =~ s/\s+$//;
+  if (not $text) {
+    $stream->write("10 Type your command\r\n");
+    return;
+  }
   my $w = {
     text => $text,
     by => $p->{id},
@@ -773,6 +779,10 @@ sub map {
 
 sub emote {
   my ($stream, $p, $text) = @_;
+  if (not $text) {
+    $stream->write("10 Type your command\r\n");
+    return;
+  }
   my $w = {
     text => $text,
     author => $p->{id},

@@ -418,7 +418,7 @@ sub oddmuse_gemini_text {
   $text = join("\n\n", @blocks); # add paragraph separation
   $text =~ s/\n\\\\ //g; # remove paragraph separation for linebreaks
   $text =~ s/^\* (.*)\n(=> \S+ \1)/$2/mg; # remove list items that are just links
-  $text =~ s/^(=>.*\n)\n(?==>)/$1/mg; # remove empty lines between links
+  $text =~ s/^(=?>.*\n)\n(?==>)/$1/mg; # remove empty lines between links or between links and quotes
   $text =~ s/^Tags: .*/Tags:/m;
   $text =~ s/\x03(\d+)\x04/$escaped[$1]/ge;
   return $text . "\n";

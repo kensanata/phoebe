@@ -558,12 +558,13 @@ sub describe {
       $stream->write("30 /play/ijirait/examine?$name\r\n");
       return;
     }
+    # No description of exits.
   }
   success($stream);
   $log->debug("Describing unknown object");
   $stream->write(encode_utf8 "# I don’t know what to describe\n");
   $stream->write(encode_utf8 "The description needs to start with what to describe, e.g. “describe me A shape-shifter with red eyes.”\n");
-  $stream->write(encode_utf8 "You can describe yourself (“me”), the room you are in (“room”), or an exit (using its shortcut).\n");
+  $stream->write(encode_utf8 "You can describe yourself (“me”), the room you are in (“room”), or a thing (using its shortcut). You cannot describe exits.\n");
   $stream->write("=> /play/ijirait Back\n");
 }
 

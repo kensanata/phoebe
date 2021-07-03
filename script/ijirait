@@ -64,11 +64,13 @@ use Mojo::IOLoop;
 use Pod::Text;
 use Getopt::Long;
 use Term::ReadLine; # install Term::ReadLine::Gnu
-use Term::ANSIColor;
+use Term::ANSIColor qw(colorstrip colored);
 use URI::Escape::XS qw(uri_escape uri_unescape);
 use Encode::Locale;
 use Encode qw(decode_utf8 encode_utf8 decode encode);
 use Text::Wrapper;
+use File::Slurper qw(read_text write_text);
+use IPC::Open2;
 use utf8;
 
 my $cert;
@@ -156,6 +158,26 @@ sub play {
   my $OUT = $term->OUT || \*STDOUT;
   while (defined ($_ = shift(@queue) || $term->readline($prompt))) {
     exit if $_ eq "quit";
+    # Handle <
+    my $command = decode(locale => $_);
+    if ($command =~ /^(.*?)\s*<\s*([^|<>]+?)\s*$/s) {
+      if (-f $2) {
+	$command = $1 . " " . decode_utf8(read_text($2));
+      } else {
+	say "Cannot read $2";
+	next;
+      }
+    }
+    # Handle | >
+    my $shell_command;
+    if ($command =~ /^([^<>]*?)(\|[^<]+)/s
+	or $command =~ /^([^<|]*?)(>[^|<>]+)/s) {
+      # matches if we're in a pipe such as look|tail>test, or just a redirect to
+      # a file like look>test; constructs like look>test|tail save the complete
+      # output of look into test and tail nothing
+      $command = $1;
+      $shell_command = $2;
+    }
     # create client
     Mojo::IOLoop->client({
       address => $host,
@@ -168,18 +190,24 @@ sub play {
 	return say $err unless $stream;
 	$stream->on(read => sub {
 	  my ($stream, $bytes) = @_;
-	  my $text = to_text(decode_utf8($bytes));
-	  print encode(locale => $text);
+	  if ($shell_command) {
+	    open(my $fh, $shell_command)
+		or die "Can't run $shell_command: $!";
+	    $bytes =~ s/^2.*\n//; # skip header
+	    print $fh $bytes;
+	  } else {
+	    my $text = to_text(decode_utf8($bytes));
+	    print encode(locale => $text);
+	  }
 	  if ($bytes =~ m!^30 /play/ijirait(?:/([a-z]+))?(?:\?(.*))?!) {
 	    my $command = ($1 || "look") . ($2 ? " " . decode_utf8 uri_unescape($2) : "");
 	    $command =~ s/[[:cntrl:]]+//g;
 	    push(@queue, $command);
 	  }});
 	# Write request to the server
-	my $text = decode(locale => $_);
-	say "$talk_url?$text" if $debug;
-	$text =~ s/\\\\/\n/g;
-	my $bytes = uri_escape(encode_utf8($text));
+	say "$talk_url?$command" if $debug;
+	$command =~ s/\\\\/\n/g;
+	my $bytes = uri_escape(encode_utf8($command));
 	$stream->write("$talk_url?$bytes\r\n")});
     # Start event loop if necessary
     Mojo::IOLoop->start unless Mojo::IOLoop->is_running;

@@ -129,7 +129,7 @@ sub serve_spartan {
     } elsif (($space) = $path =~ m!^($spaces)?(?:/page)?/?$!) {
       # "up" from page/Alex gives us page or page/ → show main menu
       spartan_main_menu($stream, $host, space($stream, $host, $space));
-    } elsif ($path =~ m!^do/source$!) {
+    } elsif ($path eq "/do/source") {
       seek DATA, 0, 0;
       local $/ = undef; # slurp
       $stream->write(encode_utf8 <DATA>);

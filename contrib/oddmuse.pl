@@ -247,7 +247,7 @@ sub oddmuse_serve_page {
   my $revision = shift;
   # cannot use text() because we don't know if we're serving a file or plain
   # text when querying Oddmuse
-  my $page = oddmuse_get_page($stream, $host, $space, $id, $revision) or return;
+  my $page = oddmuse_get_page($stream, $host, $space, $id, $revision) // return;
   if (my ($type, $data) = $page =~ /^#FILE (\S+) ?(?:\S+)?\n(.*)/s) {
     oddmuse_serve_file_page($stream, $id, $type, $data);
   } else {
@@ -478,7 +478,7 @@ sub oddmuse_serve_tag {
   print_link($stream, $host, $space, normal_to_free($tag), "tag/$tag");
   $stream->write("\n");
   my $url = "$oddmuse_wikis{$host}?raw=1&search=tag:$tag";
-  my $page = oddmuse_get_raw($stream, $url) or return;
+  my $page = oddmuse_get_raw($stream, $url) // return;
   my @entries = split(/\n\n+/, $page);
   shift @entries; # skip head
   foreach my $entry (@entries) {
@@ -509,7 +509,7 @@ sub oddmuse_serve_raw {
   $url .= "/$space" if $space;
   $url .= "/raw/" . uri_escape_utf8($id);
   $url .= "?revision=$revision" if $revision;
-  my $page = oddmuse_get_raw($stream, $url) or return;
+  my $page = oddmuse_get_raw($stream, $url) // return;
   if (my ($type, $data) = $page =~ /^#FILE (\S+) ?(?:\S+)?\n(.*)/s) {
     oddmuse_serve_file_page($stream, $id, $type, $data);
     return;
@@ -529,7 +529,7 @@ sub oddmuse_serve_html {
   $url .= "/$space" if $space;
   $url .= "/" . uri_escape_utf8($id);
   $url .= "?revision=$revision" if $revision;
-  my $page = oddmuse_get_raw($stream, $url) or return;
+  my $page = oddmuse_get_raw($stream, $url) // return;
   $log->info("Serving $id as HTML");
   success($stream, 'text/html');
   $stream->write(encode_utf8 $page);
@@ -560,7 +560,7 @@ sub oddmuse_blog_pages_new {
   my $n = shift;
   if (exists $oddmuse_wikis{$host}) {
     my $url = "$oddmuse_wikis{$host}?raw=1;action=index;match=^\\d\\d\\d\\d\\-\\d\\d-\\d\\d;n=$n";
-    return map { s/_/ /g; $_ } split(/\n/, oddmuse_get_raw($stream, $url) || '');
+    return map { s/_/ /g; $_ } split(/\n/, oddmuse_get_raw($stream, $url) // '');
   }
   return oddmuse_blog_pages_old($stream, $host, $space, $n);
 }
@@ -661,7 +661,7 @@ sub oddmuse_serve_changes {
   } if (not $all) {
     $url .= ";local=1";
   }
-  my $page = oddmuse_get_raw($stream, $url) or return;
+  my $page = oddmuse_get_raw($stream, $url) // return;
   my @entries = split(/\n\n+/, $page);
   shift @entries; # skip head
   my $log;
@@ -722,7 +722,7 @@ sub oddmuse_serve_history {
   elsif ($style eq "fancy") { print_link($stream, $host, $space, "Normal history", "history/$id") }
   my $url = "$oddmuse_wikis{$host}?raw=1;action=history;id=" . uri_escape_utf8($id);
   $url .= ";ns=$space" if $space;
-  my $page = oddmuse_get_raw($stream, $url) or return;
+  my $page = oddmuse_get_raw($stream, $url) // return;
   my @entries = split(/\n\n+/, $page);
   shift @entries; # skip head
   my $log;
@@ -800,7 +800,7 @@ sub oddmuse_serve_match {
   success($stream);
   $stream->write(encode_utf8 "# Pages matching ‘$term’\n");
   my $url = "$oddmuse_wikis{$host}?raw=1;action=index;match=" . uri_escape_utf8($term);
-  my @pages = split(/\n/, oddmuse_get_raw($stream, $url)) or return;
+  my @pages = split(/\n/, oddmuse_get_raw($stream, $url)) // return;
   for my $id (@pages) {
     print_link($stream, $host, $space, normal_to_free($id), "page/$id");
   }
@@ -815,7 +815,7 @@ sub oddmuse_serve_search {
   success($stream);
   $stream->write(encode_utf8 "# Search ‘$term’\n");
   my $url = "$oddmuse_wikis{$host}?raw=1&search=" . uri_escape_utf8($term);
-  my $page = oddmuse_get_raw($stream, $url) or return;
+  my $page = oddmuse_get_raw($stream, $url) // return;
   my @entries = split(/\n\n+/, $page);
   shift @entries; # skip head
   foreach my $entry (@entries) {
@@ -840,7 +840,7 @@ sub oddmuse_serve_rss {
   if ($space) {
     $url .= ";ns=$space";
   }
-  my $page = oddmuse_get_raw($stream, $url) or return;
+  my $page = oddmuse_get_raw($stream, $url) // return;
   my @entries = split(/\n\n+/, $page);
   my $entry = shift @entries;
   my $data = parse_data($entry);
@@ -911,7 +911,7 @@ sub oddmuse_serve_atom {
   if ($space) {
     $url .= ";ns=$space";
   }
-  my $page = oddmuse_get_raw($stream, $url) or return;
+  my $page = oddmuse_get_raw($stream, $url) // return;
   my @entries = split(/\n\n+/, $page);
   my $data = parse_data(shift @entries);
   $stream->write(encode_utf8 "<title>" . quote_html($data->{title}) . "</title>\n");

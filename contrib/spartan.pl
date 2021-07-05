@@ -124,8 +124,8 @@ sub serve_spartan {
     local *to_url = \&spartan_to_url;
     local *old_gemini_link = \&gemini_link;
     local *gemini_link = \&spartan_link;
-    if (run_extensions($stream, $host, $path, $length, $buffer)) {
-      # config file goes first
+    if (run_extensions($stream, $host, undef, $buffer, $path, $length)) {
+      # config file goes first (note that $path and $length come at the end)
     } elsif (($space) = $path =~ m!^($spaces)?(?:/page)?/?$!) {
       # "up" from page/Alex gives us page or page/ → show main menu
       spartan_main_menu($stream, $host, space($stream, $host, $space));

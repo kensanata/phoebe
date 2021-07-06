@@ -102,7 +102,7 @@ sub oddmuse_new_save_page {
   my @tokens = @{$server->{wiki_token}};
   push(@tokens, $oddmuse_wiki_tokens{$host}) if $oddmuse_wiki_tokens{$host};
   my $token = pop(@tokens); # the oddmuse wiki token, preferrably
-  my $name = $stream->handle->peer_certificate('cn') || "";
+  my $name = ref($stream->handle) eq 'IO::Socket::SSL' && $stream->handle->peer_certificate('cn') || "";
   my $ua = Mojo::UserAgent->new;
   my $tx = $ua->post(
     $oddmuse_wikis{$host}

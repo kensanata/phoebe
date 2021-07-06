@@ -20,11 +20,13 @@
 
 This is a test client. All it does is dump the response.
 
+    spartan URL
+
 =over
 
-=item The second line is the response header on STDERR
+=item The first line is the response header on STDERR
 
-=item The rest is the response itself
+=item The rest is the response itself on STDOUT
 
 =back
 
@@ -99,14 +101,14 @@ Mojo::IOLoop->client({address => $host, port => $port} => sub {
       print encode(locale => $bytes);
     } else {
       ($header) = $bytes =~ /^(.*?)\r\n/;
-      say $header;
+      warn "$header\n";
       if ($header =~ /^2\d* (?:text\/\S+)?(?:; *charset=(\S+))?$/g) {
 	# empty, or text without charset defaults to UTF-8
 	$encoding = $1 || 'UTF-8';
       }
-      $bytes =~ s/^(.*?)\r\n//;
+      $bytes =~ s/^(.*?)\r\n//; # remove header
       if ($encoding) {
-	print encode(locale => decode($encoding, $bytes));
+	say encode(locale => decode($encoding, $bytes));
       } else {
 	print encode(locale => $bytes);
       }

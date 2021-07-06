@@ -19,6 +19,13 @@
 This extension serves your Gemini pages via the Spartan protocol and generates a
 few automatic pages for you, such as the main page.
 
+=head2 Warning
+
+Warning! If you install this code, anybody can write to your site using the
+Spartan protocol. There is no token being checked.
+
+=head2 Configuration
+
 To configure, you need to specify the Spartan port(s) in your Phoebe config
 file. The default port is 300. This is a priviledge port. Thus, you either need
 to grant Perl the permission to listen on a priviledged port, or you need to run
@@ -134,7 +141,14 @@ sub serve_spartan {
       local $/ = undef; # slurp
       $stream->write(encode_utf8 <DATA>);
     } elsif (($space, $id) = $path =~ m!^(?:/($spaces))?/page/([^/]+)$!) {
-      serve_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)));
+      if ($length) {
+	$log->warn("Saving $length bytes via Spartan");
+	save_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)),
+			  "text/plain", $buffer, $length);
+      } else {
+	$log->debug("Serving $id bytes via Spartan");
+	serve_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)));
+      }
     } elsif (($space, $id) = $path =~ m!^(?:/($spaces))?/raw/([^/]+)$!) {
       serve_raw($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)));
     } elsif (($space, $id) = $path =~ m!^(?:/($spaces))?/html/([^/]+)$!) {
@@ -174,7 +188,7 @@ sub spartan_link {
 }
 
 sub spartan_main_menu {
-    my $stream = shift;
+  my $stream = shift;
   my $host = shift||"";
   my $space = shift||"";
   $log->info("Serving main menu");

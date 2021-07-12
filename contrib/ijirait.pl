@@ -89,6 +89,7 @@ our $commands = {
   hide     => \&hide,
   reveal   => \&reveal,
   secrets  => \&secrets,
+  home     => \&home,
 };
 
 our $ijrait_commands_without_cert = {
@@ -417,6 +418,15 @@ sub type {
   $stream->write("# Unknown command\n");
   $stream->write(encode_utf8 "“$command” is an unknown command.\n");
   menu($stream);
+}
+
+sub home {
+  my ($stream, $p) = @_;
+  $log->debug("Going home");
+  notify($p, "$p->{name} turns to yellow mist and disappears.");
+  $p->{location} = 2; # The Tent
+  notify($p, "$p->{name} arrives.");
+  $stream->write("30 /play/ijirait/look\r\n");
 }
 
 sub go {

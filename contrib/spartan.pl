@@ -89,15 +89,15 @@ sub spartan_startup {
 	    if (not $length and $buffer =~ /^(.*)\r\n/) {
 	      my $request_line = $1;
 	      if (($request_host, $path, $length) = $request_line =~ /^(\S+) (\S+) (\d+)/) {
-		my $re = host_regex;
+		my $re = host_regex();
 		if ($request_host !~ /^($re)$/) {
-		  $stream->write("4 We do not serve $request_host!\r\n");
+		  result($stream, "4", "We do not serve $request_host!");
 		  $stream->close_gracefully();
 		  return;
 		}
 		$buffer =~ s/^.*\r\n//; # strip request line
 	      } else {
-		$stream->write("4 This request is garbage!\r\n");
+		result($stream, "4", "This request is garbage!");
 		$stream->close_gracefully();
 		return;
 	      }
@@ -122,44 +122,44 @@ sub serve_spartan {
     };
     alarm(10); # timeout
     my $spaces = space_regex();
-    my $reserved = reserved_regex($stream);
     $log->info("Looking at $host $path $length via Spartan");
-    my ($space, $id);
+    my ($space, $id, $n);
     no warnings 'redefine';
     local *success = \&spartan_success;
+    local *result = \&spartan_result;
     local *gemini_to_url = \&to_url;
     local *to_url = \&spartan_to_url;
     local *old_gemini_link = \&gemini_link;
     local *gemini_link = \&spartan_link;
     if (run_extensions($stream, $host, undef, $buffer, $path, $length)) {
       # config file goes first (note that $path and $length come at the end)
-    } elsif (($space) = $path =~ m!^($spaces)?(?:/page)?/?$!) {
+    } elsif (($space) = $path =~ m!^($spaces/)?(?:page)?/?$!) {
       # "up" from page/Alex gives us page or page/ → show main menu
       spartan_main_menu($stream, $host, space($stream, $host, $space));
     } elsif ($path eq "/do/source") {
       seek DATA, 0, 0;
       local $/ = undef; # slurp
       $stream->write(encode_utf8 <DATA>);
-    } elsif (($space, $id) = $path =~ m!^(?:/($spaces))?/page/([^/]+)$!) {
-      if ($length) {
-	$log->warn("Saving $length bytes via Spartan");
-	save_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)),
-			  "text/plain", $buffer, $length);
-      } else {
-	$log->debug("Serving $id bytes via Spartan");
-	serve_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)));
-      }
-    } elsif (($space, $id) = $path =~ m!^(?:/($spaces))?/raw/([^/]+)$!) {
+    } elsif ($length == 0 and ($space, $id, $n) = $path =~ m!^(?:($spaces)/)?page/([^/]+)(?:/(\d+))?$!) {
+      $log->debug("Serving $id bytes via Spartan");
+      serve_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
+    } elsif ($length > 0 and ($space, $id, $n) = $path =~ m!^(?:($spaces)/)?page/([^/]+)$!) {
+      $log->warn("Saving $length bytes via Spartan");
+      save_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)),
+		"text/plain", $buffer, $length);
+    } elsif (($space, $id) = $path =~ m!^(?:($spaces)/)?raw/([^/]+)$!) {
       serve_raw($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)));
-    } elsif (($space, $id) = $path =~ m!^(?:/($spaces))?/html/([^/]+)$!) {
+    } elsif (($space, $id) = $path =~ m!^(?:($spaces)/)?html/([^/]+)$!) {
       serve_html($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)));
-    } elsif (($space, $id) = $path =~ m!^(?:/($spaces))?/history/([^/]+)$!) {
+    } elsif (($space, $id) = $path =~ m!^(?:($spaces)/)?history/([^/]+)$!) {
       serve_history($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), 10);
+    } elsif (($space, $id, $n) = $path =~ m!^(?:($spaces)/)?diff/([^/]+)(?:/(\d+))?$!) {
+      serve_diff($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($space) = $path =~ m!^(?:/($spaces))?/do/index$!) {
       serve_index($stream, $host, space($stream, $host, $space));
     } else {
       $log->info("No handler for $host $path $length via spartan");
-      $stream->write("5 I do not know what to do with $host $path $length\r\n");
+      result($stream, "5", "I do not know what to do with $host $path $length");
     }
     $log->debug("Done");
   };
@@ -171,8 +171,14 @@ sub serve_spartan {
 sub spartan_success {
   my $stream = shift;
   my $type = shift || 'text/gemini; charset=UTF-8';
-  my $lang = shift;
   $stream->write("2 $type\r\n");
+}
+
+sub spartan_result {
+  my $stream = shift;
+  my $code = substr(shift, 0, 1);
+  my $meta = shift;
+  $stream->write("$code $meta\r\n");
 }
 
 sub spartan_to_url {

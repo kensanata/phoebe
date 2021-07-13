@@ -188,7 +188,7 @@ sub add_streamer {
       $stream->close_gracefully();
     }
   } else {
-    $stream->write("59 Don't know how to handle $url\r\n");
+    result($stream, "59", "Don't know how to handle $url");
     $stream->close_gracefully();
   }
 }
@@ -258,7 +258,7 @@ sub login {
   my $fingerprint = $stream->handle->get_fingerprint();
   if (!$fingerprint) {
     $log->info("Requested client certificate");
-    $stream->write("60 You need a client certificate to play\r\n");
+    result($stream, "60", "You need a client certificate to play");
     return;
   }
   # find the right person
@@ -388,7 +388,7 @@ sub help {
 sub type {
   my ($stream, $p, $str) = @_;
   if (!$str) {
-    $stream->write("10 Type your command\r\n");
+    result($stream, "10", "Type your command");
     return;
   }
   # mark activity
@@ -426,7 +426,7 @@ sub home {
   notify($p, "$p->{name} turns to yellow mist and disappears.");
   $p->{location} = 2; # The Tent
   notify($p, "$p->{name} arrives.");
-  $stream->write("30 /play/ijirait/look\r\n");
+  result($stream, "30", "/play/ijirait/look");
 }
 
 sub go {
@@ -439,7 +439,7 @@ sub go {
     $exit->{ts} = time;
     $p->{location} = $exit->{destination};
     notify($p, "$p->{name} arrives.");
-    $stream->write("30 /play/ijirait/look\r\n");
+    result($stream, "30", "/play/ijirait/look");
   } else {
     success($stream);
     $log->debug("Unknown exit '$direction'");
@@ -485,7 +485,7 @@ sub speak {
   $text =~ s/^\s+//;
   $text =~ s/\s+$//;
   if (not $text) {
-    $stream->write("10 You say\r\n");
+    result($stream, "10", "You say");
     return;
   }
   my $w = {
@@ -548,7 +548,7 @@ sub describe {
       notify($p, "$p->{name} changes appearance.");
       $p->{description} = $description;
       my $name = uri_escape_utf8 $p->{name};
-      $stream->write("30 /play/ijirait/examine?$name\r\n");
+      result($stream, "30", "/play/ijirait/examine?$name");
       return;
     }
     my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
@@ -556,7 +556,7 @@ sub describe {
       $log->debug("Describing $room->{name}");
       notify($p, "$p->{name} changes the room’s description.");
       $room->{description} = $description;
-      $stream->write("30 /play/ijirait/look\r\n");
+      result($stream, "30", "/play/ijirait/look");
       return;
     }
     my $thing = first { $_->{short} eq $obj } @{$room->{things}};
@@ -565,7 +565,7 @@ sub describe {
       notify($p, "$p->{name} changes the description of $thing->{name}.");
       $thing->{description} = $description;
       my $name = uri_escape_utf8 $thing->{short};
-      $stream->write("30 /play/ijirait/examine?$name\r\n");
+      result($stream, "30", "/play/ijirait/examine?$name");
       return;
     }
     # No description of exits.
@@ -587,14 +587,14 @@ sub name {
       notify($p, "$p->{name} changes their name to $name.");
       $p->{name} = $name;
       my $nm = uri_escape_utf8 $p->{name};
-      $stream->write("30 /play/ijirait/examine?$nm\r\n");
+      result($stream, "30", "/play/ijirait/examine?$nm");
       return;
     } elsif ($obj eq "room") {
       my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
       $log->debug("Name $room->{name}");
       notify($p, "$p->{name} changes the room’s name to $name.");
       $room->{name} = $name;
-      $stream->write("30 /play/ijirait/look\r\n");
+      result($stream, "30", "/play/ijirait/look");
       return;
     } else {
       my $short;
@@ -609,7 +609,7 @@ sub name {
 	notify($p, "$p->{name} renames $exit->{direction} to $name ($short).");
 	$exit->{name} = $name;
 	$exit->{direction} = $short if $short;
-	$stream->write("30 /play/ijirait/look\r\n");
+	result($stream, "30", "/play/ijirait/look");
 	return;
       }
       my $thing = first { $_->{short} eq $obj } @{$room->{things}};
@@ -618,7 +618,7 @@ sub name {
 	notify($p, "$p->{name} renames $thing->{name} to $name ($short).");
 	$thing->{name} = $name;
 	$thing->{short} = $short if $short;
-	$stream->write("30 /play/ijirait/look\r\n");
+	result($stream, "30", "/play/ijirait/look");
 	return;
       }
     }
@@ -639,13 +639,13 @@ sub create {
     my $exit = new_exit($room, $dest, $p);
     new_exit($dest, $room, $p);
     notify($p, "$p->{name} creates a new room.");
-    $stream->write("30 /play/ijirait\r\n");
+    result($stream, "30", "/play/ijirait");
   } elsif ($obj eq "thing") {
     $log->debug("Create thing");
     my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
     new_thing($room, $p->{id});
     notify($p, "$p->{name} creates a new thing.");
-    $stream->write("30 /play/ijirait\r\n");
+    result($stream, "30", "/play/ijirait");
   } else {
     success($stream);
     $log->debug("Cannot create '$obj'");
@@ -707,7 +707,7 @@ sub delete {
     $log->debug("Delete '$str'");
     @{$room->{exits}} = grep { $_->{direction} ne $str } @{$room->{exits}};
     notify($p, "$p->{name} deletes $exit->{name}");
-    $stream->write("30 /play/ijirait\r\n");
+    result($stream, "30", "/play/ijirait");
     return;
   }
   # try to delete a thing
@@ -716,7 +716,7 @@ sub delete {
     $log->debug("Delete '$str'");
     @{$room->{things}} = grep { $_->{short} ne $str } @{$room->{things}};
     notify($p, "$p->{name} deletes $thing->{name}");
-    $stream->write("30 /play/ijirait\r\n");
+    result($stream, "30", "/play/ijirait");
     return;
   }
   $log->debug("Cannot delete '$str'");
@@ -750,7 +750,7 @@ sub connect {
       new_exit($room, $dest, $p);
       new_exit($dest, $room, $p);
       notify($p, "$p->{name} creates an exit to $dest->{name}.");
-      $stream->write("30 /play/ijirait\r\n");
+      result($stream, "30", "/play/ijirait");
       return;
     }
   }
@@ -791,7 +791,7 @@ sub map {
 sub emote {
   my ($stream, $p, $text) = @_;
   if (not $text) {
-    $stream->write("10 What happens\r\n");
+    result($stream, "10", "What happens");
     return;
   }
   my $w = {
@@ -814,7 +814,7 @@ sub hide {
       $log->debug("Hide '$obj'");
       notify($p, "$p->{name} hides $thing->{name}.");
       $thing->{hidden} = 1;
-      $stream->write("30 /play/ijirait/look\r\n");
+      result($stream, "30", "/play/ijirait/look");
       return;
     }
     my $exit = first { $_->{direction} eq $obj } @{$room->{exits}};
@@ -822,7 +822,7 @@ sub hide {
       $log->debug("Hide '$obj'");
       notify($p, "$p->{name} hides $exit->{name}.");
       $exit->{hidden} = 1;
-      $stream->write("30 /play/ijirait\r\n");
+      result($stream, "30", "/play/ijirait");
       return;
     }
   }
@@ -844,7 +844,7 @@ sub reveal {
 	notify($p, "$p->{name} reveals $thing->{name}.");
 	delete $thing->{hidden};
       }
-      $stream->write("30 /play/ijirait/look\r\n");
+      result($stream, "30", "/play/ijirait/look");
       return;
     }
     my $exit = first { $_->{direction} eq $obj } @{$room->{exits}};
@@ -854,7 +854,7 @@ sub reveal {
 	notify($p, "$p->{name} reveals $exit->{name}.");
 	delete $exit->{hidden};
       }
-      $stream->write("30 /play/ijirait\r\n");
+      result($stream, "30", "/play/ijirait");
       return;
     }
   }

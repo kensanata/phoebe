@@ -56,23 +56,23 @@ sub galleries {
     return 1;
   } elsif (my ($dir) = $url =~ m!^gemini://$host(?::$port)?/do/gallery/([^/?]*)$!) {
     if (not -d "$galleries_dir/$dir") {
-      $stream->write("40 This is not actuall a gallery\r\n");
+      result($stream, "40", "This is not actuall a gallery");
       return 1;
     }
     if (not -r "$galleries_dir/$dir/data.json") {
-      $stream->write("40 This gallery does not contain a data.json file like the one created by sitelen-mute or fgallery\r\n");
+      result($stream, "40", "This gallery does not contain a data.json file like the one created by sitelen-mute or fgallery");
       return 1;
     }
     my $bytes = read_binary("$galleries_dir/$dir/data.json");
     if (not $bytes) {
-      $stream->write("40 Cannot read the data.json file in this gallery\r\n");
+      result($stream, "40", "Cannot read the data.json file in this gallery");
       return 1;
     }
     my $data;
     eval { $data = decode_json $bytes };
     $log->error("decode_json: $@") if $@;
     if ($@ or not %$data) {
-      $stream->write("40 Cannot decode the data.json file in this gallery\r\n");
+      result($stream, "40", "Cannot decode the data.json file in this gallery");
       return 1;
     }
     success($stream);

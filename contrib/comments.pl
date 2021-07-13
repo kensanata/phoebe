@@ -42,16 +42,16 @@ sub process_comment_requests {
   my $port = port($stream);
   my ($host, $space, $id, $token, $query);
   if ($url =~ m!^gemini://($hosts)(?::$port)?(?:/($spaces))?/do/comment/([^/#?]+)$!) {
-    $stream->write("10 Access token\r\n");
+    result($stream, "10", "Access token");
   } elsif (($host, $space, $id, $token) =
 	   $url =~ m!^gemini://($hosts)(?::$port)?(?:/($spaces))?/do/comment/([^/#?]+)\?([^#]+)!) {
     if ($space) {
-      $stream->write("30 gemini://$host:$port/$space/do/comment/$id/$token\r\n");
+      result($stream, "30", "gemini://$host:$port/$space/do/comment/$id/$token");
     } else {
-      $stream->write("30 gemini://$host:$port/do/comment/$id/$token\r\n");
+      result($stream, "30", "gemini://$host:$port/do/comment/$id/$token");
     }
   } elsif ($url =~ m!^gemini://($hosts)(?::$port)?(?:/($spaces))?/do/comment/([^/#?]+)/([^/#?]+)$!) {
-    $stream->write("10 Short comment\r\n");
+    result($stream, "10", "Short comment");
   } elsif (($host, $space, $id, $token, $query) = $url =~ m!^gemini://($hosts)(?::$port)?(?:/($spaces))?/do/comment/([^/#?]+)/([^/#?]+)\?([^#]+)!) {
     append_comment($stream, $host, space($host, $space), map { decode_utf8(uri_unescape($_)) } $id, $token, $query);
   } else {

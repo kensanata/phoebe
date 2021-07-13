@@ -45,7 +45,7 @@ sub chat_listen {
     chat_register($stream, $host, $port, space($stream, $host, $space) || '');
     # don't lose the stream!
   } else {
-    $stream->write("59 Don't know how to handle $url\r\n");
+    result($stream, "59", "Don't know how to handle $url");
     $stream->close_gracefully();
   }
 }
@@ -57,12 +57,12 @@ sub chat_register {
   my $space = shift;
   my $name = $stream->handle->peer_certificate('cn');
   if (not $name) {
-    $stream->write("60 You need a client certificate with a common name to listen to this chat\r\n");
+    result($stream, "60", "You need a client certificate with a common name to listen to this chat");
     $stream->close_gracefully();
     return;
   }
   if (grep { $host eq $_->{host} and $space eq $_->{space} and $name eq $_->{name} } @chat_members) {
-    $stream->write("40 '$name' is already taken\r\n");
+    result($stream, "40", "'$name' is already taken");
     $stream->close_gracefully();
     return;
   }
@@ -155,12 +155,12 @@ sub process_chat_say {
   my $text = shift;
   my $name = $stream->handle->peer_certificate('cn');
   if (not $name) {
-    $stream->write("60 You need a client certificate with a common name to talk on this chat\r\n");
+    result($stream, "60", "You need a client certificate with a common name to talk on this chat");
     return;
   }
   my @found = grep { $host eq $_->{host} and $space eq $_->{space} and $name eq $_->{name} } @chat_members;
   if (not @found) {
-    $stream->write("40 You need to join the chat before you can say anything\r\n");
+    result($stream, "40", "You need to join the chat before you can say anything");
     return;
   }
   if (not $text) {
@@ -176,7 +176,7 @@ sub process_chat_say {
     $_->{stream}->write(encode_utf8 "$name: $text\n");
   }
   # and ask to send another one
-  $stream->write("31 gemini://$host:$port" . ($space ? "/$space" : "") . "/do/chat/say\r\n");
+  result($stream, "31", "gemini://$host:$port" . ($space ? "/$space" : "") . "/do/chat/say");
   return;
 }
 

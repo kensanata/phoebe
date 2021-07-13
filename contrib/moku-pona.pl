@@ -33,7 +33,7 @@ sub mokupona {
   my $host = "alexschroeder.ch";
   my $port = port($stream);
   if ($url =~ m!^gemini://$host(?::$port)?/do/moku-pona$!) {
-    $stream->write("31 gemini://$host/do/moku-pona/updates.txt\r\n");
+    result($stream, "31", "gemini://$host/do/moku-pona/updates.txt");
     return 1;
   } elsif ($url =~ m!^gemini://$host(?::$port)?/do/moku-pona/add!) {
     with_known_fingerprint($stream, sub {
@@ -47,10 +47,10 @@ sub mokupona {
   } elsif ($url =~ m!^gemini://$host(?::$port)?/do/moku-pona/([^/]+)$!) {
     my $file = decode_utf8(uri_unescape($1));
     if (-f "$moku_pona_dir/$file") {
-      $stream->write("20 text/gemini\r\n");
+      result($stream, "20", "text/gemini");
       $stream->write(encode_utf8 read_text("$moku_pona_dir/$file"));
     } else {
-      $stream->write("40 Cannot read $moku_pona_dir/$file\r\n");
+      result($stream, "40", "Cannot read $moku_pona_dir/$file");
     }
     return 1;
   }
@@ -65,9 +65,9 @@ sub with_known_fingerprint {
     $fun->();
   } elsif ($fingerprint) {
     $log->info("Unknown client certificate $fingerprint");
-    $stream->write("61 Your client certificate is not authorised for editing\r\n");
+    result($stream, "61", "Your client certificate is not authorised for editing");
   } else {
     $log->info("Requested client certificate");
-    $stream->write("60 You need an authorised client certificate to add to the moku pona list\r\n");
+    result($stream, "60", "You need an authorised client certificate to add to the moku pona list");
   }
 }

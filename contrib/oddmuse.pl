@@ -95,7 +95,7 @@ sub oddmuse_new_save_page {
     $data = "#FILE $type\n" . encode_base64($data);
   } elsif (not utf8::decode($data)) {
     $log->debug("The text is invalid UTF-8");
-    $stream->write("59 The text is invalid UTF-8\r\n");
+    result($stream, "59", "The text is invalid UTF-8");
     $stream->close_gracefully();
     return;
   }
@@ -118,7 +118,7 @@ sub oddmuse_new_save_page {
   if ($tx->result->code == 302) {
     my $url = "gemini://$host:$port";
     $url .= "/$space" if $space;
-    $stream->write("30 $url/page/" . uri_escape_utf8($id) . "\r\n");
+    result($stream, "30", "$url/page/" . uri_escape_utf8($id) . "");
   } else {
     $stream->write("59 Got HTTP code " . $tx->result->code . " " . $tx->result->message
 		   . " (" . $tx->req->url->to_abs . " " . $tx->req->params . ")\r\n");
@@ -156,7 +156,7 @@ sub oddmuse_process_request {
     # must come before redirection to regular pages since it contains no slash
     oddmuse_serve_robots($stream);
   } elsif (($host, $n, $space) = $url =~ m!^gemini://$hosts(:$port)?(?:/($spaces))?/(?:$reserved)$!) {
-    $stream->write("31 gemini://$host" . ($n ? ":$port" : "") . "/" . ($space ? $space : "") . "\r\n"); # this supports "up"
+    result($stream, "31", "gemini://$host" . ($n ? ":$port" : "") . "/" . ($space ? $space : "") . ""); # this supports "up"
   } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/page/([^/]+)(?:/(\d+))?$!
 	   and $id ne $server->{wiki_main_page}) {
     oddmuse_serve_page($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), $n);
@@ -180,11 +180,11 @@ sub oddmuse_process_request {
   } elsif (($host, $space, $id, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?(?:/(colour))?$!) {
     oddmuse_serve_diff($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), $n, $style);
   } elsif ($url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/match$!) {
-    $stream->write("10 Find page by name (Perl regex)\r\n");
+    result($stream, "10", "Find page by name (Perl regex)");
   } elsif (($host, $space, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/match\?([^#]+)!) {
     oddmuse_serve_match($stream, $host, $space, decode_utf8(uri_unescape($query)));
   } elsif ($url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/search$!) {
-    $stream->write("10 Find page by content (Perl regex)\r\n");
+    result($stream, "10", "Find page by content (Perl regex)");
   } elsif (($host, $space, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/search\?([^#]+)!) {
     oddmuse_serve_search($stream, $host, $space, decode_utf8(uri_unescape($query)));
   } elsif (($host, $space, $id, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/comment/([^/#?]+)(?:\?([^#]+))?$!) {
@@ -207,7 +207,7 @@ sub oddmuse_process_request {
     $stream->write("\r\n");
   } else {
     # We still rely on things like /do/spaces
-    # $stream->write("59 I don't know how to handle this $url\r\n");
+    # result($stream, "59", "I don't know how to handle this $url");
     return 0;
   }
   return 1;
@@ -943,9 +943,9 @@ sub oddmuse_serve_config {
   @config = grep(/^$file$/, @config) if $file;
   if (@config == 0) {
     if ($file) {
-      $stream->write("40 This config file does not exist\r\n");
+      result($stream, "40", "This config file does not exist");
     } else {
-      $stream->write("40 This site does not use any config files\r\n");
+      result($stream, "40", "This site does not use any config files");
     }
   } elsif (@config == 1) {
     success($stream, 'text/plain');
@@ -967,13 +967,13 @@ sub oddmuse_comment {
   my $port = port($stream);
   if (not $id) {
     $log->debug("The URL lacks a page name");
-    $stream->write("59 The URL lacks a page name\r\n");
+    result($stream, "59", "The URL lacks a page name");
     return;
   }
   my $name = oddmuse_fingerprint_name($stream, $host, $query);
   return unless defined $name;
   if (not $query) {
-    $stream->write("10 Short comment\r\n");
+    result($stream, "10", "Short comment");
     return;
   }
   $id = "Comments_on_$id" unless $id =~ /^Comments_on_/;
@@ -994,7 +994,7 @@ sub oddmuse_comment {
   if ($tx->result->code == 302) {
     my $url = "gemini://$host:$port";
     $url .= "/$space" if $space;
-    $stream->write("30 $url/page/" . uri_escape_utf8($id) . "\r\n");
+    result($stream, "30", "$url/page/" . uri_escape_utf8($id) . "");
     return;
   }
   $stream->write("59 Got HTTP code " . $tx->result->code . " " . $tx->result->message
@@ -1012,7 +1012,7 @@ sub oddmuse_fingerprint_name {
   # \&verify_fingerprint (which must not reject self-signed certificates).
   my $fingerprint = $stream->handle->get_fingerprint();
   if (not $fingerprint) {
-    $stream->write("60 You need a client certificate with a common name to edit this wiki\r\n");
+    result($stream, "60", "You need a client certificate with a common name to edit this wiki");
     return;
   }
   my $dir = $server->{wiki_dir};
@@ -1031,11 +1031,11 @@ sub oddmuse_fingerprint_name {
   push(@tokens, @{$server->{wiki_token}}) unless @tokens;
   if (not $fingerprints{$fingerprint}) {
     if (not $token) {
-      $stream->write("10 Token required to edit this wiki\r\n");
+      result($stream, "10", "Token required to edit this wiki");
     } elsif (not grep { $token eq $_ } @tokens) {
-      $stream->write("59 Wrong token\r\n");
+      result($stream, "59", "Wrong token");
     } else {
-      $stream->write("10 Short comment\r\n");
+      result($stream, "10", "Short comment");
       $fingerprints{$fingerprint} = $now;
     }
     # Save new or updated fingerprint timestamp.

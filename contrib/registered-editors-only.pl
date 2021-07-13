@@ -72,10 +72,10 @@ sub protected_titan {
     return handle_titan($stream, $data);
   } elsif ($fingerprint) {
     $log->info("Unknown client certificate $fingerprint");
-    $stream->write("61 Your client certificate is not authorized for editing\r\n");
+    result($stream, "61", "Your client certificate is not authorized for editing");
   } else {
     $log->info("Requested client certificate");
-    $stream->write("60 You need a client certificate to edit this wiki\r\n");
+    result($stream, "60", "You need a client certificate to edit this wiki");
   }
   $stream->close_gracefully();
 }
@@ -93,13 +93,13 @@ sub registered_editor_login {
   if (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/login!) {
     if ($fingerprint and grep { $_ eq $fingerprint} @fingerprints) {
       $log->info("Successfully identified client certificate");
-      $stream->write("30 gemini://$host:$port/\r\n");
+      result($stream, "30", "gemini://$host:$port/");
     } elsif ($fingerprint) {
       $log->info("Unknown client certificate $fingerprint");
-      $stream->write("61 Your client certificate is not known\r\n");
+      result($stream, "61", "Your client certificate is not known");
     } else {
       $log->info("Requested client certificate");
-      $stream->write("60 You need a client certificate to edit this wiki\r\n");
+      result($stream, "60", "You need a client certificate to edit this wiki");
     }
     return 1;
   }

@@ -60,9 +60,9 @@ sub with_heap_dump_fingerprint {
     $fun->();
   } elsif ($fingerprint) {
     $log->info("Unknown client certificate $fingerprint");
-    $stream->write("61 Your client certificate is not authorised for heap dumping\r\n");
+    result($stream, "61", "Your client certificate is not authorised for heap dumping");
   } else {
     $log->info("Requested client certificate");
-    $stream->write("60 You need an authorised client certificate to heap dump\r\n");
+    result($stream, "60", "You need an authorised client certificate to heap dump");
   }
 }

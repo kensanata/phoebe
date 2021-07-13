@@ -65,7 +65,7 @@ sub handle_iapetus {
     return;
   } elsif ($actual > $size) {
     $log->debug("Received more than the promised $size bytes");
-    $stream->write("59 Received more than the promised $size bytes\r\n");
+    result($stream, "59", "Received more than the promised $size bytes");
     $stream->close_gracefully();
     return;
   }
@@ -98,11 +98,11 @@ sub setup_iapetus {
 	id => decode_utf8(uri_unescape($id)),
 	params => $params,
       };
-      $stream->write("10 Continue\r\n"); # weird!
+      result($stream, "10", "Continue"); # weird!
       return 1;
     } else {
       $log->debug("The path $path is malformed");
-      $stream->write("59 The path $path is malformed\r\n");
+      result($stream, "59", "The path $path is malformed");
       $stream->close_gracefully();
     }
   }
@@ -135,10 +135,10 @@ sub valid_client_cert {
     return 1;
   } elsif ($fingerprint) {
     $log->info("Unknown client certificate $fingerprint");
-    $stream->write("61 Your client certificate is not authorized for editing\r\n");
+    result($stream, "61", "Your client certificate is not authorized for editing");
   } else {
     $log->info("Requested client certificate");
-    $stream->write("60 You need a client certificate to edit this wiki\r\n");
+    result($stream, "60", "You need a client certificate to edit this wiki");
   }
   $stream->close_gracefully();
   return;
@@ -159,13 +159,13 @@ sub iapetus_login {
   if (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/login!) {
     if ($fingerprint and grep { $_ eq $fingerprint} @known_fingerprints) {
       $log->info("Successfully identified client certificate");
-      $stream->write("30 gemini://$host:$port/\r\n");
+      result($stream, "30", "gemini://$host:$port/");
     } elsif ($fingerprint) {
       $log->info("Unknown client certificate $fingerprint");
-      $stream->write("61 Your client certificate is not known\r\n");
+      result($stream, "61", "Your client certificate is not known");
     } else {
       $log->info("Requested client certificate");
-      $stream->write("60 You need a client certificate to edit this wiki\r\n");
+      result($stream, "60", "You need a client certificate to edit this wiki");
     }
     return 1;
   }

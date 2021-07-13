@@ -775,7 +775,7 @@ for it:
       my $host = host_regex();
       my $port = port($stream);
       if ($url =~ m!^gemini://($host)(?::$port)?/do/test$!) {
-	$stream->write("20 text/plain\r\n");
+	result($stream, "20", "text/plain");
 	$stream->write("Test\n");
 	return 1;
       }
@@ -854,7 +854,7 @@ certificates to limit writing to a single, known fingerprint:
 	my ($space, $resource) = $path =~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!;
 	if (not $resource) {
 	  $log->debug("The Titan URL is malformed: $path $spaces");
-	  $stream->write("59 The Titan URL is malformed\r\n");
+	  result($stream, "59", "The Titan URL is malformed");
 	} elsif ($fingerprint and grep { $_ eq $fingerprint} @fingerprints) {
 	  $log->info("Successfully identified client certificate");
 	  my ($id, @params) = split(/[;=&]/, $resource);
@@ -862,10 +862,10 @@ certificates to limit writing to a single, known fingerprint:
 			    {map {decode_utf8(uri_unescape($_))} @params});
 	} elsif ($fingerprint) {
 	  $log->info("Unknown client certificate $fingerprint");
-	  $stream->write("61 Your client certificate is not authorized for editing\r\n");
+	  result($stream, "61", "Your client certificate is not authorized for editing");
 	} else {
 	  $log->info("Requested client certificate");
-	  $stream->write("60 You need a client certificate to edit this wiki\r\n");
+	  result($stream, "60", "You need a client certificate to edit this wiki");
 	}
 	return 1;
       }
@@ -1328,7 +1328,7 @@ sub handle_request {
       }
     }
     $log->debug("No handler found for $data->{request}");
-    $stream->write("59 Cannot handle this request\r\n");
+    result($stream, "59", "Cannot handle this request");
     $stream->close_gracefully();
   } else {
     $log->debug("Waiting for more bytes...");
@@ -1342,7 +1342,7 @@ sub handle_url {
   $log->debug("Unhandled proxy request");
   $log->debug("Discarding " . length($data->{buffer}) . " bytes")
       if $data->{buffer};
-  $stream->write("53 No proxying for $data->{request}\r\n");
+  result($stream, "53", "No proxying for $data->{request}");
   $stream->close_gracefully();
 }
 
@@ -1369,7 +1369,7 @@ sub handle_titan {
     return;
   } elsif ($actual > $size) {
     $log->debug("Received more than the promised $size bytes");
-    $stream->write("59 Received more than the promised $size bytes\r\n");
+    result($stream, "59", "Received more than the promised $size bytes");
     $stream->close_gracefully();
     return;
   }
@@ -1412,7 +1412,7 @@ sub handle_http_header {
     }
     if ($data->{header_size} and $data->{header_size} > $server->{wiki_page_size_limit}) {
       $log->debug("This wiki does not allow more than $server->{wiki_page_size_limit} bytes of headers");
-      $stream->write("400 Bad request: headers too long\r\n");
+      result($stream, "400", "Bad request: headers too long");
       $stream->close_gracefully();
       return;
     }
@@ -1454,10 +1454,18 @@ sub success {
   my $type = shift || 'text/gemini; charset=UTF-8';
   my $lang = shift;
   if ($lang) {
-    $stream->write("20 $type; lang=$lang\r\n");
+    result($stream, "20", "$type; lang=$lang");
   } else {
-    $stream->write("20 $type\r\n");
+    result($stream, "20", "$type");
   }
+}
+
+sub result {
+  my $stream = shift;
+  my $code = shift;
+  my $meta = shift;
+  my $data = shift||"";
+  $stream->write("$code $meta\r\n$data");
 }
 
 # We can't use C<flock> because this defaults to C<fcntl> which means they are
@@ -1481,13 +1489,13 @@ sub with_lock {
     eval { $code->() }; # protect against exceptions
     if ($@) {
       $log->error("Unable to run code with locked $lock: $@");
-      $stream->write("40 An error occured, unfortunately\r\n");
+      result($stream, "40", "An error occured, unfortunately");
     }
     rmdir($lock);
     $stream->close_gracefully();
   } elsif ($count > 25) {
     $log->error("Unable to unlock $lock");
-    $stream->write("40 The wiki is locked; try again in a few seconds\r\n");
+    result($stream, "40", "The wiki is locked; try again in a few seconds");
     $stream->close_gracefully();
   } else {
     $log->debug("Waiting $count...");
@@ -1926,7 +1934,7 @@ sub serve_data {
       $stream->write(read_binary($file));
     } else {
       $log->error("Creation of data archive failed");
-      $stream->write("59 Archive creation failed\r\n");
+      result($stream, "59", "Archive creation failed");
     }
   }
 }
@@ -1937,7 +1945,7 @@ sub serve_match {
   my $space = shift;
   my $match = shift;
   if (not $match) {
-    $stream->write("59 Search term is missing\r\n");
+    result($stream, "59", "Search term is missing");
     return;
   }
   success($stream);
@@ -1957,7 +1965,7 @@ sub serve_search {
   my $space = shift;
   my $str = shift;
   if (not $str) {
-    $stream->write("59 Search term is missing\r\n");
+    result($stream, "59", "Search term is missing");
     return;
   }
   success($stream);
@@ -3121,15 +3129,15 @@ sub serve_file {
   my $file = "$dir/file/$id";
   my $meta = "$dir/meta/$id";
   if (not -f $file) {
-    $stream->write("40 File not found\r\n");
+    result($stream, "40", "File not found");
     return;
   } elsif (not -f $meta) {
-    $stream->write("40 Metadata not found\r\n");
+    result($stream, "40", "Metadata not found");
     return;
   }
   my %meta = (map { split(/: /, $_, 2) } read_lines($meta));
   if (not $meta{'content-type'}) {
-    $stream->write("59 Metadata corrupt\r\n");
+    result($stream, "59", "Metadata corrupt");
     return;
   }
   success($stream, $meta{'content-type'});
@@ -3196,14 +3204,14 @@ sub write_file {
     my $old = read_binary($file);
     if ($old eq $data) {
       $log->info("$id is unchanged");
-      $stream->write("30 " . to_url($stream, $host, $space, "page/$id") . "\r\n");
+      result($stream, "30", to_url($stream, $host, $space, "page/$id"));
       return;
     }
   }
   my $changes = "$dir/changes.log";
   if (not open(my $fh, ">>:encoding(UTF-8)", $changes)) {
     $log->error("Cannot log $changes: $!");
-    $stream->write("59 Unable to write log\r\n");
+    result($stream, "59", "Unable to write log");
     return;
   } else {
     my $peerhost = $stream->handle->peerhost;
@@ -3213,17 +3221,17 @@ sub write_file {
   mkdir "$dir/file" unless -d "$dir/file";
   eval { write_binary($file, $data) };
   if ($@) {
-    $stream->write("59 Unable to save $id\r\n");
+    result($stream, "59", "Unable to save $id");
     return;
   }
   mkdir "$dir/meta" unless -d "$dir/meta";
   eval { write_text($meta, "content-type: $type\n") };
   if ($@) {
-    $stream->write("59 Unable to save metadata for $id\r\n");
+    result($stream, "59", "Unable to save metadata for $id");
     return;
   }
   $log->info("Wrote $id");
-  $stream->write("30 " . to_url($stream, $host, $space, "file/$id") . "\r\n");
+  result($stream, "30", to_url($stream, $host, $space, "file/$id"));
 }
 
 sub delete_file {
@@ -3237,7 +3245,7 @@ sub delete_file {
   my $changes = "$dir/changes.log";
   if (not open(my $fh, ">>:encoding(UTF-8)", $changes)) {
     $log->error("Cannot write log $changes: $!");
-    $stream->write("59 Unable to write log\r\n");
+    result($stream, "59", "Unable to write log");
     return;
   } else {
     my $peerhost = $stream->handle->peerhost;
@@ -3263,7 +3271,7 @@ sub write_page {
     my $old = read_text($file);
     if ($old eq $text) {
       $log->info("$id is unchanged");
-      $stream->write("30 " . to_url($stream, $host, $space, "page/$id") . "\r\n");
+      result($stream, "30", to_url($stream, $host, $space, "page/$id"));
       return;
     }
     mkdir "$dir/keep" unless -d "$dir/keep";
@@ -3281,7 +3289,7 @@ sub write_page {
     my $index = "$dir/index";
     if (not open(my $fh, ">>:encoding(UTF-8)", $index)) {
       $log->error("Cannot write index $index: $!");
-      $stream->write("59 Unable to write index\r\n");
+      result($stream, "59", "Unable to write index");
       return;
     } else {
       say $fh $id;
@@ -3291,7 +3299,7 @@ sub write_page {
   my $changes = "$dir/changes.log";
   if (not open(my $fh, ">>:encoding(UTF-8)", $changes)) {
     $log->error("Cannot write log $changes: $!");
-    $stream->write("59 Unable to write log\r\n");
+    result($stream, "59", "Unable to write log");
     return;
   } else {
     my $peerhost = $stream->handle->peerhost;
@@ -3302,10 +3310,10 @@ sub write_page {
   eval { write_text($file, $text) };
   if ($@) {
     $log->error("Unable to save $id: $@");
-    $stream->write("59 Unable to save $id\r\n");
+    result($stream, "59", "Unable to save $id");
   } else {
     $log->info("Wrote $id");
-    $stream->write("30 " . to_url($stream, $host, $space, "page/$id") . "\r\n");
+    result($stream, "30", to_url($stream, $host, $space, "page/$id"));
   }
 }
 
@@ -3341,7 +3349,7 @@ sub delete_page {
   my $changes = "$dir/changes.log";
   if (not open(my $fh, ">>:encoding(UTF-8)", $changes)) {
     $log->error("Cannot write log $changes: $!");
-    $stream->write("59 Unable to write log\r\n");
+    result($stream, "59", "Unable to write log");
     return;
   } else {
     my $peerhost = $stream->handle->peerhost;
@@ -3349,7 +3357,7 @@ sub delete_page {
     close($fh);
   }
   $log->info("Deleted page $id");
-  $stream->write("30 " . to_url($stream, $host, $space, "page/$id") . "\r\n");
+  result($stream, "30", to_url($stream, $host, $space, "page/$id"));
 }
 
 sub process_titan {
@@ -3386,7 +3394,7 @@ sub save_page {
     with_lock($stream, $host, $space, sub { write_page($stream, $host, $space, $id, $data) } );
   } else {
     $log->debug("The text is invalid UTF-8");
-    $stream->write("59 The text is invalid UTF-8\r\n");
+    result($stream, "59", "The text is invalid UTF-8");
     $stream->close_gracefully();
   }
 }
@@ -3429,7 +3437,7 @@ sub space {
     return undef unless $space;
     return $space if grep { $_ eq "$host/$space" } @{$server->{wiki_space}};
     # else it's an error and we jump out to the eval {} in handle_url
-    $stream->write("40 $host doesn't know about $space\r\n");
+    result($stream, "40", "$host doesn't know about $space");
     die "unknown space: $host/$space\n"; # is caught in the eval
   }
   # Without wildcards, just return the space. We already know that the space
@@ -3611,7 +3619,7 @@ sub is_upload {
       }
     } else {
       $log->debug("The path $path is malformed");
-      $stream->write("59 The path $path is malformed\r\n");
+      result($stream, "59", "The path $path is malformed");
       $stream->close_gracefully();
     }
   }
@@ -3638,12 +3646,12 @@ sub valid_id {
   my $id = shift;
   if (not $id) {
     $log->debug("The URL lacks a page name");
-    $stream->write("59 The URL lacks a page name\r\n");
+    result($stream, "59", "The URL lacks a page name");
     $stream->close_gracefully();
     return;
   } elsif ($id =~ /[[:cntrl:]]/) {
     $log->debug("Page names must not contain any control characters");
-    $stream->write("59 Page names must not contain any control characters\r\n");
+    result($stream, "59", "Page names must not contain any control characters");
     $stream->close_gracefully();
     return;
   }
@@ -3664,12 +3672,12 @@ sub valid_token {
   $log->debug("Spaces: " . join(", ", keys %{$server->{wiki_space_token}}));
   if (not $token and @tokens) {
     $log->debug("Uploads require a token");
-    $stream->write("59 Uploads require a token\r\n");
+    result($stream, "59", "Uploads require a token");
     $stream->close_gracefully();
     return;
   } elsif (not grep(/^$token$/, @tokens)) {
     $log->debug("Your token is the wrong token");
-    $stream->write("59 Your token is the wrong token\r\n");
+    result($stream, "59", "Your token is the wrong token");
     $stream->close_gracefully();
     return;
   }
@@ -3687,12 +3695,12 @@ sub valid_mime_type {
   my @types = @{$server->{wiki_mime_type}};
   if (not $type) {
     $log->debug("Uploads require a MIME type");
-    $stream->write("59 Uploads require a MIME type\r\n");
+    result($stream, "59", "Uploads require a MIME type");
     $stream->close_gracefully();
     return;
   } elsif ($type ne "text/plain" and not grep(/^$type$/, @types) and not grep(/^$main_type$/, @types)) {
     $log->debug("This wiki does not allow $type");
-    $stream->write("59 This wiki does not allow $type\r\n");
+    result($stream, "59", "This wiki does not allow $type");
     $stream->close_gracefully();
     return;
   }
@@ -3708,12 +3716,12 @@ sub valid_size {
   my $size = $params->{size};
   if ($size !~ /^\d+$/) {
     $log->debug("You need to send along the number of bytes, not '$size'");
-    $stream->write("59 You need to send along the number of bytes, not '$size'\r\n");
+    result($stream, "59", "You need to send along the number of bytes, not '$size'");
     $stream->close_gracefully();
     return;
   } elsif ($size > $server->{wiki_page_size_limit}) {
     $log->debug("This wiki does not allow more than $server->{wiki_page_size_limit} bytes per page");
-    $stream->write("59 This wiki does not allow more than $server->{wiki_page_size_limit} bytes per page\r\n");
+    result($stream, "59", "This wiki does not allow more than $server->{wiki_page_size_limit} bytes per page");
     $stream->close_gracefully();
     return;
   }
@@ -3741,15 +3749,15 @@ sub process_gemini {
       # config file goes first
     } elsif (not $url) {
       $log->debug("The URL is empty");
-      $stream->write("59 URL expected\r\n");
+      result($stream, "59", "URL expected");
     } elsif (length($url) > 1024) {
       $log->debug("The URL is too long");
-      $stream->write("59 The URL is too long\r\n");
+      result($stream, "59", "The URL is too long");
     } elsif (($host, $n, $space) = $url =~ m!^(?:gemini:)?//($hosts)(:$port)?(?:/($spaces))?/(?:$reserved)$!) {
       # redirect gemini://localhost:2020/do to gemini://localhost:2020/
       # redirect gemini://localhost:2020/space/do to gemini://localhost:2020/space
       $space = space($stream, $host, $space) || "";
-      $stream->write("31 gemini://$host" . ($n ? ":$port" : "") . "/$space\r\n"); # this supports "up"
+      result($stream, "31", "gemini://$host" . ($n ? ":$port" : "") . "/$space"); # this supports "up"
     } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/?$!) {
       serve_main_menu($stream, $host, space($stream, $host, $space));
     } elsif (($host, $space, $n) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/more(?:/(\d+))?$!) {
@@ -3768,21 +3776,21 @@ sub process_gemini {
       local $/ = undef; # slurp
       $stream->write(encode_utf8 <DATA>);
     } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/match$!) {
-      $stream->write("10 Find page by name (Perl regex)\r\n");
+      result($stream, "10", "Find page by name (Perl regex)");
     } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/match\?!) {
       serve_match($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($query)));
     } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/search$!) {
-      $stream->write("10 Find page by content (Perl regex)\r\n");
+      result($stream, "10", "Find page by content (Perl regex)");
     } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/search\?!) {
       serve_search($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($query))); # search terms include spaces
     } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/new$!) {
-      $stream->write("10 New page\r\n");
+      result($stream, "10", "New page");
       # no URI escaping required
     } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/new\?!) {
       if ($space) {
-	$stream->write("30 gemini://$host:$port/$space/raw/$query\r\n");
+	result($stream, "30", "gemini://$host:$port/$space/raw/$query");
       } else {
-	$stream->write("30 gemini://$host:$port/raw/$query\r\n");
+	result($stream, "30", "gemini://$host:$port/raw/$query");
       }
     } elsif (($host, $space, $n, $style) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
       serve_changes($stream, $host, space($stream, $host, $space), $n||100, $style);
@@ -3814,13 +3822,13 @@ sub process_gemini {
       serve_file($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)));
     } elsif (($host) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(/|$)!) {
       $log->info("Unknown path for $url\r");
-      $stream->write("51 Path not found for $url\r\n");
+      result($stream, "51", "Path not found for $url");
     } elsif ($authority) {
       $log->info("Unsupported proxy request for $url");
-      $stream->write("53 Unsupported proxy request for $url\r\n");
+      result($stream, "53", "Unsupported proxy request for $url");
     } else {
       $log->info("No handler for $url");
-      $stream->write("59 Don't know how to handle $url\r\n");
+      result($stream, "59", "Don't know how to handle $url");
     }
     $log->debug("Done");
   };

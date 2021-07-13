@@ -87,7 +87,7 @@ sub speed_bump {
     if (defined $overlap and $overlap != $IP_NO_OVERLAP) {
       $log->info("Net range $cidr is blocked");
       my $delta = $speed_cidr_data->{$cidr} - $now;
-      $stream->write("44 $delta\r\n");
+      result($stream, "44", "$delta");
       # no more processing
       return 1;
     }
@@ -99,7 +99,7 @@ sub speed_bump {
       my $seconds = speed_bump_add($ip, $now);
       $log->info("IP is blocked, extending by $seconds");
       my $delta = $speed_data->{$ip}->{until} - $now;
-      $stream->write("44 $delta\r\n");
+      result($stream, "44", "$delta");
       # no more processing
       return 1;
     }
@@ -118,7 +118,7 @@ sub speed_bump {
     if ($now < $oldest + $speed_bump_window) {
       my $seconds = speed_bump_add($ip, $now);
       $log->info("Blocked for $seconds because of too many requests");
-      $stream->write("44 $seconds\r\n");
+      result($stream, "44", "$seconds");
       # no more processing
       return 1;
     }
@@ -129,7 +129,7 @@ sub speed_bump {
   if ($warnings > $speed_bump_requests / 3) {
     my $seconds = speed_bump_add($ip, $now);
     $log->info("Blocked for $seconds because of too many suspicious requests");
-    $stream->write("44 $seconds\r\n");
+    result($stream, "44", "$seconds");
     # no more processing
     return 1;
   }
@@ -270,10 +270,10 @@ sub with_speed_bump_fingerprint {
     $fun->();
   } elsif ($fingerprint) {
     $log->info("Unknown client certificate $fingerprint");
-    $stream->write("61 Your client certificate is not authorised for speed bump administration\r\n");
+    result($stream, "61", "Your client certificate is not authorised for speed bump administration");
   } else {
     $log->info("Requested client certificate");
-    $stream->write("60 You need an authorised client certificate to administer speed bumps\r\n");
+    result($stream, "60", "You need an authorised client certificate to administer speed bumps");
   }
 }
 

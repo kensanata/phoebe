@@ -45,20 +45,20 @@ sub wikipedia {
     wikipedia_serve_raw($stream, $1, decode_utf8(uri_unescape($2)));
   } elsif ($url =~ m!^gemini://$host(?::$port)?/?$!) {
     $log->info("Asking for a language");
-    $stream->write("10 Search in which language? (ar, cn, en, fr, ru, es, etc.)\r\n");
+    result($stream, "10", "Search in which language? (ar, cn, en, fr, ru, es, etc.)");
   } elsif ($url =~ m!^gemini://$host(?::$port)?/?\?([a-z]+)$!) {
     $log->info("Redirecting to ask for a term");
     my $lang = $1;
-    $stream->write("30 gemini://$host:$port/$lang\r\n");
+    result($stream, "30", "gemini://$host:$port/$lang");
   } elsif ($url =~ m!^gemini://$host(?::$port)?/([a-z][a-z][a-z]?)$!) {
     $log->info("Asking for a term");
     my $lang = $1;
-    $stream->write("10 Search term\r\n");
+    result($stream, "10", "Search term");
   } elsif ($url =~ m!^gemini://$host(?::$port)?/([a-z]+)\?([^?;]+)!) {
     $log->info("Redirecting to text");
     my $lang = $1;
     my $term = $2;
-    $stream->write("30 gemini://$host:$port/search/$lang/$term\r\n");
+    result($stream, "30", "gemini://$host:$port/search/$lang/$term");
   } elsif ($url =~ m!^gemini://$host(?::$port)?/robots\.txt$!) {
     $log->info("Serving robots.txt");
     success($stream, "text/plain");
@@ -92,11 +92,11 @@ sub wikipedia_serve_search {
     list => 'prefixsearch',
     pssearch => $term, });
   if (not $articles) {
-    $stream->write("43 Wikipedia says $mw->{error}->{code}: $mw->{error}->{details}\r\n");
+    result($stream, "43", "Wikipedia says $mw->{error}->{code}: $mw->{error}->{details}");
     $stream->close_gracefully();
     return;
   }
-  $stream->write("20 text/gemini;lang=$lang\r\n");
+  result($stream, "20", "text/gemini;lang=$lang");
   $stream->write("# Searching for " . uri_unescape($term) . "\n");
   foreach (@$articles) {
     wikipedia_print_link($stream, $lang, $_->{title}, 'text', $_->{title});
@@ -117,7 +117,7 @@ sub wikipedia_serve_raw {
     prop => 'wikitext',
     formatversion => '2',
     page => $term, });
-  $stream->write("20 text/plain\r\n");
+  result($stream, "20", "text/plain");
   $stream->write(encode_utf8 $result->{parse}->{wikitext});
 }
 
@@ -142,7 +142,7 @@ sub wikipedia_serve_text {
     prop => 'wikitext',
     formatversion => '2',
     page => $term, });
-  $stream->write("20 text/gemini;lang=$lang\r\n");
+  result($stream, "20", "text/gemini;lang=$lang");
   my $title = $result->{parse}->{title};
   my $text = wikipedia_extract($stream, $lang, $result->{parse}->{wikitext});
   $stream->write(encode_utf8 "# $title\n");
@@ -295,7 +295,7 @@ sub wikipedia_serve_full {
     prop => 'wikitext',
     formatversion => '2',
     page => $term, });
-  $stream->write("20 text/gemini;lang=$lang\r\n");
+  result($stream, "20", "text/gemini;lang=$lang");
   my $title = $result->{parse}->{title};
   my $text = wikipedia_text($stream, $lang, $result->{parse}->{wikitext});
   $stream->write(encode_utf8 "# $title\n");

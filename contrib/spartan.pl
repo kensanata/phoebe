@@ -122,6 +122,7 @@ sub serve_spartan {
     };
     alarm(10); # timeout
     my $spaces = space_regex();
+    # note that path always starts with a slash!
     $log->info("Looking at $host $path $length via Spartan");
     my ($space, $id, $n);
     no warnings 'redefine';
@@ -133,27 +134,27 @@ sub serve_spartan {
     local *gemini_link = \&spartan_link;
     if (run_extensions($stream, $host, undef, $buffer, $path, $length)) {
       # config file goes first (note that $path and $length come at the end)
-    } elsif (($space) = $path =~ m!^($spaces/)?(?:page)?/?$!) {
+    } elsif (($space) = $path =~ m!^(?:/($spaces))?(?:/page)?/?$!) {
       # "up" from page/Alex gives us page or page/ → show main menu
       spartan_main_menu($stream, $host, space($stream, $host, $space));
     } elsif ($path eq "/do/source") {
       seek DATA, 0, 0;
       local $/ = undef; # slurp
       $stream->write(encode_utf8 <DATA>);
-    } elsif ($length == 0 and ($space, $id, $n) = $path =~ m!^(?:($spaces)/)?page/([^/]+)(?:/(\d+))?$!) {
+    } elsif ($length == 0 and ($space, $id, $n) = $path =~ m!^(?:/($spaces))?/page/([^/]+)(?:/(\d+))?$!) {
       $log->debug("Serving $id bytes via Spartan");
       serve_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
-    } elsif ($length > 0 and ($space, $id, $n) = $path =~ m!^(?:($spaces)/)?page/([^/]+)$!) {
+    } elsif ($length > 0 and ($space, $id, $n) = $path =~ m!^(?:/($spaces))?/page/([^/]+)$!) {
       $log->warn("Saving $length bytes via Spartan");
       save_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)),
 		"text/plain", $buffer, $length);
-    } elsif (($space, $id) = $path =~ m!^(?:($spaces)/)?raw/([^/]+)$!) {
+    } elsif (($space, $id) = $path =~ m!^(?:/($spaces))?/raw/([^/]+)$!) {
       serve_raw($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)));
-    } elsif (($space, $id) = $path =~ m!^(?:($spaces)/)?html/([^/]+)$!) {
+    } elsif (($space, $id) = $path =~ m!^(?:/($spaces))?/html/([^/]+)$!) {
       serve_html($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)));
-    } elsif (($space, $id) = $path =~ m!^(?:($spaces)/)?history/([^/]+)$!) {
+    } elsif (($space, $id) = $path =~ m!^(?:/($spaces))?/history/([^/]+)$!) {
       serve_history($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), 10);
-    } elsif (($space, $id, $n) = $path =~ m!^(?:($spaces)/)?diff/([^/]+)(?:/(\d+))?$!) {
+    } elsif (($space, $id, $n) = $path =~ m!^(?:/($spaces))?/diff/([^/]+)(?:/(\d+))?$!) {
       serve_diff($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($space) = $path =~ m!^(?:/($spaces))?/do/index$!) {
       serve_index($stream, $host, space($stream, $host, $space));

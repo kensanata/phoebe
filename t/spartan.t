@@ -70,7 +70,7 @@ like($page, qr/^Blog:/m, "Main menu (Blog section)");
 like($page, qr(^=> spartan://localhost:$spartan_port/page/2021-02-05 2021-02-05$)m, "Main menu (Blog link)");
 like($page, qr(^=> spartan://localhost:$spartan_port/do/index Index of all pages$)m, "Page index link");
 
-$page = query_spartan("page/2021-02-05");
+$page = query_spartan("/page/2021-02-05");
 like($page, qr(^# 2021-02-05$)m, "Page Title");
 like($page, qr(^yo$)m, "Page Text");
 
@@ -80,8 +80,8 @@ Through open windows
 Hear the garbage truck's engine
 Rattle in the heat
 EOT
-query_spartan("page/2021-06-28", "localhost", "```\n$haiku```\n");
-$page = query_spartan("page/2021-06-28");
+query_spartan("/page/2021-06-28", "localhost", "```\n$haiku```\n");
+$page = query_spartan("/page/2021-06-28");
 like($page, qr(^2 text/gemini; charset=UTF-8\r\n# 2021-06-28\n```\n$haiku```\n), "No empty lines");
 
 $haiku = <<'EOT';
@@ -89,30 +89,30 @@ Outside the muted
 Endless city noise of cars
 And a shy sparrow
 EOT
-query_spartan("page/2021-06-28", "localhost", "```\n$haiku```\n");
-$page = query_spartan("page/2021-06-28");
+query_spartan("/page/2021-06-28", "localhost", "```\n$haiku```\n");
+$page = query_spartan("/page/2021-06-28");
 like($page, qr(^2 text/gemini; charset=UTF-8\r\n# 2021-06-28\n```\n$haiku```\n), "Change!");
 
 # history
-$page = query_spartan("history/2021-06-28");
+$page = query_spartan("/history/2021-06-28");
 like($page, qr(^# Page history for 2021-06-28$)m, "History title");
 like($page, qr(^=> spartan://localhost:$spartan_port/page/2021-06-28 2021-06-28 \(current\)$)m, "Current revision link");
 like($page, qr(^=> spartan://localhost:$spartan_port/page/2021-06-28/1 2021-06-28 \(1\)$)m, "First revision link");
 like($page, qr(^=> spartan://localhost:$spartan_port/diff/2021-06-28/1 Differences$)m, "Diff link");
 
-$page = query_spartan("page/2021-06-28/1");
+$page = query_spartan("/page/2021-06-28/1");
 like($page, qr(^Through open windows)m, "First revision text");
 
-$page = query_spartan("diff/2021-06-28/1");
+$page = query_spartan("/diff/2021-06-28/1");
 like($page, qr(^Showing the differences between revision 1 and the current revision.)m, "Diff");
 like(decode_utf8($page), qr(^Changed lines 2–4)m, "Diff lines");
 
 # spaces
-$page = query_spartan("alex/page/2021-02-05");
+$page = query_spartan("/alex/page/2021-02-05");
 like($page, qr(^lo$)m, "Different Page Text in a Space (gemini)");
-$page = query_spartan("alex/raw/2021-02-05");
+$page = query_spartan("/alex/raw/2021-02-05");
 like($page, qr(^lo$)m, "Different Page Text in a Space (raw)");
-$page = query_spartan("alex/html/2021-02-05");
+$page = query_spartan("/alex/html/2021-02-05");
 like($page, qr(^<p>lo$)m, "Different Page Text in a Space (html)");
 
 # page list

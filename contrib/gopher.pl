@@ -138,12 +138,6 @@ sub serve_gopher {
       gopher_serve_blog($stream, $host, space($stream, $host, $space), $n);
     } elsif (($space) = $selector =~ m!^(?:($spaces)/)?do/index$!) {
       gopher_serve_index($stream, $host, space($stream, $host, $space));
-    # } elsif (($space) = $url =~ m!^(?:($spaces)/)?do/files$!) {
-    #   serve_files($stream, $host, space($stream, $host, $space));
-    # } elsif (($host) = $url =~ m!^(?:($spaces)/)?do/spaces$!) {
-    #   serve_spaces($stream, $host, $port);
-    # } elsif (($space) = $url =~ m!^(?:($spaces)/)?do/data$!) {
-    #   serve_data($stream, $host, space($stream, $host, $space));
     } elsif ($selector =~ m!^do/source$!) {
       seek DATA, 0, 0;
       local $/ = undef; # slurp
@@ -152,18 +146,9 @@ sub serve_gopher {
       gopher_serve_match($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($query)));
     } elsif (($space, $query) = $selector =~ m!^(?:($spaces)/)?do/search\t(.+)!) {
       gopher_serve_search($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($query)));
-    # } elsif (($host) = $url =~ m!^/robots.txt(?:[#?].*)?$!) {
-    #   serve_raw($stream, $host, undef, "robots");
-    # } elsif (($space, $id, $n) = $url =~ m!^(?:($spaces)/)?raw/([^/]*)(?:/(\d+))?$!) {
-    #   serve_raw($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif (($space, $id, $n) = $selector =~ m!^(?:($spaces)/)?(?:page/)?([^/]+)(?:/(\d+))?$!) {
       # the /page is optional: makes finger possible
       gopher_serve_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
-    # } elsif (($space, $id) = $url =~ m!^(?:($spaces)/)?file/([^/]+)?$!) {
-    #   serve_file($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)));
-    # } elsif (($host) = $url =~ m!^(/|$)!) {
-    #   $log->info("Unknown path for $url\r");
-    #   $stream->write("51 Path not found for $url\r\n");
     } else {
       $log->info("No handler for $selector via gopher");
       $stream->write("Don't know how to handle $selector\r\n");

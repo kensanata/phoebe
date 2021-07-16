@@ -26,7 +26,6 @@ plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true
 our $host;
 our @hosts = qw(localhost 127.0.0.1); # localhost must come first
 our @spaces = qw(localhost/alex);
-our $port;
 our $dir;
 our $base;
 our @config = qw(gopher.pl);
@@ -36,6 +35,7 @@ my $gophers_port = Mojo::IOLoop::Server->generate_port; # new port for Gophers
 
 # make sure starting phoebe starts serving the gopher port, too
 push(@config, <<"EOF");
+package App::Phoebe::Gopher;
 \$gopher_port = $gopher_port;
 \$gophers_port = $gophers_port;
 \$gopher_host = $hosts[0];

@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,12 +14,33 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
-use Modern::Perl '2018';
-use Encode qw(encode_utf8);
-use utf8;
+=head1 Chat
 
-our (@extensions, @request_handlers, $log);
+For every wiki space, this creates a Gemini-based chat room. Every chat client
+needs two URLs, the "listen" and the "say" URL.
+
+Listen URL is where you need to I<stream>: as people say things in the room,
+these messages get streamed in one endless Gemini document. You might have to
+set an appropriate timeout period for your connection for this to work. 1h,
+perhaps?
+
+gemini://localhost/do/chat/listen or gemini://localhost/space/do/chat/listen
+
+Say URL is where you post things you want to say:
+
+gemini://localhost/do/chat/say or gemini://localhost/space/do/chat/say
+
+Your client certificate's common name is used as your chat nickname.
+
+=cut
+
+package App::Phoebe::Chat;
+use App::Phoebe qw(@extensions @request_handlers $log
+		   success result port space host_regex space_regex);
+use Modern::Perl '2018';
+use Encode qw(decode_utf8 encode_utf8);
+use URI::Escape;
+use utf8;
 
 # Each chat member is {stream => $stream, host => $host, space => $space, name => $name}
 my (@chat_members, @chat_lines);
@@ -164,7 +185,7 @@ sub process_chat_say {
     return;
   }
   if (not $text) {
-    $stream->write(encode_utf8 "10 Post to the channel as $name:\r\n");
+    result($stream, "10", encode_utf8 "Post to the channel as $name");
     return;
   }
   $text = decode_utf8(uri_unescape($text));

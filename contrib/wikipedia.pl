@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,14 +14,15 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+package App::Phoebe::Wikipedia;
+use App::Phoebe qw($log @extensions $full_url_regex success result);
 use Modern::Perl;
 use MediaWiki::API;
 use Text::SpanningTable;
 use List::Util qw(sum min max);
 use Encode;
 
-our (@extensions, $server, $full_url_regex, $log);
+our $host = "vault.transjovian.org";
 
 # Wikipedia
 
@@ -33,8 +34,8 @@ sub wikipedia {
   my $stream = shift;
   my $url = shift;
   my $headers = shift;
-  my $host = "vault.transjovian.org";
-  my $port = port($stream);
+  $log->info("Wikipedia proxy at $host");
+  my $port = App::Phoebe::port($stream);
   if ($url =~ m!^gemini://$host(?::$port)?/search/([a-z]+)/([^?;]+)!) {
     wikipedia_serve_search($stream, $1, decode_utf8(uri_unescape($2)));
   } elsif ($url =~ m!^gemini://$host(?::$port)?/text/([a-z]+)/([^?;]+)!) {
@@ -303,3 +304,5 @@ sub wikipedia_serve_full {
   wikipedia_print_link($stream, $lang, $term, 'text', "Short text");
   $stream->write("=> https://$lang.wikipedia.org/wiki/" . uri_escape_utf8($term) . " Source\n");
 }
+
+1;

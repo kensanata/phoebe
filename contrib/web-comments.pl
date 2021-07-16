@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,13 +14,17 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+package App::Phoebe::WebComments;
+use App::Phoebe qw(@footer @extensions @request_handlers $server $log
+		   handle_http_header port space host_regex space_regex
+		   quote_html http_error wiki_dir with_lock bogus_hash
+		   to_url);
 use Modern::Perl;
-use Encode qw(encode_utf8);
+use URI::Escape;
+use File::Slurper qw(write_text);
+use Encode qw(decode_utf8 encode_utf8);
 use File::Slurper qw(read_text);
 use utf8;
-
-our (@footer, @extensions, @request_handlers, $server, $log);
 
 push(@footer, \&add_comment_web_link_to_footer);
 
@@ -175,3 +179,5 @@ sub write_page_for_http {
     $stream->write("\r\n");
   }
 }
+
+1;

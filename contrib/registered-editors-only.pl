@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,15 +14,17 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+package App::Phoebe::RegisteredEditorsOnly;
+use App::Phoebe qw(@request_handlers @extensions @known_fingerprints $log
+		   port host_regex space_regex handle_titan result);
 use Modern::Perl;
 
 =head1 Registered Editors Only
 
-You need to set C<@fingerprints> in your config file. Here's an example:
+You need to set C<@known_fingerprints> in your config file. Here's an example:
 
-    our (@fingerprints);
-    @fingerprints = qw(
+    package App::Phoebe;
+    our @known_fingerprints = qw(
       sha256$fce75346ccbcf0da647e887271c3d3666ef8c7b181f2a3b22e976ddc8fa38401
       sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
 
@@ -56,8 +58,6 @@ This code works by intercepting all C<titan:> links. Specifically:
 
 =cut
 
-our (@request_handlers, @extensions, @fingerprints, $log);
-
 unshift(@request_handlers, '^titan://' => \&protected_titan);
 
 sub protected_titan {
@@ -67,7 +67,7 @@ sub protected_titan {
   my $spaces = space_regex();
   my $port = port($stream);
   my $fingerprint = $stream->handle->get_fingerprint();
-  if ($fingerprint and grep { $_ eq $fingerprint} @fingerprints) {
+  if ($fingerprint and grep { $_ eq $fingerprint} @known_fingerprints) {
     $log->info("Successfully identified client certificate");
     return handle_titan($stream, $data);
   } elsif ($fingerprint) {
@@ -91,7 +91,7 @@ sub registered_editor_login {
   my $fingerprint = $stream->handle->get_fingerprint();
   my $host;
   if (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/login!) {
-    if ($fingerprint and grep { $_ eq $fingerprint} @fingerprints) {
+    if ($fingerprint and grep { $_ eq $fingerprint} @known_fingerprints) {
       $log->info("Successfully identified client certificate");
       result($stream, "30", "gemini://$host:$port/");
     } elsif ($fingerprint) {

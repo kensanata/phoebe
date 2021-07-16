@@ -47,6 +47,7 @@ You can set the normal Gopher and the encrypted Gopher ports by setting the
 appropriate variables. These variables either be a single port, or an array of
 ports.
 
+    package App::Phoebe::Gopher;
     our $gopher_port = 7000; # listen on port 7000
     our $gopher_port = [70,79]; # listen on the finger port as well
     our $gophers_port = 7443; # listen on port 7443 using TLS
@@ -60,13 +61,18 @@ uses a URL including a hostname in its request.
 
 This is why you need to specify the hostname to use in this situation:
 
+    package App::Phoebe::Gopher;
     our $gopher_host = "alexschroeder.ch";
 
 =cut
 
-package App::Phoebe;
+package App::Phoebe::Gopher;
+use App::Phoebe qw(get_ip_numbers $log $server @extensions port space pages blog_pages
+		   space_regex reserved_regex run_extensions text);
 use Modern::Perl;
-use Encode qw(encode_utf8 decode_utf8 decode);
+use URI::Escape;
+use List::Util qw(min);
+use Encode qw(encode_utf8 decode_utf8);
 use Text::Wrapper;
 use utf8;
 

@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,10 +14,10 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+package App::Phoebe::TokiPona;
+use App::Phoebe qw(@extensions $server $log);
+use File::Slurper qw(read_binary);
 use Modern::Perl;
-
-our (@extensions, $server, $log);
 
 =head Toki Pona
 
@@ -55,6 +55,8 @@ sub serve_font_via_http {
 # CSS
 
 no warnings qw(redefine);
+*App::Phoebe::serve_css_via_http = \&serve_css_via_http;
+
 sub serve_css_via_http {
   my $stream = shift;
   $log->info("Serving CSS via HTTP (toki-pona)");

@@ -50,18 +50,23 @@ If you don't do any of the above, you'll get a permission error on startup:
 "Mojo::Reactor::Poll: Timer failed: Can't create listen socket: Permission
 denied…"
 
+    package App::Phoebe::Spartan;
     our $spartan_port = 7000; # listen on port 7000
 
 =cut
 
-package App::Phoebe;
+package App::Phoebe::Spartan;
+use App::Phoebe qw($server $log @main_menu get_ip_numbers space host_regex space_regex run_extensions
+		   serve_index serve_page serve_raw serve_html serve_history serve_diff save_page
+		   blog print_link);
 use Modern::Perl;
+use URI::Escape;
 use Encode qw(encode_utf8 decode_utf8 decode);
 use Text::Wrapper;
 use utf8;
+no warnings 'redefine';
 
 our $spartan_port ||= 300;
-our ($server, $log, @main_menu);
 
 use Mojo::IOLoop;
 
@@ -126,12 +131,14 @@ sub serve_spartan {
     $log->info("Looking at $host $path $length via Spartan");
     my ($space, $id, $n);
     no warnings 'redefine';
-    local *success = \&spartan_success;
-    local *result = \&spartan_result;
-    local *gemini_to_url = \&to_url;
-    local *to_url = \&spartan_to_url;
-    local *old_gemini_link = \&gemini_link;
-    local *gemini_link = \&spartan_link;
+    # we cannot import these subroutines and modify them, otherwise the
+    # App::Phoebe code remains unchanged
+    local *gemini_to_url = \&App::Phoebe::to_url;
+    local *App::Phoebe::to_url = \&spartan_to_url;
+    local *old_gemini_link = \&App::Phoebe::gemini_link;
+    local *App::Phoebe::gemini_link = \&spartan_link;
+    local *App::Phoebe::success = \&success;
+    local *App::Phoebe::result = \&result;
     if (run_extensions($stream, $host, undef, $buffer, $path, $length)) {
       # config file goes first (note that $path and $length come at the end)
     } elsif (($space) = $path =~ m!^(?:/($spaces))?(?:/page)?/?$!) {
@@ -145,7 +152,7 @@ sub serve_spartan {
       $log->debug("Serving $id bytes via Spartan");
       serve_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $n);
     } elsif ($length > 0 and ($space, $id, $n) = $path =~ m!^(?:/($spaces))?/page/([^/]+)$!) {
-      $log->warn("Saving $length bytes via Spartan");
+      $log->debug("Saving $length bytes via Spartan");
       save_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)),
 		"text/plain", $buffer, $length);
     } elsif (($space, $id) = $path =~ m!^(?:/($spaces))?/raw/([^/]+)$!) {
@@ -169,13 +176,13 @@ sub serve_spartan {
   $stream->close_gracefully();
 }
 
-sub spartan_success {
+sub success {
   my $stream = shift;
   my $type = shift || 'text/gemini; charset=UTF-8';
   $stream->write("2 $type\r\n");
 }
 
-sub spartan_result {
+sub result {
   my $stream = shift;
   my $code = substr(shift, 0, 1);
   my $meta = shift;

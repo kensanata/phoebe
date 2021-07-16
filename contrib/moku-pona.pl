@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,60 +14,50 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+=head1 Moku Pona
+
+This serves files from your moku pona directory. See L<App::mokupona>.
+
+If you need to change the directory (defaults to C<$HOME/.moku-pona>), or if you
+need to change the host (defaults to the first one), use the following for your
+config file:
+
+    package App::Phoebe::MokuPona;
+    our $dir = "/some/other/directory";
+    our $host = "some.other.host";
+
+=cut
+
+package App::Phoebe::MokuPona;
+use App::Phoebe qw(@extensions $server $log success result port);
 use Modern::Perl;
-
-our (@extensions, $log);
-
+use URI::Escape;
+use File::Slurper qw(read_text);
+use Encode qw(encode_utf8 decode_utf8);
 # moku pona
 
-our $moku_pona_dir = "/home/alex/.moku-pona";
-our @known_fingerprints = qw(
-  sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
+our $dir = "$ENV{HOME}/.moku-pona";
+our $host;
 
 push(@extensions, \&mokupona);
 
 sub mokupona {
   my $stream = shift;
   my $url = shift;
-  my $host = "alexschroeder.ch";
+  my $host ||= (keys %{$server->{host}})[0];
   my $port = port($stream);
   if ($url =~ m!^gemini://$host(?::$port)?/do/moku-pona$!) {
     result($stream, "31", "gemini://$host/do/moku-pona/updates.txt");
     return 1;
-  } elsif ($url =~ m!^gemini://$host(?::$port)?/do/moku-pona/add!) {
-    with_known_fingerprint($stream, sub {
-      $stream->write("10 Line to add to the subscription list\r\n") });
-    return 1;
-  } elsif ($url =~ m!^gemini://$host(?::$port)?/do/moku-pona/add?(.+)!) {
-    with_known_fingerprint($stream, sub {
-      moku_pona_add(decode_utf8(uri_unescape($1)));
-      $stream->write("31 gemini://$host/do/moku-pona/sites.txt\r\n") });
-    return 1;
   } elsif ($url =~ m!^gemini://$host(?::$port)?/do/moku-pona/([^/]+)$!) {
     my $file = decode_utf8(uri_unescape($1));
-    if (-f "$moku_pona_dir/$file") {
-      result($stream, "20", "text/gemini");
-      $stream->write(encode_utf8 read_text("$moku_pona_dir/$file"));
+    if (-f "$dir/$file") {
+      success($stream);
+      $stream->write(encode_utf8 read_text("$dir/$file"));
     } else {
-      result($stream, "40", "Cannot read $moku_pona_dir/$file");
+      result($stream, "40", "Cannot read $dir/$file");
     }
     return 1;
   }
   return 0;
-}
-
-sub with_known_fingerprint {
-  my $stream = shift;
-  my $fun = shift;
-  my $fingerprint = $stream->handle->get_fingerprint();
-  if ($fingerprint and grep { $_ eq $fingerprint} @known_fingerprints) {
-    $fun->();
-  } elsif ($fingerprint) {
-    $log->info("Unknown client certificate $fingerprint");
-    result($stream, "61", "Your client certificate is not authorised for editing");
-  } else {
-    $log->info("Requested client certificate");
-    result($stream, "60", "You need an authorised client certificate to add to the moku pona list");
-  }
 }

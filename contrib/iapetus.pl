@@ -44,10 +44,14 @@ L<https://codeberg.org/oppenlab/iapetus> for more.
 
 =cut
 
-package App::Phoebe;
+package App::Phoebe::Iapetus;
+use App::Phoebe qw($server $log @request_handlers @extensions host_regex space_regex space port result
+		   valid_id valid_mime_type valid_size @known_fingerprints process_titan);
 use Modern::Perl;
 use File::MimeInfo qw(globs);
-our (@extensions, @request_handlers, $log, $server, @known_fingerprints);
+use Encode qw(decode_utf8);
+use URI::Escape;
+
 push(@{$server->{wiki_mime_type}},'text/gemini');
 unshift(@request_handlers, '^iapetus://' => \&handle_iapetus);
 

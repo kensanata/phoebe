@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,12 +14,12 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
-use Modern::Perl;
+package App::Phoebe::Galleries;
+use App::Phoebe qw(@extensions $log port success result print_link);
+use File::Slurper qw(read_dir read_binary read_text);
 use Encode qw(encode_utf8);
-use Mojo::JSON;
-
-our (@extensions, $log);
+use Modern::Perl;
+use Mojo::JSON qw(decode_json encode_json);
 
 # galleries
 
@@ -51,7 +51,7 @@ sub galleries {
       } grep {
 	-d "$galleries_dir/$_"
       } read_dir($galleries_dir)) {
-      gallery_print_link($stream, "alexschroeder.ch", gallery_title($dir), "do/gallery/$dir");
+      gallery_print_link($stream, $host, gallery_title($dir), "do/gallery/$dir");
     };
     return 1;
   } elsif (my ($dir) = $url =~ m!^gemini://$host(?::$port)?/do/gallery/([^/?]*)$!) {
@@ -92,15 +92,15 @@ sub galleries {
     for my $image (@{$data->{data}}) {
       $stream->write("\n");
       $stream->write(encode_utf8 join("\n", grep /\S/, @{$image->{caption}}) . "\n") if $image->{caption};
-      gallery_print_link($stream, "alexschroeder.ch", "Thumbnail", "do/gallery/$dir/" . $image->{thumb}->[0]);
-      gallery_print_link($stream, "alexschroeder.ch", "Image", "do/gallery/$dir/" . $image->{img}->[0]);
+      gallery_print_link($stream, $host, "Thumbnail", "do/gallery/$dir/" . $image->{thumb}->[0]);
+      gallery_print_link($stream, $host, "Image", "do/gallery/$dir/" . $image->{img}->[0]);
     }
     return 1;
   } elsif (my ($file, $extension) = $url =~ m!^gemini://$host(?::$port)?/do/gallery/([^/?]*/(?:thumbs|imgs)/[^/?]*\.(jpe?g|png))$!i) {
     if (not -r "$galleries_dir/$file") {
       $stream->write(encode_utf8 "40 Cannot read $file\r\n");
     } else {
-      success($stream, $extension =~ /^png$/i ? "image/png" : "image/jpg");
+      success($stream, $extension =~ /^png$/i ? "image/png" : "image/jpeg");
       $log->info("Serving image $file");
       $stream->write(read_binary("$galleries_dir/$file"));
     }

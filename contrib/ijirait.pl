@@ -14,10 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
-our (@extensions, $log, $server, @request_handlers);
 
 package App::Phoebe::Ijirait;
+use App::Phoebe qw(@extensions $log $server @request_handlers success result);
 use Modern::Perl;
 use Encode qw(encode_utf8 decode_utf8);
 use File::Slurper qw(read_binary write_binary read_text);
@@ -26,8 +25,6 @@ use List::Util qw(first);
 use Graph::Easy;
 use URI::Escape;
 use utf8;
-
-*success = \&App::Phoebe::success;
 
 =head1 Ijirait
 

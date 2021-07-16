@@ -5,8 +5,8 @@ os_unsupported if $^O eq 'MSWin32';
 
 WriteMakefile(
   NAME             => 'App::phoebe',
-  VERSION_FROM     => 'lib/App/phoebe.pm',
-  ABSTRACT_FROM    => 'lib/App/phoebe.pm',
+  VERSION_FROM     => 'lib/App/Phoebe.pm',
+  ABSTRACT_FROM    => 'lib/App/Phoebe.pm',
   AUTHOR           => 'Alex Schroeder',
   LICENSE          => 'agpl_3',
   MIN_PERL_VERSION => '5.26.0', # Modern::Perl '2018'

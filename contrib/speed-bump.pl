@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,16 +14,17 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+package App::Phoebe::SpeedBump;
+use App::Phoebe qw(@extensions $log $server @known_fingerprints
+		   success result port host_regex );
 use Modern::Perl;
 use File::Slurper qw(read_binary write_binary);
 use List::Util qw(sum);
 use Mojo::JSON qw(decode_json encode_json);
 use Net::IP;
 use Net::DNS qw(rr);
-our (@extensions, $log, $server);
 
-our @known_fingerprints = qw(
+@known_fingerprints = qw(
   sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
 
 =head1 Speed Bump
@@ -338,3 +339,5 @@ sub speed_bump_time {
   return sprintf("%4dm", int($seconds/60)) if abs($seconds) > 120; # 2min
   return sprintf("%4ds", $seconds);
 }
+
+1;

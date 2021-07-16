@@ -119,6 +119,7 @@ is($res->body, "Berta\n", "Oddmuse page content from namespace");
 # Start Phoebe
 
 my $config = <<"EOT";
+package App::Phoebe::Oddmuse;
 our \%oddmuse_wikis = ("localhost" => "http://localhost:$oddmuse_port/wiki");
 our \%oddmuse_wiki_names = ("localhost" => "Test");
 our \%oddmuse_wiki_dirs = ("localhost" => "$oddmuse_dir");
@@ -242,18 +243,18 @@ like(query_gemini("$base"), qr(^Hello\n\nBlog:\n)m, "Main page including Welcome
 ok(require './script/phoebe', "load phoebe");
 ok(require './contrib/oddmuse.pl', "load oddmuse.pl");
 
-$page = App::Phoebe::oddmuse_gemini_text(undef, $host, "", "Testing [Foo:Bar baz]");
+$page = App::Phoebe::Oddmuse::oddmuse_gemini_text(undef, $host, "", "Testing [Foo:Bar baz]");
 like($page, qr(^Testing baz$)m, "Namespace link with text, text");
 like($page, qr(^=> gemini://localhost:1965/Foo/page/Bar baz$)m, "Namespace link with text, link");
 
-$page = App::Phoebe::oddmuse_gemini_text(undef, $host, "", "e.g. &#x2605; is ★");
+$page = App::Phoebe::Oddmuse::oddmuse_gemini_text(undef, $host, "", "e.g. &#x2605; is ★");
 like($page, qr(^e.g. ★ is ★$)m, "HTML entities that look like hash tags");
 
-$page = App::Phoebe::oddmuse_gemini_text(undef, $host, "", "it has [Tau_Subsector:?action=index 39 pages]");
+$page = App::Phoebe::Oddmuse::oddmuse_gemini_text(undef, $host, "", "it has [Tau_Subsector:?action=index 39 pages]");
 like($page, qr(^it has 39 pages$)m, "index link inline text");
 like($page, qr(^=> gemini://localhost:1965/Tau_Subsector/do/index 39 pages$)m, "index link");
 
-$page = App::Phoebe::oddmuse_gemini_text(undef, $host, "", qq{
+$page = App::Phoebe::Oddmuse::oddmuse_gemini_text(undef, $host, "", qq{
 This is a table.
 
 |hello|

@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,16 +14,21 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+package App::Phoebe::DebugIpNumbers;
+use App::Phoebe qw($log);
+use Modern::Perl;
 
-our ($log);
+# We have to override the copy that was imported into the main namespace in the
+# start_servers subroutine.
+no warnings 'redefine';
+*old_handle_request = \&main::handle_request;
+*main::handle_request = \&handle_request;
 
-*my_old_handle_request = \&handle_request;
-*handle_request = \&my_new_handle_request;
-
-sub my_new_handle_request {
+sub handle_request {
   my ($stream) = @_;
   my $address = $stream->handle->peerhost;
   $log->debug("Visitor: $address");
-  my_old_handle_request(@_);
+  return old_handle_request(@_);
 }
+
+1;

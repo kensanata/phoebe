@@ -18,4 +18,4 @@ prereq_ok("Testing prerequisites",
 	      './script/phoebe' $module B Encode File::Basename File::Path
 	      File::Temp Getopt::Long IO::Socket::IP List::Util Mojo::IOLoop
 	      Mojo::IOLoop::Server Mojo::Log Mojo::UserAgent Pod::Text Socket
-	      Term::ReadLine Test::More utf8 warnings)]);
+	      Term::ReadLine Test::More utf8 warnings Exporter IPC::Open2)]);

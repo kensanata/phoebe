@@ -41,9 +41,8 @@ our $dir = "./" . sprintf("test-%04d", int(rand(10000)));
 
 mkdir($dir);
 write_text("$dir/config", <<'EOT');
-package App::Phoebe;
+use App::Phoebe qw(@extensions @main_menu port);
 use Modern::Perl;
-our (@init, @extensions, @main_menu);
 push(@main_menu, "=> gemini://localhost:1965/do/test Test");
 push(@extensions, \&serve_test);
 sub serve_test {
@@ -59,13 +58,16 @@ sub serve_test {
   return;
 }
 no warnings 'redefine';
-sub get_ip_numbers {
-  return '127.0.0.1';
-}
+sub get_ip_numbers { '127.0.0.1' }
+
+package App::Phoebe::SpeedBump;
 our $speed_bump_requests = 2;
 our $speed_bump_window = 5;
+
+package App::Phoebe;
 our @known_fingerprints = qw(
   sha256$0ba6ba61da1385890f611439590f2f0758760708d1375859b2184dcd8f855a00);
+1;
 EOT
 
 our @config;
@@ -117,6 +119,7 @@ if (!defined $pid) {
 sub query_gemini {
   my $query = shift;
   my $text = shift;
+  my $cert = shift // 1; # suppress use of client certificate in the test
   my ($header, $mimetype, $encoding, $buffer);
 
   # create client
@@ -125,8 +128,8 @@ sub query_gemini {
       address => "localhost",
       port => $port,
       tls => 1,
-      tls_cert => "t/cert.pem",
-      tls_key => "t/key.pem",
+      tls_cert => ($cert ? "t/cert.pem" : undef),
+      tls_key => ($cert ? "t/key.pem" : undef),
       tls_options => { SSL_verify_mode => 0x00 },
     } => sub {
       my ($loop, $err, $stream) = @_;
@@ -160,7 +163,8 @@ sub query_gemini {
 	  }
 	}});
       # Write request
-      $stream->write("$query\r\n");
+      $stream->write($query);
+      $stream->write("\r\n") unless $query =~ /^POST/; # GET and Gemini requests end in \r\n
       $stream->write($text) if $text });
   # Start event loop if necessary
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
@@ -172,7 +176,8 @@ sub query_gemini {
 
 sub query_web {
   my $query = shift;
-  return query_gemini("$query\r\n"); # add empty line
+  $query .= "\r\n" unless $query =~ /^POST/; # add empty line for GET requests
+  return query_gemini($query);
 }
 
 my $total = 0;

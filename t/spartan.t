@@ -34,6 +34,7 @@ my $spartan_port = Mojo::IOLoop::Server->generate_port; # new port for Spartan
 
 # make sure starting phoebe starts serving the spartan port, too
 push(@config, <<"EOF");
+package App::Phoebe::Spartan;
 \$spartan_port = $spartan_port;
 EOF
 

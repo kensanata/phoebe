@@ -15,30 +15,29 @@
 
 use Modern::Perl;
 use Test::More;
-use Encode qw(decode_utf8);
-use utf8; # tests contain UTF-8 characters and it matters
+use File::Slurper qw(read_text write_text);
 
 my $msg;
-if (not $ENV{TEST_AUTHOR} or $ENV{TEST_AUTHOR} < 2) {
-  $msg = 'Diagnostics are an author test that cannot succeed, unfortunately. Set $ENV{TEST_AUTHOR} to "2" to run it anyway.';
+if (not $ENV{TEST_AUTHOR}) {
+  $msg = 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.';
 }
 plan skip_all => $msg if $msg;
-
-our $host = 'localhost';
+our $dir;
+our $host;
+our $base;
 our $port;
 
+# tricky: must know the directory before generating the random number in test.pl!
+our @config = (qw(moku-pona.pl), "package App::Phoebe::MokuPona;\n"
+	       . "use App::Phoebe qw(\$server);\n"
+	       . "our \$dir = \"\$server->{wiki_dir}/moku-pona\";\n");
 require './t/test.pl';
+mkdir("$dir/moku-pona");
+write_text("$dir/moku-pona/updates.txt", "A\n");
 
-say "Running gemini-diagnostics $host $port";
-open(my $fh, "-|:utf8", "gemini-diagnostics $host $port")
-    or plan skip_all => "Cannot run gemini-diagnostics";
-diag "A lot of errors at the beginning are OK!";
-
-my $test;
-while (<$fh>) {
-  $test = $1 if /\[(\w+)\]/;
-  next unless m/^ *(x|✓)/;
-  ok($1 eq "✓", $test);
-}
+like(query_gemini("$base/do/moku-pona"), qr/^31/, "Redirected");
+my $page = query_gemini("$base/do/moku-pona/updates.txt");
+like($page, qr/^20/, "Updates");
+like($page, qr/^A$/m, "File content");
 
 done_testing();

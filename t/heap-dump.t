@@ -15,30 +15,23 @@
 
 use Modern::Perl;
 use Test::More;
-use Encode qw(decode_utf8);
-use utf8; # tests contain UTF-8 characters and it matters
+use utf8;
 
-my $msg;
-if (not $ENV{TEST_AUTHOR} or $ENV{TEST_AUTHOR} < 2) {
-  $msg = 'Diagnostics are an author test that cannot succeed, unfortunately. Set $ENV{TEST_AUTHOR} to "2" to run it anyway.';
-}
-plan skip_all => $msg if $msg;
+our @config = qw(heap-dump.pl);
 
-our $host = 'localhost';
-our $port;
+plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 
 require './t/test.pl';
 
-say "Running gemini-diagnostics $host $port";
-open(my $fh, "-|:utf8", "gemini-diagnostics $host $port")
-    or plan skip_all => "Cannot run gemini-diagnostics";
-diag "A lot of errors at the beginning are OK!";
+# variables set by test.pl
+our $base;
+our $dir;
 
-my $test;
-while (<$fh>) {
-  $test = $1 if /\[(\w+)\]/;
-  next unless m/^ *(x|✓)/;
-  ok($1 eq "✓", $test);
-}
+# no client cert
+my $page = query_gemini("$base/do/heap-dump", undef, 0);
+like($page, qr/^60/, "Client certificate required");
+$page = query_gemini("$base/do/heap-dump");
+like($page, qr/^20/, "Heap dump saved");
+ok(-f "$dir/phoebe.pmat", "File exists");
 
-done_testing();
+done_testing;

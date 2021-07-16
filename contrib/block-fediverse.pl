@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,18 +14,28 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+package App::Phoebe::BlockFediverse;
+use App::Phoebe qw(@extensions http_error);
 use Modern::Perl;
 
-our (@extensions);
+=head1 Block the Fediverse
 
-# block fediverse
+This extension blocks the Fediverse user agent from your website (Mastodon,
+Friendica, Pleroma). The reason is this: when these sites federate a status
+linking to your site, each instance will fetch a preview, so your site will get
+hit by hundreds of requests from all over the Internet. Blocking them helps us
+weather the storm.
+
+=cut
 
 push(@extensions, \&block_fediverse);
 
 sub block_fediverse {
   my ($stream, $url, $headers) = @_;
   # quit as quickly as possible: return 1 means the request has been handled
-  return 1 if $headers and $headers->{"user-agent"} and $headers->{"user-agent"} =~ m!Mastodon|Friendica|Pleroma!i;
-  return 0;
+  return 0 unless $headers and $headers->{"user-agent"} and $headers->{"user-agent"} =~ m!Mastodon|Friendica|Pleroma!i;
+  http_error($stream, "Blocking Fediverse previews");
+  return 1;
 }
+
+1;

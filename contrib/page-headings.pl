@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,14 +14,16 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+package App::Phoebe::PageHeadings;
+use App::Phoebe qw(@extensions $server $log port host_regex space_regex success
+		   blog_pages text print_link footer);
 use Modern::Perl;
+use List::Util qw(min);
 use Encode qw(encode_utf8);
 
 # Blogging where the first level headers in the page takes precedence over the
 # filename.
 
-our (@extensions, $server, $log);
 push(@extensions, \&serve_minimal_main_menu);
 
 # We want to serve a different main page if no page was specified.
@@ -37,7 +39,7 @@ sub serve_minimal_main_menu {
     success($stream);
     my $page = $server->{wiki_main_page};
     if ($page) {
-      $stream->write(encode_utf8 text($host, $space, $page));
+      $stream->write(encode_utf8 text($stream, $host, $space, $page));
     } else {
       $stream->write("# Welcome to Phoebe!\n");
       $stream->write("\n");
@@ -60,7 +62,7 @@ sub blog_with_headers {
   return unless @blog;
   $stream->write("Blog:\n");
   for my $id (@blog[0 .. min($#blog, $n - 1)]) {
-    my $text = encode_utf8 text($host, $space, $id);
+    my $text = encode_utf8 text($stream, $host, $space, $id);
     next unless $text; # skipping empty pages
     my ($title) = $text =~ /^# (.*)/m;
     $title ||= "(untitled)";
@@ -71,6 +73,9 @@ sub blog_with_headers {
 
 # When serving a page, we don't want to use the filename as a first level
 # heading.
+no warnings 'redefine';
+*App::Phoebe::serve_page = \&serve_page;
+
 sub serve_page {
   my $stream = shift;
   my $host = shift;
@@ -79,6 +84,8 @@ sub serve_page {
   my $revision = shift;
   $log->info("Serve Gemini page $id without a heading");
   success($stream);
-  $stream->write(encode_utf8 text($host, $space, $id, $revision));
+  $stream->write(encode_utf8 text($stream, $host, $space, $id, $revision));
   $stream->write(encode_utf8 footer($stream, $host, $space, $id, $revision));
 }
+
+1;

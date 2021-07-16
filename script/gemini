@@ -52,6 +52,13 @@ links, grep then filters for the links to thumbnails, extract the URL using cut
 (assuming a space between "=>" and the URL), and download each URL, and save the
 output in the filename indicated by the URL.
 
+=head2 Client Certificates
+
+You can provide a certificate and a key file:
+
+        gemini --cert_file=cert.pem --key_file=key.pem \
+          gemini://campaignwiki.org/play/ijirait
+
 =cut
 
 use Modern::Perl '2018';

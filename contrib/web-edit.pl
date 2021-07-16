@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,11 +14,14 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+package App::Phoebe::WebEdit;
+use App::Phoebe qw(@footer @extensions @request_handlers @main_menu $server $log
+		   port space host_regex space_regex handle_http_header
+		   with_lock wiki_dir bogus_hash http_error to_url);
+use Encode qw(decode_utf8 encode_utf8);
+use File::Slurper qw(write_text);
 use Modern::Perl;
-use Encode qw(encode_utf8);
-
-our (@footer, @extensions, @request_handlers, @main_menu, $server, $log);
+use URI::Escape;
 
 unshift(@request_handlers, '^POST .* HTTP/1\.[01]$' => \&handle_http_header);
 

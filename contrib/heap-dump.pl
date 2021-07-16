@@ -14,14 +14,14 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+package App::Phoebe::HeapDump;
+use App::Phoebe qw(@extensions $server $log @known_fingerprints
+		   port host_regex space_regex success result);
 use Modern::Perl;
 use Devel::MAT::Dumper;
 
-our @known_fingerprints = qw(
+@known_fingerprints = qw(
   sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
-
-our (@extensions, $server, $log);
 
 =head1 Heap Dumper
 
@@ -66,3 +66,5 @@ sub with_heap_dump_fingerprint {
     result($stream, "60", "You need an authorised client certificate to heap dump");
   }
 }
+
+1;

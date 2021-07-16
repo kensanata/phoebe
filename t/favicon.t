@@ -15,30 +15,20 @@
 
 use Modern::Perl;
 use Test::More;
-use Encode qw(decode_utf8);
-use utf8; # tests contain UTF-8 characters and it matters
 
-my $msg;
-if (not $ENV{TEST_AUTHOR} or $ENV{TEST_AUTHOR} < 2) {
-  $msg = 'Diagnostics are an author test that cannot succeed, unfortunately. Set $ENV{TEST_AUTHOR} to "2" to run it anyway.';
-}
-plan skip_all => $msg if $msg;
+our $base;
+our @config = qw(favicon.pl);
 
-our $host = 'localhost';
-our $port;
+plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 
 require './t/test.pl';
 
-say "Running gemini-diagnostics $host $port";
-open(my $fh, "-|:utf8", "gemini-diagnostics $host $port")
-    or plan skip_all => "Cannot run gemini-diagnostics";
-diag "A lot of errors at the beginning are OK!";
+# variables set by test.pl
+our $dir;
+our $host;
+our $port;
 
-my $test;
-while (<$fh>) {
-  $test = $1 if /\[(\w+)\]/;
-  next unless m/^ *(x|✓)/;
-  ok($1 eq "✓", $test);
-}
+like(query_web("GET /favicon.ico HTTP/1.0\r\nhost: $host:$port"),
+     qr/^HTTP\/1.1 200 OK/, "Favicon is served via HTTP");
 
-done_testing();
+done_testing;

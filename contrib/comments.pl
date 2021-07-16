@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,12 +14,24 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+=head1 Comments
+
+Add a comment link to footers such that visitors can comment via Gemini. A
+comment is simply a new paragraph starting with the character LEFT SPEECH BUBBLE
+(🗨). For every page I<Foo> the comments are found on I<Comments on Foo>.
+
+Commenting requires the access token.
+
+=cut
+
+package App::Phoebe::Comments;
+use App::Phoebe qw(@footer @extensions $log with_lock port space host_regex space_regex
+		   result valid_id valid_token wiki_dir write_page);
+use Encode qw(decode_utf8);
 use Modern::Perl;
+use URI::Escape;
 use File::Slurper qw(read_text);
 use utf8;
-
-our (@footer, @extensions, $log);
 
 push(@footer, \&add_comment_link_to_footer);
 
@@ -71,7 +83,7 @@ sub append_comment {
   if (-e $file) {
     $text = read_text($file) . "\n\n🗨 " . $query;
   } else {
-    $text = $query;
+    $text = "🗨 $query";
   }
   with_lock($stream, $host, $space, sub { write_page($stream, $host, $space, $id, $text) } );
 }

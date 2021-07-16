@@ -1,5 +1,5 @@
 # -*- mode: perl -*-
-# Copyright (C) 2017–2020  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -14,16 +14,19 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe;
+package App::Phoebe::Oddmuse;
+use App::Phoebe qw(@request_handlers @extensions @main_menu $server $log $full_url_regex
+		   success result reserved_regex port gemini_link modified changes diff
+		   colourize quote_html bogus_hash print_link);
 use Mojo::UserAgent;
 use Modern::Perl;
 use MIME::Base64;
+use URI::Escape;
 use List::Util qw(uniq);
-use Encode qw(encode_utf8);
+use Encode qw(encode_utf8 decode_utf8);
 use DateTime::Format::ISO8601;
 use utf8; # the source contains UTF-8 encoded strings
-
-our (@request_handlers, @extensions, @main_menu, $server, $log, $full_url_regex);
+no warnings 'redefine';
 
 # Oddmuse Wiki
 
@@ -53,8 +56,8 @@ our %oddmuse_wiki_tokens = (
 
 our $oddmuse_namespace_regex = '[\p{Uppercase}\d][\w_  ]*';
 
-*oddmuse_old_space_regex = \&space_regex;
-*space_regex = \&oddmuse_new_space_regex;
+*oddmuse_old_space_regex = \&App::Phoebe::space_regex;
+*App::Phoebe::space_regex = \&oddmuse_new_space_regex;
 
 sub oddmuse_new_space_regex {
   my $spaces = oddmuse_old_space_regex();
@@ -62,8 +65,8 @@ sub oddmuse_new_space_regex {
   return $oddmuse_namespace_regex;
 }
 
-*oddmuse_old_space = \&space;
-*space = \&oddmuse_new_space;
+*oddmuse_old_space = \&App::Phoebe::space;
+*App::Phoebe::space = \&oddmuse_new_space;
 
 sub oddmuse_new_space {
   my $stream = shift;
@@ -76,8 +79,8 @@ sub oddmuse_new_space {
   return oddmuse_old_space($stream, $host, $space);
 }
 
-*oddmuse_old_save_page = \&save_page;
-*save_page = \&oddmuse_new_save_page;
+*oddmuse_old_save_page = \&App::Phoebe::save_page;
+*App::Phoebe::save_page = \&oddmuse_new_save_page;
 
 sub oddmuse_new_save_page {
   my $stream = shift;
@@ -126,8 +129,8 @@ sub oddmuse_new_save_page {
   $stream->close_gracefully();
 }
 
-*oddmuse_old_valid_token = \&valid_token;
-*valid_token = \&oddmuse_new_valid_token;
+*oddmuse_old_valid_token = \&App::Phoebe::valid_token;
+*App::Phoebe::valid_token = \&oddmuse_new_valid_token;
 
 sub oddmuse_new_valid_token {
   my ($stream, $host, $space, $id, $params) = @_;
@@ -257,8 +260,8 @@ sub oddmuse_serve_page {
 }
 
 # this is required when combining gopher with oddmuse!
-*oddmuse_text_old = \&text;
-*text = \&oddmuse_text_new;
+*oddmuse_text_old = \&App::Phoebe::text;
+*App::Phoebe::text = \&oddmuse_text_new;
 
 sub oddmuse_text_new {
   my ($stream, $host, $space, $id, $revision) = @_;
@@ -550,8 +553,8 @@ sub normal_to_free {
 }
 
 # this is required when combining gopher with oddmuse!
-*oddmuse_blog_pages_old = \&blog_pages;
-*blog_pages = \&oddmuse_blog_pages_new;
+*oddmuse_blog_pages_old = \&App::Phoebe::blog_pages;
+*App::Phoebe::blog_pages = \&oddmuse_blog_pages_new;
 
 sub oddmuse_blog_pages_new {
   my $stream = shift;
@@ -597,7 +600,9 @@ sub oddmuse_serve_index {
   $log->info("Serving all pages for $host");
   success($stream);
   $stream->write("# All Pages\n");
-  my @pages = pages($stream, $host, $space);
+  # we need to call our own: if we import pages from App:Phoebe, we get a copy
+  # and would have to remap that just like we do App::Phoebe::pages below
+  my @pages = oddmuse_pages_new($stream, $host, $space);
   return unless @pages;
   for my $id (@pages) {
     print_link($stream, $host, $space, normal_to_free($id), "page/$id");
@@ -605,8 +610,8 @@ sub oddmuse_serve_index {
 }
 
 # this is required when combining gopher with oddmuse!
-*oddmuse_pages_old = \&pages;
-*pages = \&oddmuse_pages_new;
+*oddmuse_pages_old = \&App::Phoebe::pages;
+*App::Phoebe::pages = \&oddmuse_pages_new;
 
 sub oddmuse_pages_new {
   my $stream = shift;
@@ -623,8 +628,8 @@ sub oddmuse_pages_new {
 }
 
 # this is required when combining gopher with oddmuse!
-*oddmuse_search_old = \&search;
-*search = \&oddmuse_search_new;
+*oddmuse_search_old = \&App::Phoebe::search;
+*App::Phoebe::search = \&oddmuse_search_new;
 
 sub oddmuse_search_new {
   my $stream = shift;

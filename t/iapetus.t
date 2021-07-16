@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use App::Phoebe;
 use Modern::Perl;
 use Test::More;
 use IO::Socket::SSL;
@@ -26,11 +27,11 @@ plan skip_all => $msg if $msg;
 
 our $host;
 our $base;
-our $dir;
 our $port;
 our @config = qw(iapetus.pl);
 # make sure fingerprints are known (this reuses the server certificate!)
 push(@config, <<"EOF");
+package App::Phoebe;
 \@fingerprints = qw(sha256$0ba6ba61da1385890f611439590f2f0758760708d1375859b2184dcd8f855a00);
 EOF
 require './t/test.pl';

@@ -378,6 +378,7 @@ sub oddmuse_gemini_text {
     $block =~ s/\s+$//; # trim
     my @links;
     $block =~ s/^(=>.*)\n?/push(@links, $1); ""/gem;
+    $block =~ s/^$full_url_regex\n?/push(@links, "=> $1"); ""/ge;
     $block =~ s/\[([^]]+)\]\($full_url_regex\)/push(@links, oddmuse_gemini_link($stream, $host, $space, $1, $2)); $1/ge;
     $block =~ s/\[([^]]+)\]\(([^) ]+)\)/push(@links, oddmuse_gemini_link($stream, $host, $space, $1, $2)); $1/ge;
     $block =~ s/\[$full_url_regex\s+([^]]+)\]/push(@links, oddmuse_gemini_link($stream, $host, $space, $2, $1)); $2/ge;

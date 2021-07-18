@@ -37,15 +37,14 @@ use File::Slurper qw(read_text);
 use Encode qw(encode_utf8 decode_utf8);
 # moku pona
 
-our $dir = "$ENV{HOME}/.moku-pona";
-our $host;
+our $dir  ||= "$ENV{HOME}/.moku-pona";
+our $host ||= (keys %{$server->{host}})[0];
 
 push(@extensions, \&mokupona);
 
 sub mokupona {
   my $stream = shift;
   my $url = shift;
-  my $host ||= (keys %{$server->{host}})[0];
   my $port = port($stream);
   if ($url =~ m!^gemini://$host(?::$port)?/do/moku-pona$!) {
     result($stream, "31", "gemini://$host/do/moku-pona/updates.txt");

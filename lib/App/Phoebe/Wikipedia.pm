@@ -47,7 +47,6 @@ sub wikipedia {
   my $stream = shift;
   my $url = shift;
   my $headers = shift;
-  $log->info("Wikipedia proxy at $host");
   my $port = App::Phoebe::port($stream);
   if ($url =~ m!^gemini://$host(?::$port)?/search/([a-z]+)/([^?;]+)!) {
     wikipedia_serve_search($stream, $1, decode_utf8(uri_unescape($2)));
@@ -123,7 +122,7 @@ sub wikipedia_serve_raw {
   my $stream = shift;
   my $lang = shift;
   my $term = shift;
-  $log->info("Getting $lang/$term");
+  $log->info("Wikipedia getting $lang/$term");
   my $mw = MediaWiki::API->new();
   $mw->{config}->{api_url} = "https://$lang.wikipedia.org/w/api.php";
   my $result = $mw->api({
@@ -148,7 +147,7 @@ sub wikipedia_serve_text {
   my $stream = shift;
   my $lang = shift;
   my $term = shift;
-  $log->info("Getting $lang/$term");
+  $log->info("Wikipedia getting $lang/$term");
   my $mw = MediaWiki::API->new();
   $mw->{config}->{api_url} = "https://$lang.wikipedia.org/w/api.php";
   my $result = $mw->api({
@@ -301,7 +300,7 @@ sub wikipedia_serve_full {
   my $stream = shift;
   my $lang = shift;
   my $term = shift;
-  $log->info("Serving full $lang/$term");
+  $log->info("Wikipedia serving full $lang/$term");
   my $mw = MediaWiki::API->new();
   $mw->{config}->{api_url} = "https://$lang.wikipedia.org/w/api.php";
   my $result = $mw->api({

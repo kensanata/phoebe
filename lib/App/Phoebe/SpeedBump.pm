@@ -55,8 +55,9 @@ my $speed_data;
 # $speed_cidr_data->{$cidr} = $ts
 my $speed_cidr_data;
 
-# order is important: we must be able to reset the stats for tests
-push(@extensions, \&speed_bump_admin, \&speed_bump);
+# order is important: we must be able to reset the stats for tests; and we need
+# to be there before others handle our requests
+unshift(@extensions, \&speed_bump_admin, \&speed_bump);
 
 sub speed_bump {
   my ($stream, $url) = @_;

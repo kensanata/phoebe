@@ -20,7 +20,7 @@ use utf8; # tests contain UTF-8 characters and it matters
 our $base;
 our @use = qw(Wikipedia);
 
-plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
+plan skip_all => 'Contributions are an author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 
 # make sure starting phoebe starts knows localhost is the proxy
 our @config = '$App::Phoebe::Wikipedia::host = "localhost";';

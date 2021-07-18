@@ -14,6 +14,22 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::WebComments
+
+This extension allows visitors on the web to add comments.
+
+Comments are appended to a "comments page". For every page I<Foo> the comments
+are found on I<Comments on Foo>. This prefix is fixed, currently.
+
+On the comments page, each new comment starts with the character LEFT SPEECH
+BUBBLE (🗨). This character is fixed, currently.
+
+There is no configuration. Simply add it to your F<config> file:
+
+    use App::Phoebe::WebComments;
+
+=cut
+
 package App::Phoebe::WebComments;
 use App::Phoebe qw(@footer @extensions @request_handlers $server $log
 		   handle_http_header port space host_regex space_regex

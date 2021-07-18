@@ -14,23 +14,32 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::HeapDump
+
+Perhaps you find yourself in a desperate situation: your server is leaking
+memory and you don't know where. This extension provides a way to use
+L<Devel::MAT::Dumper> by allowing users identified with a known fingerprint of
+their client certificate to initiate a dump.
+
+You must set the fingerprints in your F<config> file.
+
+    package App::Phoebe;
+    our @known_fingerprints = qw(
+      sha256$fce75346ccbcf0da647e887271c3d3666ef8c7b181f2a3b22e976ddc8fa38401);
+    use App::Phoebe::HeapDump;
+
+Once have restarted the server, L<gemini://localhost/do/heap-dump> will write a
+heap dump to its wiki data directory. See L<Devel::MAT::UserGuide> for more.
+
+=cut
+
 package App::Phoebe::HeapDump;
 use App::Phoebe qw(@extensions $server $log @known_fingerprints
 		   port host_regex space_regex success result);
 use Modern::Perl;
 use Devel::MAT::Dumper;
 
-@known_fingerprints = qw(
-  sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
-
-=head1 Heap Dumper
-
-We want Phoebe to write a heap dump to its wiki data directory when visiting
-/do/heap-dump.
-
-See L<Devel::MAT::UserGuide>.
-
-=cut
+our @known_fingerprints;
 
 # order is important: we must be able to reset the stats for tests
 push(@extensions, \&heap_dump);

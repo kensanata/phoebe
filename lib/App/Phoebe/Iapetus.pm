@@ -14,18 +14,20 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 Iapetus Support
+=head1 App::Phoebe::Iapetus
 
 This allows known editors to upload files and pages. You need to set
-C<@known_fingerprints> in your config file. Here's an example:
+C<@known_fingerprints> in your F<config> file. Here's an example:
 
-    our (@known_fingerprints);
+    package App::Phoebe;
+    our @known_fingerprints;
     @known_fingerprints = qw(
       sha256$fce75346ccbcf0da647e887271c3d3666ef8c7b181f2a3b22e976ddc8fa38401
       sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
+    use App::Phoebe::Iapetus;
 
 The way to do it is to request the I<certificate> from your friends (not their
-key!) and run the following:
+key!) and run the following, assuming the is named F<client-cert.pem>:
 
     openssl x509 -in client-cert.pem -noout -sha256 -fingerprint \
     | sed -e 's/://g' -e 's/SHA256 Fingerprint=/sha256$/' \

@@ -14,6 +14,38 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::Ijirait
+
+The ijirait are red-eyed shape shifters, and a game one plays via the Gemini
+protocol, and Ijiraq is also one of the moons of Saturn.
+
+The Ijirait game is modelled along traditional MUSH games ("multi-user shared
+hallucination"), that is: players have a character in the game world; the game
+world consists of rooms; these rooms are connected to each other; if two
+characters are in the same room, they see each other; if one of them says
+something, the other hears it.
+
+When you visit the URL using your Gemini browser, you're asked for a client
+certificate. The common name of the certificate is the name of your character in
+the game.
+
+As the server doesn't know whether you're still active or not, it assumes a
+10min timout. If you were active in the last 10min, other people in the same
+"room". Similarly, if you "say" something, whatever you said hangs on the room
+description for up to 10min as long as your character is still in the room.
+
+There is no configuration. Simply add it to your F<config> file:
+
+    use App::Phoebe::Ijirait;
+
+In a virtual host setup, this extension serves all the hosts. Here's how to
+serve just one of them:
+
+    package App::Phoebe::Ijirait;
+    our $host = "campaignwiki.org";
+    use App::Phoebe::Ijirait;
+
+=cut
 
 package App::Phoebe::Ijirait;
 use App::Phoebe qw(@extensions $log $server @request_handlers success result);
@@ -25,32 +57,6 @@ use List::Util qw(first);
 use Graph::Easy;
 use URI::Escape;
 use utf8;
-
-=head1 Ijirait
-
-The ijirait are red-eyed shape shifters, and a game one plays via the Gemini
-protocol, and Ijiraq is also one of the moons of Saturn.
-
-The Ijirait game is modelled along traditional MUSH games ("multi-user shared
-hallucination"), that is: players have a character in the game world; the game
-world consists of rooms; these rooms are connected to each other; if two
-characters are in the same room, they see each other; if one of them says
-something, the other hears it.
-
-=head2 Your Character
-
-When you visit the URL using your Gemini browser, you're asked for a client
-certificate. The common name of the certificate is the name of your character in
-the game.
-
-=head2 Time
-
-As the server doesn't know whether you're still active or not, it assumes a
-10min timout. If you were active in the last 10min, other people in the same
-"room". Similarly, if you "say" something, whatever you said hangs on the room
-description for up to 10min as long as your character is still in the room.
-
-=cut
 
 # See "load world on startup" for the small world generated if no save file is
 # available.

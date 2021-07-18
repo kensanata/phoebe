@@ -14,6 +14,28 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::SpeedBump
+
+We want to block crawlers that are too fast or that don't follow the
+instructions in robots.txt. We do this by keeping a list of recent visitors: for
+every IP number, we remember the timestamps of their last visits. If they make
+more than 30 requests in 60s, we block them for an ever increasing amount of
+seconds, starting with 60s and doubling every time this happens.
+
+There is no configuration required. Simply add it to your F<config> file:
+
+    use App::Phoebe::SpeedBump;
+
+The exact number of requests and the length of this time window (in seconds) can
+be changed in the F<config> file. Here's one way to do that:
+
+    package App::Phoebe::SpeedBump;
+    our $speed_bump_requests = 20;
+    our $speed_bump_window = 20;
+    use App::Phoebe::SpeedBump;
+
+=cut
+
 package App::Phoebe::SpeedBump;
 use App::Phoebe qw(@extensions $log $server @known_fingerprints
 		   success result port host_regex );
@@ -27,24 +49,8 @@ use Net::DNS qw(rr);
 @known_fingerprints = qw(
   sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
 
-=head1 Speed Bump
-
-We want to block crawlers that are too fast or that don't follow the
-instructions in robots.txt. We do this by keeping a list of recent visitors: for
-every IP number, we remember the timestamps of their last visits. If they make
-more than 30 requests in 60s, we block them for an ever increasing amount of
-seconds, starting with 60s and doubling every time this happens.
-
-The exact number of requests and the length of this time window (in seconds) can
-be changed in the config file.
-
-    our $speed_bump_requests = 20;
-    our $speed_bump_window = 20;
-
-=cut
-
-our $speed_bump_requests = 30;
-our $speed_bump_window = 60;
+our $speed_bump_requests ||= 30;
+our $speed_bump_window ||= 60;
 
 # $speed_data->{$ip}->{visits} = [$last, ... , $oldest]
 # $speed_data->{$ip}->{warnings} = [1, ... , 0]

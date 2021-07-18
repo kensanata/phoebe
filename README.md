@@ -23,20 +23,39 @@ Phoebe - serve a wiki as a Gemini site
 - [Security](#security)
 - [Privacy](#privacy)
 - [Example](#example)
-- [Certificates and file permission](#certificates-and-file-permission)
-- [Main page and title](#main-page-and-title)
-- [Gus and robots.txt](#gus-and-robots-txt)
-- [Limited, read-only http support](#limited-read-only-http-support)
+- [Certificates and File Permission](#certificates-and-file-permission)
+- [Main Page and Title](#main-page-and-title)
+- [robots.txt](#robots-txt)
+- [Limited, read-only HTTP support](#limited-read-only-http-support)
 - [Configuration](#configuration)
-- [Wiki spaces](#wiki-spaces)
-- [Tokens per wiki space](#tokens-per-wiki-space)
-- [Client certificates](#client-certificates)
-- [Virtual hosting](#virtual-hosting)
-- [Multiple certificates](#multiple-certificates)
-- [Css for the web](#css-for-the-web)
-- [Favicon for the web](#favicon-for-the-web)
+- [Wiki Spaces](#wiki-spaces)
+- [Tokens per Wiki Space](#tokens-per-wiki-space)
+- [Virtual Hosting](#virtual-hosting)
+- [Multiple Certificates](#multiple-certificates)
 - [See also](#see-also)
 - [License](#license)
+- [App::Phoebe](#app-phoebe)
+- [App::Phoebe::BlockFediverse](#app-phoebe-blockfediverse)
+- [App::Phoebe::Chat](#app-phoebe-chat)
+- [App::Phoebe::Comments](#app-phoebe-comments)
+- [App::Phoebe::Css](#app-phoebe-css)
+- [App::Phoebe::DebugIpNumbers](#app-phoebe-debugipnumbers)
+- [App::Phoebe::Favicon](#app-phoebe-favicon)
+- [App::Phoebe::Galleries](#app-phoebe-galleries)
+- [App::Phoebe::Gopher](#app-phoebe-gopher)
+- [App::Phoebe::HeapDump](#app-phoebe-heapdump)
+- [App::Phoebe::Iapetus](#app-phoebe-iapetus)
+- [App::Phoebe::Ijirait](#app-phoebe-ijirait)
+- [App::Phoebe::MokuPona](#app-phoebe-mokupona)
+- [App::Phoebe::Oddmuse](#app-phoebe-oddmuse)
+- [App::Phoebe::PageHeadings](#app-phoebe-pageheadings)
+- [App::Phoebe::RegisteredEditorsOnly](#app-phoebe-registerededitorsonly)
+- [App::Phoebe::Spartan](#app-phoebe-spartan)
+- [App::Phoebe::SpeedBump](#app-phoebe-speedbump)
+- [App::Phoebe::TokiPona](#app-phoebe-tokipona)
+- [App::Phoebe::WebComments](#app-phoebe-webcomments)
+- [App::Phoebe::WebEdit](#app-phoebe-webedit)
+- [App::Phoebe::Wikipedia](#app-phoebe-wikipedia)
 
 # SYNOPSIS
 
@@ -286,7 +305,7 @@ What you get back explains the problem:
 
 In order to allow such graphics as well, you need to restart Phoebe:
 
-    perl phoebe --wiki_mime_type=image/jpeg --wiki_mime_type=image/png
+    phoebe --wiki_mime_type=image/jpeg --wiki_mime_type=image/png
 
 Except that in my case, the image is too big:
 
@@ -305,7 +324,7 @@ Try again:
 Alternatively, you can increase the size limit using the
 `--wiki_page_size_limit` option, but you need to restart Phoebe:
 
-    perl phoebe --wiki_page_size_limit=10000000 \
+    phoebe --wiki_page_size_limit=10000000 \
       --wiki_mime_type=image/jpeg --wiki_mime_type=image/png
 
 Now you can upload about 10MB…
@@ -507,7 +526,7 @@ Here's an example for how to start Phoebe. It listens on `localhost` port 1965,
 adds the "Welcome" and the "About" page to the main menu, and allows editing
 using one of two tokens.
 
-    perl phoebe \
+    phoebe \
       --wiki_token=Elrond \
       --wiki_token=Thranduil \
       --wiki_page=Welcome \
@@ -594,7 +613,7 @@ If you have pages with names that start with an ISO date like 2020-06-30, then
 I'm assuming you want some sort of blog. In this case, up to ten of them will be
 shown on your front page.
 
-## GUS and robots.txt
+## robots.txt
 
 There are search machines out there that will index your site. Ideally, these
 wouldn't index the history pages and all that: they would only get the list of
@@ -653,26 +672,146 @@ Apache or nginx. It's a (simple) web server, too!
 Here's how you could serve the wiki both on Gemini, and the standard HTTPS port,
 443:
 
-    sudo ./phoebe --port=443 --port=1965 \
-      --user=$(id --user --name) --group=$(id --group  --name)
+    phoebe --port=443 --port=1965
 
-We need to use `sudo` because all the ports below 1024 are priviledge ports and
-that includes the standard HTTPS port. Since we don't want the server itself to
-run with all those priviledges, however, I'm using the `--user` and `--group`
-options to change effective and user and group ID. The `id` command is used to
-get your user and your group IDs instead. If you've followed the ["Quickstart"](#quickstart)
-and created a separate `phoebe` user, you could simply use `--user=phoebe` and
-`--group=phoebe` instead. 👍
+Note that 443 is a priviledge port. Thus, you either need to grant Perl the
+permission to listen on a priviledged port, or you need to run Phoebe as a super
+user. Both are potential security risk, but the first option is much less of a
+problem, I think.
+
+If you want to try this, run the following as root:
+
+    setcap 'cap_net_bind_service=+ep' $(which perl)
+
+Verify it:
+
+    getcap $(which perl)
+
+If you want to undo this:
+
+    setcap -r $(which perl)
 
 ## Configuration
 
+See [App::Phoebe](https://metacpan.org/pod/App%3A%3APhoebe) for more information.
+
+## Wiki Spaces
+
+Wiki spaces are separate wikis managed by the same Phoebe server, on the
+same machine, but with data stored in a different directory. If you used
+`--wiki_space=alex` and `--wiki_space=berta`, for example, then you'd have
+three wikis in total:
+
+- `gemini://localhost/` is the main space that continues to be available
+- `gemini://localhost/alex/` is the wiki space for Alex
+- `gemini://localhost/berta/` is the wiki space for Berta
+
+Note that all three spaces are still editable by anybody who knows any of the
+[tokens](#security).
+
+## Tokens per Wiki Space
+
+Per default, there is simply one set of tokens which allows the editing of the
+wiki, and all the wiki spaces you defined. If you want to give users a token
+just for their space, you can do that, too. Doing this is starting to strain the
+command line interface, however, and therefore the following illustrates how to
+do more advanced configuration using the config file:
+
+    package App::Phoebe;
+    use Modern::Perl;
+    our ($server);
+    $server->{wiki_space_token}->{alex} = ["*secret*"];
+
+The code above sets up the `wiki_space_token` property. It's a hash reference
+where keys are existing wiki spaces and values are array references listing the
+valid tokens for that space (in addition to the global tokens that you can set
+up using `--wiki_token` which defaults to the token "hello"). Thus, the above
+code sets up the token `*secret*` for the `alex` wiki space.
+
+You can use the config file to change the values of other properties as well,
+even if these properties are set via the command line.
+
+    package App::Phoebe;
+    use Modern::Perl;
+    our ($server);
+    $server->{wiki_token} = [];
+
+This code simply deactivates the token list. No more tokens!
+
+## Virtual Hosting
+
+Sometimes you want have a machine reachable under different domain names and you
+want each domain name to have their own wiki space, automatically. You can do
+this by using multiple `--host` options.
+
+Here's a simple, stand-alone setup that will work on your local machine. These
+are usually reachable using the IPv4 `127.0.0.1` or the name `localhost`. The
+following command tells Phoebe to serve both `127.0.0.1` and `localhost`
+(the default is to just serve `localhost`).
+
+    phoebe --host=127.0.0.1 --host=localhost
+
+Visit both at [gemini://localhost/](gemini://localhost/) and [gemini://127.0.0.1/](gemini://127.0.0.1/), and create a
+new page in each one, then examine the data directory `wiki`. You'll see both
+`wiki/localhost` and `wiki/127.0.0.1`.
+
+If you're using more wiki spaces, you need to prefix them with the respective
+hostname if you use more than one:
+
+    phoebe --host=127.0.0.1 --host=localhost \
+        --wiki_space=127.0.0.1/alex --wiki_space=localhost/berta
+
+In this situation, you can visit [gemini://127.0.0.1/](gemini://127.0.0.1/),
+[gemini://127.0.0.1/alex/](gemini://127.0.0.1/alex/), [gemini://localhost/](gemini://localhost/), and
+[gemini://localhost/berta/](gemini://localhost/berta/), and they will all be different.
+
+If this is confusing, remember that not using virtual hosting and not using
+spaces is fine, too. 😀
+
+## Multiple Certificates
+
+If you're using virtual hosting as discussed above, you have two options: you
+can use one certificate for all your hostnames, or you can use different
+certificates for the hosts. If you want to use just one certificate for all your
+hosts, you don't need to do anything else. If you want to use different
+certificates for different hosts, you have to specify them all on the command
+line. Generally speaking, use `--host` to specifiy one or more hosts, followed
+by both `--cert_file` and `--key_file` to specifiy the certificate and key to
+use for the hosts.
+
+For example:
+
+    phoebe --host=transjovian.org \
+        --cert_file=/var/lib/dehydrated/certs/transjovian.org/cert.pem \
+        --key_file=/var/lib/dehydrated/certs/transjovian.org/privkey.pem \
+        --host=alexschroeder.ch \
+        --cert_file=/var/lib/dehydrated/certs/alexschroeder.ch/cert.pem \
+        --key_file=/var/lib/dehydrated/certs/alexschroeder.ch/privkey.pem
+
+# SEE ALSO
+
+As you might have guessed, the system is easy to tinker with, if you know some
+Perl. The Transjovian Council has a wiki space dedicated to Phoebe, and it
+includes a section with more configuration examples, including simple comments
+(append-only via Gemini), complex comments (editing via Titan or the web),
+wholesale page editing via the web, user-agent blocking, and so on.
+[gemini://transjovian.org/](gemini://transjovian.org/) [https://transjovian.org:1965/](https://transjovian.org:1965/)
+
+# LICENSE
+
+GNU Affero General Public License
+
+# App::Phoebe
+
+This module contains the core of the Phoebe wiki. Import functions and variables
+from this module to write extensions, or to run it some other way. Usually,
+`script/phoebe` is used to start a Phoebe server. This is why all the necessary
+documentation can be found there.
+
 This section describes some hooks you can use to customize your wiki using the
 `config` file, or using a Perl file (ending in `*.pl` or `*.pm`) in the
-`conf.d` directory. Once you're happy with the changes you've made, reload the
-server to make it read the config file. You can do that by sending it the HUP
-signal, if you know the pid, or if you have a pid file:
-
-    kill -s SIGHUP `cat phoebe.pid`
+`conf.d` directory. Once you're happy with the changes you've made, restart the
+server, or send a SIGHUP if you know the PID.
 
 Here are the ways you can hook into Phoebe code:
 
@@ -742,7 +881,7 @@ for it:
       my $host = host_regex();
       my $port = port($stream);
       if ($url =~ m!^gemini://($host)(?::$port)?/do/test$!) {
-        $stream->write("20 text/plain\r\n");
+        result($stream, "20", "text/plain");
         $stream->write("Test\n");
         return 1;
       }
@@ -750,259 +889,494 @@ for it:
     }
     1;
 
-## Wiki Spaces
+# App::Phoebe::BlockFediverse
 
-Wiki spaces are separate wikis managed by the same Phoebe server, on the
-same machine, but with data stored in a different directory. If you used
-`--wiki_space=alex` and `--wiki_space=berta`, for example, then you'd have
-three wikis in total:
+This extension blocks the Fediverse user agent from your website (Mastodon,
+Friendica, Pleroma). The reason is this: when these sites federate a status
+linking to your site, each instance will fetch a preview, so your site will get
+hit by hundreds of requests from all over the Internet. Blocking them helps us
+weather the storm.
 
-- `gemini://localhost/` is the main space that continues to be available
-- `gemini://localhost/alex/` is the wiki space for Alex
-- `gemini://localhost/berta/` is the wiki space for Berta
+There is no configuration. Simply add it to your `config` file:
 
-Note that all three spaces are still editable by anybody who knows any of the
-[tokens](#security).
+    use App::Phoebe::BlockFediverse;
 
-## Tokens per Wiki Space
+# App::Phoebe::Chat
 
-Per default, there is simply one set of tokens which allows the editing of the
-wiki, and all the wiki spaces you defined. If you want to give users a token
-just for their space, you can do that, too. Doing this is starting to strain the
-command line interface, however, and therefore the following illustrates how to
-do more advanced configuration using the config file:
+For every wiki space, this creates a Gemini-based chat room. Every chat client
+needs two URLs, the "listen" and the "say" URL.
 
-    package App::Phoebe;
+The _Listen URL_ is where you need to _stream_: as people say things in the
+room, these messages get streamed in one endless Gemini document. You might have
+to set an appropriate timeout period for your connection for this to work. 1h,
+perhaps?
+
+The URL will look something like this:
+`gemini://localhost/do/chat/listen` or
+`gemini://localhost/space/do/chat/listen`
+
+The _Say URL_ is where you post things you want to say: point your client at
+the URL, it prompts your for something to say, and once you do, it redirects you
+to the same URL again, so you can keep saying things.
+
+The URL will look something like this: `gemini://localhost/do/chat/say` or
+`gemini://localhost/space/do/chat/say`
+
+Your chat nickname is the client certificate's common name. One way to create a
+client certificate that's valid for five years with an appropriate common name:
+
+    openssl req -new -x509 -newkey ec \
+    -pkeyopt ec_paramgen_curve:prime256v1 \
+    -subj '/CN=Alex' \
+    -days 1825 -nodes -out cert.pem -keyout key.pem
+
+There is no configuration. Simply add it to your `config` file:
+
+    use App::Phoebe::Chat;
+
+# App::Phoebe::Comments
+
+Add a comment link to footers such that visitors can comment via Gemini.
+Commenting requires the access token.
+
+Comments are appended to a "comments page". For every page _Foo_ the comments
+are found on _Comments on Foo_. This prefix is fixed, currently.
+
+On the comments page, each new comment starts with the character LEFT SPEECH
+BUBBLE (🗨). This character is fixed, currently.
+
+There is no configuration. Simply add it to your `config` file:
+
+    use App::Phoebe::Comments;
+
+# App::Phoebe::Css
+
+By default, Phoebe comes with its own, minimalistic CSS when serving HTML
+rendition of pages: they all refer to `/default.css` and when this URL is
+requested, Phoebe serves a small CSS.
+
+With this extension, Phoebe serves an actual `default.css` in the wiki
+directory.
+
+There is no configuration. Simply add it to your `config` file:
+
+    use App::Phoebe::Css;
+
+Then create `default.css` and make it look good. 😁
+
+# App::Phoebe::DebugIpNumbers
+
+By default the IP numbers of your visitors are not logged. This small extensions
+allows you to log them anyway if you're trying to figure out whether a bot is
+going crazy.
+
+There is no configuration. Simply add it to your `config` file:
+
+    use App::Phoebe::DebugIpNumbers;
+
+# App::Phoebe::Favicon
+
+This adds an ominous looking Jupiter planet SVG icon as the favicon for the web
+view of your site.
+
+There is no configuration. Simply add it to your `config` file:
+
+    App::Phoebe::Favicon
+
+It would be nice if this code were to look for a `favicon.jpg` or
+`favicon.svg` in the data directory and served that, only falling back to the
+Jupiter planet SVG if no such file can be found. We could cache the content of
+the file in the `$server` hash reference… Well, if somebody writes it, it shall
+be merged. 😃
+
+# App::Phoebe::Galleries
+
+This extension only makes sense if you have image galleries created by
+`fgallery` or [App::sitelenmute](https://metacpan.org/pod/App%3A%3Asitelenmute).
+
+If you do, you can serve them via Gemini. You have to configure two things: in
+which directory the galleries are, and under what host they are served (the code
+assumes that when you are virtual hosting multiple domains, only one of them has
+the galleries).
+
+`$galleries_dir` is the directory where the galleries are. This assumes that
+your galleries are all in one directory. For example, under
+`/home/alex/alexschroeder.ch/gallery` you'd find `2016-altstetten` and many
+others like it. Under `2016-altstetten` you'd find the `data.json` file and
+the various subdirectories.
+
+In your `config` file:
+
+    package App::Phoebe::Galleries;
+    our $galleries_dir = "/home/alex/alexschroeder.ch/gallery";
+    our $galleries_host = "alexschroeder.ch";
+    use App::Phoebe::Galleries;
+
+# App::Phoebe::Gopher
+
+This extension serves your Gemini pages via Gopher and generates a few automatic
+pages for you, such as the main page.
+
+To configure, you need to specify the Gopher port(s) in your Phoebe `config` file.
+The default port is 70. This is a priviledge port. Thus, you either need to
+grant Perl the permission to listen on a priviledged port, or you need to run
+Phoebe as a super user. Both are potential security risk, but the first option
+is much less of a problem, I think.
+
+If you want to try this, run the following as root:
+
+    setcap 'cap_net_bind_service=+ep' $(which perl)
+
+Verify it:
+
+    getcap $(which perl)
+
+If you want to undo this:
+
+    setcap -r $(which perl)
+
+The alternative is to use a port number above 1024.
+
+If you don't do any of the above, you'll get a permission error on startup:
+"Mojo::Reactor::Poll: Timer failed: Can't create listen socket: Permission
+denied…"
+
+If you are virtual hosting note that the Gopher protocol is incapable of doing
+that: the server does not know what hostname the client used to look up the IP
+number it eventually contacted. This works for HTTP and Gemini because HTTP/1.0
+and later added a Host header to pass this information along, and because Gemini
+uses a URL including a hostname in its request. It does not work for Gopher.
+This is why you need to specify the hostname via `$gopher_host`.
+
+You can set the normal Gopher via `$gopher_port` and the encrypted Gopher ports
+via `$gophers_port` (note the extra s). The values either be a single port, or
+an array of ports. See the example below.
+
+In this example we first switch to the package namespace, set some variables,
+and then we _use_ the package. At this point the ports are specified and the
+server processes it starts go up, one for ever IP number serving the hostname.
+
+    package App::Phoebe::Gopher;
+    our $gopher_host = "alexschroeder.ch";
+    our $gopher_port = [70,79]; # listen on the finger port as well
+    our $gophers_port = 7443; # listen on port 7443 using TLS
+    our $gopher_main_page = "Gopher_Welcome";
+    use App::Phoebe::Gopher;
+
+Note the `finger` port in the example. This works, but it's awkward since you
+have to finger `page/alex` instead of `alex`. In order to make that work, we
+need some more code.
+
+    package App::Phoebe::Gopher;
+    use App::Phoebe qw(@extensions port $log);
     use Modern::Perl;
-    our ($server);
-    $server->{wiki_space_token}->{alex} = ["*secret*"];
-
-The code above sets up the `wiki_space_token` property. It's a hash reference
-where keys are existing wiki spaces and values are array references listing the
-valid tokens for that space (in addition to the global tokens that you can set
-up using `--wiki_token` which defaults to the token "hello"). Thus, the above
-code sets up the token `*secret*` for the `alex` wiki space.
-
-You can use the config file to change the values of other properties as well,
-even if these properties are set via the command line.
-
-    package App::Phoebe;
-    use Modern::Perl;
-    our ($server);
-    $server->{wiki_token} = [];
-
-This code simply deactivates the token list. No more tokens!
-
-## Client Certificates
-
-Phoebe serves a public wiki by default. Limiting editing to known users (that
-is, known client certificates) is possible. Here's a config file using client
-certificates to limit writing to a single, known fingerprint:
-
-    package App::Phoebe;
-    use Modern::Perl;
-    our ($server, @extensions, $log);
-    my @fingerprints = ('sha256$e4b871adf0d74d9ab61fbf0b6773d75a152594090916834278d416a769712570');
-    push(@extensions, \&protected_wiki);
-    sub protected_wiki {
+    our $gopher_host = "alexschroeder.ch";
+    our $gopher_port = [70,79]; # listen on the finger port as well
+    our $gophers_port = 7443; # listen on port 7443 using TLS
+    our $gopher_main_page = "Gopher_Welcome";
+    our @extensions;
+    push(@extensions, \&finger);
+    sub finger {
       my $stream = shift;
-      my $url = shift;
-      my $hosts = host_regex();
+      my $selector = shift;
       my $port = port($stream);
-      my $spaces = space_regex($stream);
-      my $fingerprint = $server->{client}->get_fingerprint();
-      if (my ($host, $path) = $url =~ m!^titan://($hosts)(?::$port)?([^?#]*)!) {
-        my ($space, $resource) = $path =~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!;
-        if (not $resource) {
-          $log->debug("The Titan URL is malformed: $path $spaces");
-          $stream->write("59 The Titan URL is malformed\r\n");
-        } elsif ($fingerprint and grep { $_ eq $fingerprint} @fingerprints) {
-          $log->info("Successfully identified client certificate");
-          my ($id, @params) = split(/[;=&]/, $resource);
-          save_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)),
-                            {map {decode_utf8(uri_unescape($_))} @params});
-        } elsif ($fingerprint) {
-          $log->info("Unknown client certificate $fingerprint");
-          $stream->write("61 Your client certificate is not authorized for editing\r\n");
-        } else {
-          $log->info("Requested client certificate");
-          $stream->write("60 You need a client certificate to edit this wiki\r\n");
-        }
-        return 1;
-      }
-      return;
-    }
-    1;
-
-`@fingerprints` is a list, so you could add more fingerprints:
-
-    my @fingerprints = qw(
-      sha256$e4b871adf0d74d9ab61fbf0b6773d75a152594090916834278d416a769712570
-      sha256$4a948f5a11f4a81d0a2e8b60b1e4b3c9d1e25f4d95694965d98b333a443a3b25);
-
-Or you could read them from a file:
-
-    use File::Slurper qw(read_lines);
-    my @fingerprints = read_lines("fingerprints");
-
-The important part is that this code matches the same Titan requests as the
-default code, and it comes first. Thus, the old code can no longer be reached
-and this code checks for a known client certificate fingerprint.
-
-To be sure, it doesn't check anything else! It doesn't check whether the client
-certificate has expired, for example.
-
-You could, for example, install Phoebe, use the code above for your config
-file, and replace the fingerprint with the fingerprint of your own client
-certificate. The `Makefile` allows you to easily create such a certificate:
-
-    make client-cert
-
-Answer at least one of the questions OpenSSL asks of you and you should now have
-a `client-cert.pem` and a `client-key.pem` file. To get the fingerprint of
-your client certificate:
-
-    make client-fingerprint
-
-The output is the fingerprint you need to put into your config file.
-
-## Virtual Hosting
-
-Sometimes you want have a machine reachable under different domain names and you
-want each domain name to have their own wiki space, automatically. You can do
-this by using multiple `--host` options.
-
-Here's a simple, stand-alone setup that will work on your local machine. These
-are usually reachable using the IPv4 `127.0.0.1` or the name `localhost`. The
-following command tells Phoebe to serve both `127.0.0.1` and `localhost`
-(the default is to just serve `localhost`).
-
-    perl phoebe --host=127.0.0.1 --host=localhost
-
-Visit both at [gemini://localhost/](gemini://localhost/) and [gemini://127.0.0.1/](gemini://127.0.0.1/), and create a
-new page in each one, then examine the data directory `wiki`. You'll see both
-`wiki/localhost` and `wiki/127.0.0.1`.
-
-If you're using more wiki spaces, you need to prefix them with the respective
-hostname if you use more than one:
-
-    perl phoebe --host=127.0.0.1 --host=localhost \
-        --wiki_space=127.0.0.1/alex --wiki_space=localhost/berta
-
-In this situation, you can visit [gemini://127.0.0.1/](gemini://127.0.0.1/),
-[gemini://127.0.0.1/alex/](gemini://127.0.0.1/alex/), [gemini://localhost/](gemini://localhost/), and
-[gemini://localhost/berta/](gemini://localhost/berta/), and they will all be different.
-
-If this is confusing, remember that not using virtual hosting and not using
-spaces is fine, too. 😀
-
-## Multiple Certificates
-
-If you're using virtual hosting as discussed above, you have two options: you
-can use one certificate for all your hostnames, or you can use different
-certificates for the hosts. If you want to use just one certificate for all your
-hosts, you don't need to do anything else. If you want to use different
-certificates for different hosts, you have to specify them all on the command
-line. Generally speaking, use `--host` to specifiy one or more hosts, followed
-by both `--cert_file` and `--key_file` to specifiy the certificate and key to
-use for the hosts.
-
-For example:
-
-    perl phoebe --host=transjovian.org \
-        --cert_file=/var/lib/dehydrated/certs/transjovian.org/cert.pem \
-        --key_file=/var/lib/dehydrated/certs/transjovian.org/privkey.pem \
-        --host=alexschroeder.ch \
-        --cert_file=/var/lib/dehydrated/certs/alexschroeder.ch/cert.pem \
-        --key_file=/var/lib/dehydrated/certs/alexschroeder.ch/privkey.pem
-
-## CSS for the Web
-
-The wiki can also answer web requests. By default, it only does that on port
-1965\. The web pages refer to a CSS file at `/default.css`, and the response to
-a request for this CSS is served by a function that you can override in your
-config file. The following would be the beginning of a CSS that supports a dark
-theme, for example. The Cache-Control header makes sure browsers don't keep
-trying to revalidate the CSS more than once a day.
-[https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
-
-    our ($log);
-
-    sub serve_css_via_http {
-      my $stream = shift;
-      $log->info("Serving CSS via HTTP");
-      $stream->write("HTTP/1.1 200 OK\r\n");
-      $stream->write("Content-Type: text/css\r\n");
-      $stream->write("Cache-Control: public, max-age=86400, immutable\r\n"); # 24h
-      $stream->write("\r\n");
-      $stream->write(<<'EOT');
-    html { max-width: 70ch; padding: 2ch; margin: auto; }
-    body { color: #111111; background-color: #fffff8; }
-    a:link { color: #0000ee }
-    a:visited { color: #551a8b }
-    a:hover { color: #7a67ee }
-    @media (prefers-color-scheme: dark) {
-       body { color: #eeeee8; background-color: #333333; }
-       a:link { color: #1e90ff }
-       a:hover { color: #63b8ff }
-       a:visited { color: #7a67ee }
-    }
-    EOT
-    }
-
-## Favicon for the Web
-
-Here's an example where we a little Jupiter SVG is being served for the favicon,
-for all hosts. You could, of course, accept the `$headers` as an additional
-argument to `favicon`, match hostnames, pass the `$host` to
-`serve_favicon_via_http`, and return different images depending on the host.
-Let me know if you need this and you are stuck.
-
-    our (@extensions, $log);
-
-    push(@extensions, \&favicon);
-
-    sub favicon {
-      my $stream = shift;
-      my $url = shift;
-      if ($url =~ m!^GET /favicon.ico HTTP/1\.[01]$!) {
-        serve_favicon_via_http($stream);
+      if ($port == 79 and $selector =~ m!^[^/]+$!) {
+        $log->debug("Serving $selector via finger");
+        gopher_serve_page($stream, $gopher_host, undef, decode_utf8(uri_unescape($selector)));
         return 1;
       }
       return 0;
     }
+    use App::Phoebe::Gopher;
 
-    sub serve_favicon_via_http {
-      my $stream = shift;
-      $log->info("Serving favicon via HTTP");
-      $stream->write("HTTP/1.1 200 OK\r\n");
-      $stream->write("Content-Type: image/svg+xml\r\n");
-      $stream->write("Cache-Control: public, max-age=86400, immutable\r\n"); # 24h
-      $stream->write("\r\n");
-      $stream->write(<<'EOT');
-    <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-    <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
-    <circle cx="50" cy="50" r="45" fill="white" stroke="black" stroke-width="5"/>
-    <line x1="12" y1="25" x2="88" y2="25" stroke="black" stroke-width="4"/>
-    <line x1="5" y1="45" x2="95" y2="45" stroke="black" stroke-width="7"/>
-    <line x1="5" y1="60" x2="95" y2="60" stroke="black" stroke-width="4"/>
-    <path d="M20,73 C30,65 40,63 60,70 C70,72 80,73 90,72
-             L90,74 C80,75 70,74 60,76 C40,83 30,81 20,73" fill="black"/>
-    <ellipse cx="40" cy="73" rx="11.5" ry="4.5" fill="red"/>
-    <line x1="22" y1="85" x2="78" y2="85" stroke="black" stroke-width="3"/>
-    </svg>
-    EOT
-    }
+# App::Phoebe::HeapDump
 
-# SEE ALSO
+Perhaps you find yourself in a desperate situation: your server is leaking
+memory and you don't know where. This extension provides a way to use
+[Devel::MAT::Dumper](https://metacpan.org/pod/Devel%3A%3AMAT%3A%3ADumper) by allowing users identified with a known fingerprint of
+their client certificate to initiate a dump.
 
-As you might have guessed, the system is easy to tinker with, if you know some
-Perl. The Transjovian Council has a wiki space dedicated to Phoebe, and it
-includes a section with more configuration examples, including simple comments
-(append-only via Gemini), complex comments (editing via Titan or the web),
-wholesale page editing via the web, user-agent blocking, and so on.
-[gemini://transjovian.org/](gemini://transjovian.org/) [https://transjovian.org:1965/](https://transjovian.org:1965/)
+You must set the fingerprints in your `config` file.
 
-# LICENSE
+    package App::Phoebe;
+    our @known_fingerprints = qw(
+      sha256$fce75346ccbcf0da647e887271c3d3666ef8c7b181f2a3b22e976ddc8fa38401);
+    use App::Phoebe::HeapDump;
 
-GNU Affero General Public License
+Once have restarted the server, [gemini://localhost/do/heap-dump](gemini://localhost/do/heap-dump) will write a
+heap dump to its wiki data directory. See [Devel::MAT::UserGuide](https://metacpan.org/pod/Devel%3A%3AMAT%3A%3AUserGuide) for more.
+
+# App::Phoebe::Iapetus
+
+This allows known editors to upload files and pages. You need to set
+`@known_fingerprints` in your `config` file. Here's an example:
+
+    package App::Phoebe;
+    our @known_fingerprints;
+    @known_fingerprints = qw(
+      sha256$fce75346ccbcf0da647e887271c3d3666ef8c7b181f2a3b22e976ddc8fa38401
+      sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
+    use App::Phoebe::Iapetus;
+
+The way to do it is to request the _certificate_ from your friends (not their
+key!) and run the following, assuming the is named `client-cert.pem`:
+
+    openssl x509 -in client-cert.pem -noout -sha256 -fingerprint \
+    | sed -e 's/://g' -e 's/SHA256 Fingerprint=/sha256$/' \
+    | tr [:upper:] [:lower:]
+
+This should give you your friend's fingerprint in the correct format to add to
+the list above.
+
+Make sure your main menu has a link to the login page. The login page allows
+people to pick the right certificate without interrupting their uploads.
+
+    => /login Login
+
+This code works by handling `iapetus:` links. See
+[https://codeberg.org/oppenlab/iapetus](https://codeberg.org/oppenlab/iapetus) for more.
+
+# App::Phoebe::Ijirait
+
+The ijirait are red-eyed shape shifters, and a game one plays via the Gemini
+protocol, and Ijiraq is also one of the moons of Saturn.
+
+The Ijirait game is modelled along traditional MUSH games ("multi-user shared
+hallucination"), that is: players have a character in the game world; the game
+world consists of rooms; these rooms are connected to each other; if two
+characters are in the same room, they see each other; if one of them says
+something, the other hears it.
+
+When you visit the URL using your Gemini browser, you're asked for a client
+certificate. The common name of the certificate is the name of your character in
+the game.
+
+As the server doesn't know whether you're still active or not, it assumes a
+10min timout. If you were active in the last 10min, other people in the same
+"room". Similarly, if you "say" something, whatever you said hangs on the room
+description for up to 10min as long as your character is still in the room.
+
+There is no configuration. Simply add it to your `config` file:
+
+    use App::Phoebe::Ijirait;
+
+In a virtual host setup, this extension serves all the hosts. Here's how to
+serve just one of them:
+
+    package App::Phoebe::Ijirait;
+    our $host = "campaignwiki.org";
+    use App::Phoebe::Ijirait;
+
+# App::Phoebe::MokuPona
+
+This serves files from your moku pona directory. See [App::mokupona](https://metacpan.org/pod/App%3A%3Amokupona).
+
+If you need to change the directory (defaults to `$HOME/.moku-pona`), or if you
+need to change the host (defaults to the first one), use the following for your
+`config` file:
+
+    package App::Phoebe::MokuPona;
+    our $dir = "/home/alex/.moku-pona";
+    our $host = "alexschroeder.ch";
+    use App::Phoebe::MokuPona;
+
+# App::Phoebe::Oddmuse
+
+This extension allows you to serve files from an Oddmuse wiki instead of a real
+Phoebe wiki directory.
+
+The tricky part is that most Oddmuse wikis don't use Gemini markup (“gemtext”)
+and therefore care is required. The extension tries to transmogrify typical
+Oddmuse markup (based on my own wikis) to Gemini.
+
+Here's one way to configure it. I use Apache as my proxy server and have
+multiple Oddmuse wikis running on the same machine, each only serving
+`localhost`. I need to recreate some of the Apache configuration, here.
+
+    package App::Phoebe::Oddmuse;
+
+    our %oddmuse_wikis = (
+      "alexschroeder.ch" => "http://localhost:4023/wiki",
+      "communitywiki.org" => "http://localhost:4019/wiki",
+      "emacswiki.org" => "http://localhost:4002/wiki",
+      "campaignwiki.org" => "http://localhost:4004/wiki", );
+
+    our %oddmuse_wiki_names = (
+      "alexschroeder.ch" => "Alex Schroeder",
+      "communitywiki.org" => "Community Wiki",
+      "emacswiki.org" => "Emacs Wiki",
+      "campaignwiki.org" => "Campaign Wiki", );
+
+    our %oddmuse_wiki_dirs = (
+      "alexschroeder.ch" => "/home/alex/alexschroeder",
+      "communitywiki.org" => "/home/alex/communitywiki",
+      "emacswiki.org" => "/home/alex/emacswiki",
+      "campaignwiki.org" => "/home/alex/campaignwiki", );
+
+    our %oddmuse_wiki_links = (
+      "communitywiki.org" => 1,
+      "campaignwiki.org" => 1, );
+
+    use App::Phoebe::Oddmuse;
+
+# App::Phoebe::PageHeadings
+
+This extension hides the page name from visitors, unless they start digging.
+
+One the front page, where the last ten pages of your date pages are listed, the
+name of the page is replaced with the level one heading of your page.
+
+If you visit a page, the name of the page is similarly replaced with the level
+one heading of your page.
+
+There is no configuration. Simply add it to your `config` file:
+
+    use App::Phoebe::PageHeadings;
+
+# App::Phoebe::RegisteredEditorsOnly
+
+This extension limits editing to registered editors only.
+
+You need to set `@known_fingerprints` in your `config` file. Here's an example:
+
+    package App::Phoebe;
+    our @known_fingerprints = qw(
+      sha256$fce75346ccbcf0da647e887271c3d3666ef8c7b181f2a3b22e976ddc8fa38401
+      sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
+    use App::Phoebe::RegisteredEditorsOnly;
+
+The way to do it is to request the _certificate_ from your friends (not their
+key!) and run the following:
+
+    openssl x509 -in client-cert.pem -noout -sha256 -fingerprint \
+    | sed -e 's/://g' -e 's/SHA256 Fingerprint=/sha256$/' \
+    | tr [:upper:] [:lower:]
+
+This should give you your friend's fingerprint in the correct format to add to
+the list above.
+
+Make sure your main menu has a link to the login page:
+
+    => /login Login
+
+This code works by intercepting all `titan:` links. Specifically:
+
+- If you allow simple comments using [App::Phoebe::Comments](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AComments), then these
+      are not affected, since these comments use Gemini instead of Titan. Thus,
+      people can still leave comments.
+- If you allow editing via the web using [App::Phoebe::WebEdit](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWebEdit), then those
+      are not affected, since these edits use HTTP instead of Titan. Thus,
+      people can still edit pages. **This is probably not what you want!**
+
+# App::Phoebe::Spartan
+
+This extension serves your Gemini pages via the Spartan protocol and generates a
+few automatic pages for you, such as the main page.
+
+**Warning!** If you install this code, anybody can write to your site using the
+Spartan protocol. There is no token being checked.
+
+To configure, you need to specify the Spartan port(s) in your Phoebe config
+file. The default port is 300. This is a priviledge port. Thus, you either need
+to grant Perl the permission to listen on a priviledged port, or you need to run
+Phoebe as a super user. Both are potential security risk, but the first option
+is much less of a problem, I think.
+
+If you want to try this, run the following as root:
+
+    setcap 'cap_net_bind_service=+ep' $(which perl)
+
+Verify it:
+
+    getcap $(which perl)
+
+If you want to undo this:
+
+    setcap -r $(which perl)
+
+Once you do that, no further configuration is necessary. Just add the following
+to your `config` file:
+
+    use App::Phoebe::Spartan;
+
+The alternative is to use a port number above 1024. Here's a way to do that:
+
+    package App::Phoebe::Spartan;
+    our $spartan_port = 7000; # listen on port 7000
+    use App::Phoebe::Spartan;
+
+If you don't do any of the above, you'll get a permission error on startup:
+"Mojo::Reactor::Poll: Timer failed: Can't create listen socket: Permission
+denied…"
+
+# App::Phoebe::SpeedBump
+
+We want to block crawlers that are too fast or that don't follow the
+instructions in robots.txt. We do this by keeping a list of recent visitors: for
+every IP number, we remember the timestamps of their last visits. If they make
+more than 30 requests in 60s, we block them for an ever increasing amount of
+seconds, starting with 60s and doubling every time this happens.
+
+There is no configuration required. Simply add it to your `config` file:
+
+    use App::Phoebe::SpeedBump;
+
+The exact number of requests and the length of this time window (in seconds) can
+be changed in the `config` file. Here's one way to do that:
+
+    package App::Phoebe::SpeedBump;
+    our $speed_bump_requests = 20;
+    our $speed_bump_window = 20;
+    use App::Phoebe::SpeedBump;
+
+# App::Phoebe::TokiPona
+
+This extension adds rendering of Toki Pona glyphs to the web output of your
+site. For this to work, you need to download the WOFF file from the Linja Pona
+4.2 repository and put it into your wiki directory.
+
+[https://github.com/janSame/linja-pona/](https://github.com/janSame/linja-pona/)
+
+No further configuration is necessary. Simply add it to your `config` file:
+
+    use App::Phoebe::TokiPona;
+
+# App::Phoebe::WebComments
+
+This extension allows visitors on the web to add comments.
+
+Comments are appended to a "comments page". For every page _Foo_ the comments
+are found on _Comments on Foo_. This prefix is fixed, currently.
+
+On the comments page, each new comment starts with the character LEFT SPEECH
+BUBBLE (🗨). This character is fixed, currently.
+
+There is no configuration. Simply add it to your `config` file:
+
+    use App::Phoebe::WebComments;
+
+# App::Phoebe::WebEdit
+
+This package allows visitors on the web to edit your pages.
+
+There is no configuration. Simply add it to your `config` file:
+
+    use App::Phoebe::WebEdit;
+
+# App::Phoebe::Wikipedia
+
+This extension turns one of your hosts into a Wikipedia proxy.
+
+In your `config` file, you need to specify which of your hosts it is:
+
+    package App::Phoebe::Wikipedia;
+    our $host = "vault.transjovian.org";
+    use App::Phoebe::Wikipedia;
+
+# POD ERRORS
+
+Hey! **The above document had some coding errors, which are explained below:**
+
+- Around line 4822:
+
+    &#x3d;cut found outside a pod block.  Skipping to next block.

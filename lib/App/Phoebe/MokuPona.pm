@@ -14,17 +14,18 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 Moku Pona
+=head1 App::Phoebe::MokuPona
 
 This serves files from your moku pona directory. See L<App::mokupona>.
 
 If you need to change the directory (defaults to C<$HOME/.moku-pona>), or if you
 need to change the host (defaults to the first one), use the following for your
-config file:
+F<config> file:
 
     package App::Phoebe::MokuPona;
-    our $dir = "/some/other/directory";
-    our $host = "some.other.host";
+    our $dir = "/home/alex/.moku-pona";
+    our $host = "alexschroeder.ch";
+    use App::Phoebe::MokuPona;
 
 =cut
 

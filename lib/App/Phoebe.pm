@@ -1,19 +1,90 @@
-=head1 NAME
+=head1 App::Phoebe
 
-App::phoebe - an app that serves a wiki as a Gemini and web site
+This module contains the core of the Phoebe wiki. Import functions and variables
+from this module to write extensions, or to run it some other way. Usually,
+F<script/phoebe> is used to start a Phoebe server. This is why all the necessary
+documentation can be found there.
 
-=head1 DESCRIPTION
+This section describes some hooks you can use to customize your wiki using the
+F<config> file, or using a Perl file (ending in F<*.pl> or F<*.pm>) in the
+F<conf.d> directory. Once you're happy with the changes you've made, restart the
+server, or send a SIGHUP if you know the PID.
 
-This module defines variables and subroutines for Phoebe. See F<script/phoebe>
-for details of the app.
+Here are the ways you can hook into Phoebe code:
 
-=head1 AUTHOR
+C<@extensions> is a list of code references allowing you to handle additional
+URLs; return 1 if you handle a URL; each code reference gets called with $stream
+(L<Mojo::IOLoop::Stream>), the first line of the request (a Gemini URL, a Gopher
+selector, a finger user, a HTTP request line), a hash reference for the headers
+(in the case of HTTP requests), and a buffer of bytes (e.g. for Titan or HTTP
+PUT or POST requests)
 
-Alex Schroeder
+C<@main_menu> adds more lines to the main menu, possibly links that aren't
+simply links to existing pages
 
-=head1 LICENSE
+C<@footer> is a list of code references allowing you to add things like licenses
+or contact information to every page; each code reference gets called with
+$stream (L<Mojo::IOLoop::Stream>), $host, $space, $id, $revision, and $format
+('gemini' or 'html') used to serve the page; return a gemtext string to append
+at the end; the alternative is to overwrite the C<footer> or C<html_footer> subs
+– the default implementation for Gemini adds History, Raw text and HTML link,
+and C<@footer> to the bottom of every page; the default implementation for HTTP
+just adds C<@footer> to the bottom of every page
 
-GNU Affero General Public License
+If you do hook into Phoebe's code, you probably want to make use of the
+following variables:
+
+C<$server> stores the command line options provided by the user.
+
+C<$log> is how you log things.
+
+A very simple example to add a contact mail at the bottom of every page; this
+works for both Gemini and the web:
+
+    package App::Phoebe;
+    use Modern::Perl;
+    our (@footer);
+    push(@footer, sub { '=> mailto:alex@alexschroeder.ch Mail' });
+
+This prints a very simply footer instead of the usual footer for Gemini, as the
+C<footer> function is redefined. At the same time, the C<@footer> array is still
+used for the web:
+
+    package App::Phoebe;
+    use Modern::Perl;
+    our (@footer); # HTML only
+    push(@footer, sub { '=> https://alexschroeder.ch/wiki/Contact Contact' });
+    # footer sub is Gemini only
+    no warnings qw(redefine);
+    sub footer {
+      return '—' x 10 . "\n" . '=> mailto:alex@alexschroeder.ch Mail';
+    }
+
+This example also shows how to redefine existing code in your config file
+without the warning "Subroutine … redefined".
+
+Here's a more elaborate example to add a new action the main menu and a handler
+for it:
+
+    package App::Phoebe;
+    use Modern::Perl;
+    our (@extensions, @main_menu);
+    push(@main_menu, "=> gemini://localhost/do/test Test");
+    push(@extensions, \&serve_test);
+    sub serve_test {
+      my $stream = shift;
+      my $url = shift;
+      my $headers = shift;
+      my $host = host_regex();
+      my $port = port($stream);
+      if ($url =~ m!^gemini://($host)(?::$port)?/do/test$!) {
+	result($stream, "20", "text/plain");
+	$stream->write("Test\n");
+	return 1;
+      }
+      return;
+    }
+    1;
 
 =cut
 

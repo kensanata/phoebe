@@ -14,6 +14,18 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::DebugIpNumbers
+
+By default the IP numbers of your visitors are not logged. This small extensions
+allows you to log them anyway if you're trying to figure out whether a bot is
+going crazy.
+
+There is no configuration. Simply add it to your F<config> file:
+
+    use App::Phoebe::DebugIpNumbers;
+
+=cut
+
 package App::Phoebe::DebugIpNumbers;
 use App::Phoebe qw($log);
 use Modern::Perl;

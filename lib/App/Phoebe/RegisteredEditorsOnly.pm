@@ -14,19 +14,17 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe::RegisteredEditorsOnly;
-use App::Phoebe qw(@request_handlers @extensions @known_fingerprints $log
-		   port host_regex space_regex handle_titan result);
-use Modern::Perl;
+=head1 App::Phoebe::RegisteredEditorsOnly
 
-=head1 Registered Editors Only
+This extension limits editing to registered editors only.
 
-You need to set C<@known_fingerprints> in your config file. Here's an example:
+You need to set C<@known_fingerprints> in your F<config> file. Here's an example:
 
     package App::Phoebe;
     our @known_fingerprints = qw(
       sha256$fce75346ccbcf0da647e887271c3d3666ef8c7b181f2a3b22e976ddc8fa38401
       sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
+    use App::Phoebe::RegisteredEditorsOnly;
 
 The way to do it is to request the I<certificate> from your friends (not their
 key!) and run the following:
@@ -46,17 +44,22 @@ This code works by intercepting all C<titan:> links. Specifically:
 
 =over
 
-=item If you allow simple comments using F<comments.pl>, then those are not
-      affected, since these comments use Gemini instead of Titan. Thus, people
-      can still leave comments.
+=item If you allow simple comments using L<App::Phoebe::Comments>, then these
+      are not affected, since these comments use Gemini instead of Titan. Thus,
+      people can still leave comments.
 
-=item If you allow editing via the web using F<web-edit.pl>, then those are not
-      affected, since these edits use HTTP instead of Titan. Thus, people can
-      still edit pages.
+=item If you allow editing via the web using L<App::Phoebe::WebEdit>, then those
+      are not affected, since these edits use HTTP instead of Titan. Thus,
+      people can still edit pages. B<This is probably not what you want!>
 
 =back
 
 =cut
+
+package App::Phoebe::RegisteredEditorsOnly;
+use App::Phoebe qw(@request_handlers @extensions @known_fingerprints $log
+		   port host_regex space_regex handle_titan result);
+use Modern::Perl;
 
 unshift(@request_handlers, '^titan://' => \&protected_titan);
 

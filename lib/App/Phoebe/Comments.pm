@@ -14,13 +14,20 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 Comments
+=head1 App::Phoebe::Comments
 
-Add a comment link to footers such that visitors can comment via Gemini. A
-comment is simply a new paragraph starting with the character LEFT SPEECH BUBBLE
-(🗨). For every page I<Foo> the comments are found on I<Comments on Foo>.
-
+Add a comment link to footers such that visitors can comment via Gemini.
 Commenting requires the access token.
+
+Comments are appended to a "comments page". For every page I<Foo> the comments
+are found on I<Comments on Foo>. This prefix is fixed, currently.
+
+On the comments page, each new comment starts with the character LEFT SPEECH
+BUBBLE (🗨). This character is fixed, currently.
+
+There is no configuration. Simply add it to your F<config> file:
+
+    use App::Phoebe::Comments;
 
 =cut
 

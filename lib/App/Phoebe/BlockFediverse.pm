@@ -18,13 +18,17 @@ package App::Phoebe::BlockFediverse;
 use App::Phoebe qw(@extensions http_error);
 use Modern::Perl;
 
-=head1 Block the Fediverse
+=head1 App::Phoebe::BlockFediverse
 
 This extension blocks the Fediverse user agent from your website (Mastodon,
 Friendica, Pleroma). The reason is this: when these sites federate a status
 linking to your site, each instance will fetch a preview, so your site will get
 hit by hundreds of requests from all over the Internet. Blocking them helps us
 weather the storm.
+
+There is no configuration. Simply add it to your F<config> file:
+
+    use App::Phoebe::BlockFediverse;
 
 =cut
 

@@ -14,6 +14,16 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::WebEdit
+
+This package allows visitors on the web to edit your pages.
+
+There is no configuration. Simply add it to your F<config> file:
+
+    use App::Phoebe::WebEdit;
+
+=cut
+
 package App::Phoebe::WebEdit;
 use App::Phoebe qw(@footer @extensions @request_handlers @main_menu $server $log
 		   port space host_regex space_regex handle_http_header text

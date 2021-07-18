@@ -14,6 +14,31 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::Galleries
+
+This extension only makes sense if you have image galleries created by
+F<fgallery> or L<App::sitelenmute>.
+
+If you do, you can serve them via Gemini. You have to configure two things: in
+which directory the galleries are, and under what host they are served (the code
+assumes that when you are virtual hosting multiple domains, only one of them has
+the galleries).
+
+C<$galleries_dir> is the directory where the galleries are. This assumes that
+your galleries are all in one directory. For example, under
+F</home/alex/alexschroeder.ch/gallery> you'd find F<2016-altstetten> and many
+others like it. Under F<2016-altstetten> you'd find the F<data.json> file and
+the various subdirectories.
+
+In your F<config> file:
+
+    package App::Phoebe::Galleries;
+    our $galleries_dir = "/home/alex/alexschroeder.ch/gallery";
+    our $galleries_host = "alexschroeder.ch";
+    use App::Phoebe::Galleries;
+
+=cut
+
 package App::Phoebe::Galleries;
 use App::Phoebe qw(@extensions $log port success result print_link);
 use File::Slurper qw(read_dir read_binary read_text);

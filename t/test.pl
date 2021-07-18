@@ -15,7 +15,7 @@
 
 use Modern::Perl;
 use Test::More;
-use File::Slurper qw(write_text);
+use File::Slurper qw(write_text read_text);
 use Mojo::IOLoop;
 use File::Copy;
 use Encode;
@@ -38,6 +38,7 @@ our @spaces;
 our $port = Mojo::IOLoop::Server->generate_port;
 our $base = "gemini://$host:$port";
 our $dir = "./" . sprintf("test-%04d", int(rand(10000)));
+our $example;
 
 # Generating the config file for this test
 our @config;
@@ -75,6 +76,15 @@ our @known_fingerprints = qw(
 EOT
 $config .= join("\n", @config) if @config;
 $config .= join("", map { "use App::Phoebe::$_;\n" } @use) if @use;
+if ($example) {
+  my $source = read_text("script/phoebe");
+  $source =~ /^    # tested by $0\n((?:    .*\n|\t.*\n|\n)+)/m;
+  $example = $1;
+  $example =~ s/\t/        /g;
+  $example =~ s/^    //gm;
+  $config .= $example;
+}
+$config .= "\n1;\n";
 write_text("$dir/config", $config);
 
 our $pid = fork();

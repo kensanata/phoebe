@@ -14,6 +14,47 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::Oddmuse
+
+This extension allows you to serve files from an Oddmuse wiki instead of a real
+Phoebe wiki directory.
+
+The tricky part is that most Oddmuse wikis don't use Gemini markup (“gemtext”)
+and therefore care is required. The extension tries to transmogrify typical
+Oddmuse markup (based on my own wikis) to Gemini.
+
+Here's one way to configure it. I use Apache as my proxy server and have
+multiple Oddmuse wikis running on the same machine, each only serving
+C<localhost>. I need to recreate some of the Apache configuration, here.
+
+    package App::Phoebe::Oddmuse;
+
+    our %oddmuse_wikis = (
+      "alexschroeder.ch" => "http://localhost:4023/wiki",
+      "communitywiki.org" => "http://localhost:4019/wiki",
+      "emacswiki.org" => "http://localhost:4002/wiki",
+      "campaignwiki.org" => "http://localhost:4004/wiki", );
+
+    our %oddmuse_wiki_names = (
+      "alexschroeder.ch" => "Alex Schroeder",
+      "communitywiki.org" => "Community Wiki",
+      "emacswiki.org" => "Emacs Wiki",
+      "campaignwiki.org" => "Campaign Wiki", );
+
+    our %oddmuse_wiki_dirs = (
+      "alexschroeder.ch" => "/home/alex/alexschroeder",
+      "communitywiki.org" => "/home/alex/communitywiki",
+      "emacswiki.org" => "/home/alex/emacswiki",
+      "campaignwiki.org" => "/home/alex/campaignwiki", );
+
+    our %oddmuse_wiki_links = (
+      "communitywiki.org" => 1,
+      "campaignwiki.org" => 1, );
+
+    use App::Phoebe::Oddmuse;
+
+=cut
+
 package App::Phoebe::Oddmuse;
 use App::Phoebe qw(@request_handlers @extensions @main_menu $server $log $full_url_regex
 		   success result reserved_regex port gemini_link modified changes diff

@@ -14,17 +14,13 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 Spartan
+=head1 App::Phoebe::Spartan
 
 This extension serves your Gemini pages via the Spartan protocol and generates a
 few automatic pages for you, such as the main page.
 
-=head2 Warning
-
-Warning! If you install this code, anybody can write to your site using the
+B<Warning!> If you install this code, anybody can write to your site using the
 Spartan protocol. There is no token being checked.
-
-=head2 Configuration
 
 To configure, you need to specify the Spartan port(s) in your Phoebe config
 file. The default port is 300. This is a priviledge port. Thus, you either need
@@ -44,14 +40,20 @@ If you want to undo this:
 
     setcap -r $(which perl)
 
-The alternative is to use a port number above 1024.
+Once you do that, no further configuration is necessary. Just add the following
+to your F<config> file:
+
+    use App::Phoebe::Spartan;
+
+The alternative is to use a port number above 1024. Here's a way to do that:
+
+    package App::Phoebe::Spartan;
+    our $spartan_port = 7000; # listen on port 7000
+    use App::Phoebe::Spartan;
 
 If you don't do any of the above, you'll get a permission error on startup:
 "Mojo::Reactor::Poll: Timer failed: Can't create listen socket: Permission
 denied…"
-
-    package App::Phoebe::Spartan;
-    our $spartan_port = 7000; # listen on port 7000
 
 =cut
 

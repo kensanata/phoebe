@@ -14,12 +14,12 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 Gopher
+=head1 App::Phoebe::Gopher
 
 This extension serves your Gemini pages via Gopher and generates a few automatic
 pages for you, such as the main page.
 
-To configure, you need to specify the Gopher port(s) in your Phoebe config file.
+To configure, you need to specify the Gopher port(s) in your Phoebe F<config> file.
 The default port is 70. This is a priviledge port. Thus, you either need to
 grant Perl the permission to listen on a priviledged port, or you need to run
 Phoebe as a super user. Both are potential security risk, but the first option
@@ -43,26 +43,53 @@ If you don't do any of the above, you'll get a permission error on startup:
 "Mojo::Reactor::Poll: Timer failed: Can't create listen socket: Permission
 denied…"
 
-You can set the normal Gopher and the encrypted Gopher ports by setting the
-appropriate variables. These variables either be a single port, or an array of
-ports.
-
-    package App::Phoebe::Gopher;
-    our $gopher_port = 7000; # listen on port 7000
-    our $gopher_port = [70,79]; # listen on the finger port as well
-    our $gophers_port = 7443; # listen on port 7443 using TLS
-    our $gophers_port = [7070,7079]; # listen on port 7070 and 7079 using TLS
-
 If you are virtual hosting note that the Gopher protocol is incapable of doing
 that: the server does not know what hostname the client used to look up the IP
 number it eventually contacted. This works for HTTP and Gemini because HTTP/1.0
 and later added a Host header to pass this information along, and because Gemini
-uses a URL including a hostname in its request.
+uses a URL including a hostname in its request. It does not work for Gopher.
+This is why you need to specify the hostname via C<$gopher_host>.
 
-This is why you need to specify the hostname to use in this situation:
+You can set the normal Gopher via C<$gopher_port> and the encrypted Gopher ports
+via C<$gophers_port> (note the extra s). The values either be a single port, or
+an array of ports. See the example below.
+
+In this example we first switch to the package namespace, set some variables,
+and then we I<use> the package. At this point the ports are specified and the
+server processes it starts go up, one for ever IP number serving the hostname.
 
     package App::Phoebe::Gopher;
     our $gopher_host = "alexschroeder.ch";
+    our $gopher_port = [70,79]; # listen on the finger port as well
+    our $gophers_port = 7443; # listen on port 7443 using TLS
+    our $gopher_main_page = "Gopher_Welcome";
+    use App::Phoebe::Gopher;
+
+Note the C<finger> port in the example. This works, but it's awkward since you
+have to finger C<page/alex> instead of C<alex>. In order to make that work, we
+need some more code.
+
+    package App::Phoebe::Gopher;
+    use App::Phoebe qw(@extensions port $log);
+    use Modern::Perl;
+    our $gopher_host = "alexschroeder.ch";
+    our $gopher_port = [70,79]; # listen on the finger port as well
+    our $gophers_port = 7443; # listen on port 7443 using TLS
+    our $gopher_main_page = "Gopher_Welcome";
+    our @extensions;
+    push(@extensions, \&finger);
+    sub finger {
+      my $stream = shift;
+      my $selector = shift;
+      my $port = port($stream);
+      if ($port == 79 and $selector =~ m!^[^/]+$!) {
+	$log->debug("Serving $selector via finger");
+	gopher_serve_page($stream, $gopher_host, undef, decode_utf8(uri_unescape($selector)));
+	return 1;
+      }
+      return 0;
+    }
+    use App::Phoebe::Gopher;
 
 =cut
 

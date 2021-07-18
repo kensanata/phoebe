@@ -14,6 +14,23 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::Favicon
+
+This adds an ominous looking Jupiter planet SVG icon as the favicon for the web
+view of your site.
+
+There is no configuration. Simply add it to your F<config> file:
+
+    App::Phoebe::Favicon
+
+It would be nice if this code were to look for a F<favicon.jpg> or
+F<favicon.svg> in the data directory and served that, only falling back to the
+Jupiter planet SVG if no such file can be found. We could cache the content of
+the file in the C<$server> hash reference… Well, if somebody writes it, it shall
+be merged. 😃
+
+=cut
+
 package App::Phoebe::Favicon;
 use App::Phoebe qw(@extensions $log);
 use Modern::Perl;

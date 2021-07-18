@@ -303,7 +303,7 @@ What you get back explains the problem:
 
 In order to allow such graphics as well, you need to restart Phoebe:
 
-    perl phoebe --wiki_mime_type=image/jpeg --wiki_mime_type=image/png
+    phoebe --wiki_mime_type=image/jpeg --wiki_mime_type=image/png
 
 Except that in my case, the image is too big:
 
@@ -322,7 +322,7 @@ Try again:
 Alternatively, you can increase the size limit using the
 C<--wiki_page_size_limit> option, but you need to restart Phoebe:
 
-    perl phoebe --wiki_page_size_limit=10000000 \
+    phoebe --wiki_page_size_limit=10000000 \
       --wiki_mime_type=image/jpeg --wiki_mime_type=image/png
 
 Now you can upload about 10MB…
@@ -540,7 +540,7 @@ Here's an example for how to start Phoebe. It listens on C<localhost> port 1965,
 adds the "Welcome" and the "About" page to the main menu, and allows editing
 using one of two tokens.
 
-    perl phoebe \
+    phoebe \
       --wiki_token=Elrond \
       --wiki_token=Thranduil \
       --wiki_page=Welcome \
@@ -627,7 +627,7 @@ If you have pages with names that start with an ISO date like 2020-06-30, then
 I'm assuming you want some sort of blog. In this case, up to ten of them will be
 shown on your front page.
 
-=head2 GUS and robots.txt
+=head2 robots.txt
 
 There are search machines out there that will index your site. Ideally, these
 wouldn't index the history pages and all that: they would only get the list of
@@ -686,102 +686,28 @@ Apache or nginx. It's a (simple) web server, too!
 Here's how you could serve the wiki both on Gemini, and the standard HTTPS port,
 443:
 
-    sudo ./phoebe --port=443 --port=1965 \
-      --user=$(id --user --name) --group=$(id --group  --name)
+    phoebe --port=443 --port=1965
 
-We need to use F<sudo> because all the ports below 1024 are priviledge ports and
-that includes the standard HTTPS port. Since we don't want the server itself to
-run with all those priviledges, however, I'm using the C<--user> and C<--group>
-options to change effective and user and group ID. The F<id> command is used to
-get your user and your group IDs instead. If you've followed the L</Quickstart>
-and created a separate C<phoebe> user, you could simply use C<--user=phoebe> and
-C<--group=phoebe> instead. 👍
+Note that 443 is a priviledge port. Thus, you either need to grant Perl the
+permission to listen on a priviledged port, or you need to run Phoebe as a super
+user. Both are potential security risk, but the first option is much less of a
+problem, I think.
+
+If you want to try this, run the following as root:
+
+    setcap 'cap_net_bind_service=+ep' $(which perl)
+
+Verify it:
+
+    getcap $(which perl)
+
+If you want to undo this:
+
+    setcap -r $(which perl)
 
 =head2 Configuration
 
-This section describes some hooks you can use to customize your wiki using the
-F<config> file, or using a Perl file (ending in F<*.pl> or F<*.pm>) in the
-F<conf.d> directory. Once you're happy with the changes you've made, reload the
-server to make it read the config file. You can do that by sending it the HUP
-signal, if you know the pid, or if you have a pid file:
-
-    kill -s SIGHUP `cat phoebe.pid`
-
-Here are the ways you can hook into Phoebe code:
-
-C<@extensions> is a list of code references allowing you to handle additional
-URLs; return 1 if you handle a URL; each code reference gets called with $stream
-(L<Mojo::IOLoop::Stream>), the first line of the request (a Gemini URL, a Gopher
-selector, a finger user, a HTTP request line), a hash reference for the headers
-(in the case of HTTP requests), and a buffer of bytes (e.g. for Titan or HTTP
-PUT or POST requests)
-
-C<@main_menu> adds more lines to the main menu, possibly links that aren't
-simply links to existing pages
-
-C<@footer> is a list of code references allowing you to add things like licenses
-or contact information to every page; each code reference gets called with
-$stream (L<Mojo::IOLoop::Stream>), $host, $space, $id, $revision, and $format
-('gemini' or 'html') used to serve the page; return a gemtext string to append
-at the end; the alternative is to overwrite the C<footer> or C<html_footer> subs
-– the default implementation for Gemini adds History, Raw text and HTML link,
-and C<@footer> to the bottom of every page; the default implementation for HTTP
-just adds C<@footer> to the bottom of every page
-
-If you do hook into Phoebe's code, you probably want to make use of the
-following variables:
-
-C<$server> stores the command line options provided by the user.
-
-C<$log> is how you log things.
-
-A very simple example to add a contact mail at the bottom of every page; this
-works for both Gemini and the web:
-
-    package App::Phoebe;
-    use Modern::Perl;
-    our (@footer);
-    push(@footer, sub { '=> mailto:alex@alexschroeder.ch Mail' });
-
-This prints a very simply footer instead of the usual footer for Gemini, as the
-C<footer> function is redefined. At the same time, the C<@footer> array is still
-used for the web:
-
-    package App::Phoebe;
-    use Modern::Perl;
-    our (@footer); # HTML only
-    push(@footer, sub { '=> https://alexschroeder.ch/wiki/Contact Contact' });
-    # footer sub is Gemini only
-    no warnings qw(redefine);
-    sub footer {
-      return '—' x 10 . "\n" . '=> mailto:alex@alexschroeder.ch Mail';
-    }
-
-This example also shows how to redefine existing code in your config file
-without the warning "Subroutine … redefined".
-
-Here's a more elaborate example to add a new action the main menu and a handler
-for it:
-
-    package App::Phoebe;
-    use Modern::Perl;
-    our (@extensions, @main_menu);
-    push(@main_menu, "=> gemini://localhost/do/test Test");
-    push(@extensions, \&serve_test);
-    sub serve_test {
-      my $stream = shift;
-      my $url = shift;
-      my $headers = shift;
-      my $host = host_regex();
-      my $port = port($stream);
-      if ($url =~ m!^gemini://($host)(?::$port)?/do/test$!) {
-	result($stream, "20", "text/plain");
-	$stream->write("Test\n");
-	return 1;
-      }
-      return;
-    }
-    1;
+See L<App::Phoebe> for more information.
 
 =head2 Wiki Spaces
 
@@ -832,79 +758,6 @@ even if these properties are set via the command line.
 
 This code simply deactivates the token list. No more tokens!
 
-=head2 Client Certificates
-
-Phoebe serves a public wiki by default. Limiting editing to known users (that
-is, known client certificates) is possible. Here's a config file using client
-certificates to limit writing to a single, known fingerprint:
-
-    package App::Phoebe;
-    use Modern::Perl;
-    our ($server, @extensions, $log);
-    my @fingerprints = ('sha256$e4b871adf0d74d9ab61fbf0b6773d75a152594090916834278d416a769712570');
-    push(@extensions, \&protected_wiki);
-    sub protected_wiki {
-      my $stream = shift;
-      my $url = shift;
-      my $hosts = host_regex();
-      my $port = port($stream);
-      my $spaces = space_regex($stream);
-      my $fingerprint = $stream->handle->get_fingerprint();
-      if (my ($host, $path) = $url =~ m!^titan://($hosts)(?::$port)?([^?#]*)!) {
-	my ($space, $resource) = $path =~ m!^(?:/($spaces))?(?:/raw)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!;
-	if (not $resource) {
-	  $log->debug("The Titan URL is malformed: $path $spaces");
-	  result($stream, "59", "The Titan URL is malformed");
-	} elsif ($fingerprint and grep { $_ eq $fingerprint} @fingerprints) {
-	  $log->info("Successfully identified client certificate");
-	  my ($id, @params) = split(/[;=&]/, $resource);
-	  save_page($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)),
-			    {map {decode_utf8(uri_unescape($_))} @params});
-	} elsif ($fingerprint) {
-	  $log->info("Unknown client certificate $fingerprint");
-	  result($stream, "61", "Your client certificate is not authorized for editing");
-	} else {
-	  $log->info("Requested client certificate");
-	  result($stream, "60", "You need a client certificate to edit this wiki");
-	}
-	return 1;
-      }
-      return;
-    }
-    1;
-
-C<@fingerprints> is a list, so you could add more fingerprints:
-
-    my @fingerprints = qw(
-      sha256$e4b871adf0d74d9ab61fbf0b6773d75a152594090916834278d416a769712570
-      sha256$4a948f5a11f4a81d0a2e8b60b1e4b3c9d1e25f4d95694965d98b333a443a3b25);
-
-Or you could read them from a file:
-
-    use File::Slurper qw(read_lines);
-    my @fingerprints = read_lines("fingerprints");
-
-The important part is that this code matches the same Titan requests as the
-default code, and it comes first. Thus, the old code can no longer be reached
-and this code checks for a known client certificate fingerprint.
-
-To be sure, it doesn't check anything else! It doesn't check whether the client
-certificate has expired, for example.
-
-You could, for example, install Phoebe, use the code above for your config
-file, and replace the fingerprint with the fingerprint of your own client
-certificate. The F<Makefile> allows you to easily create such a certificate:
-
-    make client-cert
-
-Answer at least one of the questions OpenSSL asks of you and you should now have
-a F<client-cert.pem> and a F<client-key.pem> file. To get the fingerprint of
-your client certificate:
-
-    make client-fingerprint
-
-The output is the fingerprint you need to put into your config file.
-
 =head2 Virtual Hosting
 
 Sometimes you want have a machine reachable under different domain names and you
@@ -916,7 +769,7 @@ are usually reachable using the IPv4 C<127.0.0.1> or the name C<localhost>. The
 following command tells Phoebe to serve both C<127.0.0.1> and C<localhost>
 (the default is to just serve C<localhost>).
 
-    perl phoebe --host=127.0.0.1 --host=localhost
+    phoebe --host=127.0.0.1 --host=localhost
 
 Visit both at L<gemini://localhost/> and L<gemini://127.0.0.1/>, and create a
 new page in each one, then examine the data directory F<wiki>. You'll see both
@@ -925,7 +778,7 @@ F<wiki/localhost> and F<wiki/127.0.0.1>.
 If you're using more wiki spaces, you need to prefix them with the respective
 hostname if you use more than one:
 
-    perl phoebe --host=127.0.0.1 --host=localhost \
+    phoebe --host=127.0.0.1 --host=localhost \
         --wiki_space=127.0.0.1/alex --wiki_space=localhost/berta
 
 In this situation, you can visit L<gemini://127.0.0.1/>,
@@ -948,90 +801,12 @@ use for the hosts.
 
 For example:
 
-    perl phoebe --host=transjovian.org \
+    phoebe --host=transjovian.org \
         --cert_file=/var/lib/dehydrated/certs/transjovian.org/cert.pem \
         --key_file=/var/lib/dehydrated/certs/transjovian.org/privkey.pem \
         --host=alexschroeder.ch \
         --cert_file=/var/lib/dehydrated/certs/alexschroeder.ch/cert.pem \
         --key_file=/var/lib/dehydrated/certs/alexschroeder.ch/privkey.pem
-
-=head2 CSS for the Web
-
-The wiki can also answer web requests. By default, it only does that on port
-1965. The web pages refer to a CSS file at C</default.css>, and the response to
-a request for this CSS is served by a function that you can override in your
-config file. The following would be the beginning of a CSS that supports a dark
-theme, for example. The Cache-Control header makes sure browsers don't keep
-trying to revalidate the CSS more than once a day.
-L<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control>
-
-    our ($log);
-
-    sub serve_css_via_http {
-      my $stream = shift;
-      $log->info("Serving CSS via HTTP");
-      $stream->write("HTTP/1.1 200 OK\r\n");
-      $stream->write("Content-Type: text/css\r\n");
-      $stream->write("Cache-Control: public, max-age=86400, immutable\r\n"); # 24h
-      $stream->write("\r\n");
-      $stream->write(<<'EOT');
-    html { max-width: 70ch; padding: 2ch; margin: auto; }
-    body { color: #111111; background-color: #fffff8; }
-    a:link { color: #0000ee }
-    a:visited { color: #551a8b }
-    a:hover { color: #7a67ee }
-    @media (prefers-color-scheme: dark) {
-       body { color: #eeeee8; background-color: #333333; }
-       a:link { color: #1e90ff }
-       a:hover { color: #63b8ff }
-       a:visited { color: #7a67ee }
-    }
-    EOT
-    }
-
-=head2 Favicon for the Web
-
-Here's an example where we a little Jupiter SVG is being served for the favicon,
-for all hosts. You could, of course, accept the C<$headers> as an additional
-argument to C<favicon>, match hostnames, pass the C<$host> to
-C<serve_favicon_via_http>, and return different images depending on the host.
-Let me know if you need this and you are stuck.
-
-    our (@extensions, $log);
-
-    push(@extensions, \&favicon);
-
-    sub favicon {
-      my $stream = shift;
-      my $url = shift;
-      if ($url =~ m!^GET /favicon.ico HTTP/1\.[01]$!) {
-	serve_favicon_via_http($stream);
-	return 1;
-      }
-      return 0;
-    }
-
-    sub serve_favicon_via_http {
-      my $stream = shift;
-      $log->info("Serving favicon via HTTP");
-      $stream->write("HTTP/1.1 200 OK\r\n");
-      $stream->write("Content-Type: image/svg+xml\r\n");
-      $stream->write("Cache-Control: public, max-age=86400, immutable\r\n"); # 24h
-      $stream->write("\r\n");
-      $stream->write(<<'EOT');
-    <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-    <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
-    <circle cx="50" cy="50" r="45" fill="white" stroke="black" stroke-width="5"/>
-    <line x1="12" y1="25" x2="88" y2="25" stroke="black" stroke-width="4"/>
-    <line x1="5" y1="45" x2="95" y2="45" stroke="black" stroke-width="7"/>
-    <line x1="5" y1="60" x2="95" y2="60" stroke="black" stroke-width="4"/>
-    <path d="M20,73 C30,65 40,63 60,70 C70,72 80,73 90,72
-	     L90,74 C80,75 70,74 60,76 C40,83 30,81 20,73" fill="black"/>
-    <ellipse cx="40" cy="73" rx="11.5" ry="4.5" fill="red"/>
-    <line x1="22" y1="85" x2="78" y2="85" stroke="black" stroke-width="3"/>
-    </svg>
-    EOT
-    }
 
 =head1 SEE ALSO
 

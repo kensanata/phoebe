@@ -14,6 +14,23 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::Css
+
+By default, Phoebe comes with its own, minimalistic CSS when serving HTML
+rendition of pages: they all refer to C</default.css> and when this URL is
+requested, Phoebe serves a small CSS.
+
+With this extension, Phoebe serves an actual F<default.css> in the wiki
+directory.
+
+There is no configuration. Simply add it to your F<config> file:
+
+    use App::Phoebe::Css;
+
+Then create F<default.css> and make it look good. 😁
+
+=cut
+
 package App::Phoebe::Css;
 use App::Phoebe qw($server $log);
 use Modern::Perl;

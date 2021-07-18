@@ -17,7 +17,7 @@ use Modern::Perl;
 use Test::More;
 use File::Slurper qw(read_text read_dir);
 
-for my $file (grep /\.pm$/, read_dir("lib/App/Phoebe")) {
+for my $file (sort grep /\.pm$/, read_dir("lib/App/Phoebe")) {
   # ok(0 == system($^X, '-c', "lib/App/Phoebe/$file"), "Syntax OK");
   my $test = $file;
   $test =~ s/pm$/t/;
@@ -28,6 +28,14 @@ for my $file (grep /\.pm$/, read_dir("lib/App/Phoebe")) {
   my $source = read_text("lib/App/Phoebe/$file");
   ok($source =~ /^package App::Phoebe::$module/m, "$file is in a separate package");
   ok($source =~ /^use App::Phoebe qw/m, "$file uses the App::Phoebe module");
+  ok($source =~ /^=head1 /m, "$file has some documentation");
+}
+
+for my $file (qw(script/phoebe)) {
+  my $source = read_text($file);
+  for my $test ($source =~ /# tested by (\S+)/g) {
+    ok(-f $test, "$test exists");
+  }
 }
 
 done_testing;

@@ -3,13 +3,19 @@ use Modern::Perl;
 use Pod::Markdown;
 use Text::Slugify qw(slugify);
 use File::Slurper qw(read_text write_text);
-die "Read which Perl script?" unless @ARGV == 1;
-my $pod = read_text(shift(@ARGV));
+die "Read which Perl script?" unless @ARGV;
+my @pods = map { read_text($_) } @ARGV;
+# skip the first file, increase heading level for all subsequent files
+for (@pods[1..-1]) {
+  s/^=head(\d)/"=head".($1+1)/gem;
+}
+my $pod = join("\n", @pods);
 my $parser = Pod::Markdown->new;
 my $markdown;
 $parser->output_string(\$markdown);
 $parser->parse_string_document($pod);
-my @toc = map { ucfirst lc } $pod =~ /\n=head[12] (.*)/g;
+my @toc = $pod =~ /\n=head[12] (.*)/g;
+foreach (@toc) {$_ = ucfirst lc if /^[A-Z ]+$/ }
 my $toc = "**Table of Contents**\n\n"
     . join("\n", map { "- [$_](#" . slugify($_) . ")" } @toc)
     . "\n\n";

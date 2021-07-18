@@ -14,6 +14,22 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::PageHeadings
+
+This extension hides the page name from visitors, unless they start digging.
+
+One the front page, where the last ten pages of your date pages are listed, the
+name of the page is replaced with the level one heading of your page.
+
+If you visit a page, the name of the page is similarly replaced with the level
+one heading of your page.
+
+There is no configuration. Simply add it to your F<config> file:
+
+    use App::Phoebe::PageHeadings;
+
+=cut
+
 package App::Phoebe::PageHeadings;
 use App::Phoebe qw(@extensions $server $log port host_regex space_regex success
 		   blog_pages text print_link footer);

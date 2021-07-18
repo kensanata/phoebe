@@ -14,6 +14,18 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::Wikipedia
+
+This extension turns one of your hosts into a Wikipedia proxy.
+
+In your F<config> file, you need to specify which of your hosts it is:
+
+    package App::Phoebe::Wikipedia;
+    our $host = "vault.transjovian.org";
+    use App::Phoebe::Wikipedia;
+
+=cut
+
 package App::Phoebe::Wikipedia;
 use App::Phoebe qw($log @extensions $full_url_regex success result);
 use URI::Escape;

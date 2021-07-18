@@ -14,23 +14,38 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 Chat
+=head1 App::Phoebe::Chat
 
 For every wiki space, this creates a Gemini-based chat room. Every chat client
 needs two URLs, the "listen" and the "say" URL.
 
-Listen URL is where you need to I<stream>: as people say things in the room,
-these messages get streamed in one endless Gemini document. You might have to
-set an appropriate timeout period for your connection for this to work. 1h,
+The I<Listen URL> is where you need to I<stream>: as people say things in the
+room, these messages get streamed in one endless Gemini document. You might have
+to set an appropriate timeout period for your connection for this to work. 1h,
 perhaps?
 
-gemini://localhost/do/chat/listen or gemini://localhost/space/do/chat/listen
+The URL will look something like this:
+C<gemini://localhost/do/chat/listen> or
+C<gemini://localhost/space/do/chat/listen>
 
-Say URL is where you post things you want to say:
+The I<Say URL> is where you post things you want to say: point your client at
+the URL, it prompts your for something to say, and once you do, it redirects you
+to the same URL again, so you can keep saying things.
 
-gemini://localhost/do/chat/say or gemini://localhost/space/do/chat/say
+The URL will look something like this: C<gemini://localhost/do/chat/say> or
+C<gemini://localhost/space/do/chat/say>
 
-Your client certificate's common name is used as your chat nickname.
+Your chat nickname is the client certificate's common name. One way to create a
+client certificate that's valid for five years with an appropriate common name:
+
+    openssl req -new -x509 -newkey ec \
+    -pkeyopt ec_paramgen_curve:prime256v1 \
+    -subj '/CN=Alex' \
+    -days 1825 -nodes -out cert.pem -keyout key.pem
+
+There is no configuration. Simply add it to your F<config> file:
+
+    use App::Phoebe::Chat;
 
 =cut
 

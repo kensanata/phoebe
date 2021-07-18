@@ -14,20 +14,24 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=head1 App::Phoebe::TokiPona
+
+This extension adds rendering of Toki Pona glyphs to the web output of your
+site. For this to work, you need to download the WOFF file from the Linja Pona
+4.2 repository and put it into your wiki directory.
+
+L<https://github.com/janSame/linja-pona/>
+
+No further configuration is necessary. Simply add it to your F<config> file:
+
+    use App::Phoebe::TokiPona;
+
+=cut
+
 package App::Phoebe::TokiPona;
 use App::Phoebe qw(@extensions $server $log);
 use File::Slurper qw(read_binary);
 use Modern::Perl;
-
-=head Toki Pona
-
-You need to host the Toki Pona font from your server. That is to say: you need
-to download the WOFF file from the Linja Pona 4.2 repository and put it into
-your wiki directory.
-
-L<https://github.com/janSame/linja-pona/>
-
-=cut
 
 push(@extensions, \&toki_pona_font);
 

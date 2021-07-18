@@ -27,7 +27,24 @@ our @config = '$App::Phoebe::Wikipedia::host = "localhost";';
 
 require './t/test.pl';
 
-my $page = query_gemini("$base/");
-like($page, qr/^10/, "Top level is a prompt");
+like(query_gemini("$base/"),
+     qr/^10.*language/, "Top level is a prompt");
+like(query_gemini("$base/?en"),
+     qr/^30.*\/en\r\n/, "Redirect for the language");
+like(query_gemini("$base/en"),
+     qr/^10.*term/, "Search term prompt");
+like(query_gemini("$base/en?Project%20Gemini"),
+     qr/^30.*\/search\/en\/Project%20Gemini\r\n/, "Redirect for the term");
+
+ SKIP: {
+   skip "Making requests to Wikipedia requires \$ENV{TEST_AUTHOR} > 2", 2
+       unless $ENV{TEST_AUTHOR} and $ENV{TEST_AUTHOR} > 2;
+
+   like(query_gemini("$base/search/en/Project%20Gemini"),
+	qr/^20/, "List of terms");
+   like(query_gemini("$base/text/en/Project%20Gemini"),
+	qr/^20/, "Term");
+
+}
 
 done_testing;

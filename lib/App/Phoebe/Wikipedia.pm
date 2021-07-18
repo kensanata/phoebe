@@ -16,6 +16,7 @@
 
 package App::Phoebe::Wikipedia;
 use App::Phoebe qw($log @extensions $full_url_regex success result);
+use URI::Escape;
 use Modern::Perl;
 use MediaWiki::API;
 use Text::SpanningTable;

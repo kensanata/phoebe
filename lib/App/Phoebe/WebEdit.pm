@@ -19,7 +19,7 @@ use App::Phoebe qw(@footer @extensions @request_handlers @main_menu $server $log
 		   port space host_regex space_regex handle_http_header text
 		   with_lock wiki_dir bogus_hash http_error to_url quote_html);
 use Encode qw(decode_utf8 encode_utf8);
-use File::Slurper qw(write_text);
+use File::Slurper qw(read_text write_text);
 use Modern::Perl;
 use URI::Escape;
 

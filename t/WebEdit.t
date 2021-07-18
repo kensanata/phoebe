@@ -34,6 +34,10 @@ my $page = query_web("GET /page/Hello HTTP/1.0\r\n"
 like($page, qr/^HTTP\/1.1 200 OK/, "Page served via HTTP");
 like($page, qr/This page does not yet exist/, "Empty page");
 
+$page = query_web("GET /do/edit/Hello HTTP/1.0\r\n"
+		  . "host: $host:$port");
+like($page, qr/^HTTP\/1.1 200 OK/, "Edit page served via HTTP");
+
 my $haiku = <<EOT;
 The laptop streaming
 videos of floods and rain

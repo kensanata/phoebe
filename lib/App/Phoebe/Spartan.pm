@@ -58,7 +58,7 @@ denied…"
 package App::Phoebe::Spartan;
 use App::Phoebe qw($server $log @main_menu get_ip_numbers space host_regex space_regex run_extensions
 		   serve_index serve_page serve_raw serve_html serve_history serve_diff save_page
-		   blog print_link);
+		   blog print_link text);
 use Modern::Perl;
 use URI::Escape;
 use Encode qw(encode_utf8 decode_utf8 decode);

@@ -23,7 +23,7 @@ if (not $ENV{TEST_AUTHOR}) {
 }
 plan skip_all => $msg if $msg;
 
-our @config = qw(ijirait.pl);
+our @use = qw(Ijirait);
 our $base;
 our $port;
 our $dir;

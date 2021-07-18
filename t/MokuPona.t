@@ -28,7 +28,8 @@ our $base;
 our $port;
 
 # tricky: must know the directory before generating the random number in test.pl!
-our @config = (qw(moku-pona.pl), "package App::Phoebe::MokuPona;\n"
+our @use = qw(MokuPona);
+our @config = ("package App::Phoebe::MokuPona;\n"
 	       . "use App::Phoebe qw(\$server);\n"
 	       . "our \$dir = \"\$server->{wiki_dir}/moku-pona\";\n");
 require './t/test.pl';

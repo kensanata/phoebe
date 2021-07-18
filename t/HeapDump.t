@@ -15,8 +15,9 @@
 
 use Modern::Perl;
 use Test::More;
+use utf8;
 
-our @config = ('page-headings.pl');
+our @use = qw(HeapDump);
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 
@@ -25,24 +26,12 @@ require './t/test.pl';
 # variables set by test.pl
 our $base;
 our $dir;
-our $host;
-our $port;
 
-my $titan = "titan://$host:$port";
-
-my $haiku = <<EOT;
-# Hurt
-When I type, it hurts
-When I do not type, it hurts
-My fingers, they hurt
-EOT
-
-# create a regular page, including updating the page index
-like(query_gemini("$titan/raw/2021-07-16;size=80;mime=text/plain;token=hello", $haiku),
-     qr/^30/, "Page redirect after save");
-like(query_gemini("$base/page/2021-07-16"),
-     qr/^20 text\/gemini; charset=UTF-8\r\n# Hurt\n/, "Page name not used as title");
-like(query_gemini("$base/"),
-     qr/^=> $base\/page\/2021-07-16 Hurt/m, "Date page listed");
+# no client cert
+my $page = query_gemini("$base/do/heap-dump", undef, 0);
+like($page, qr/^60/, "Client certificate required");
+$page = query_gemini("$base/do/heap-dump");
+like($page, qr/^20/, "Heap dump saved");
+ok(-f "$dir/phoebe.pmat", "File exists");
 
 done_testing;

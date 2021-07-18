@@ -18,7 +18,7 @@ use Test::More;
 use IPC::Open2;
 use Encode qw(encode_utf8);
 
-our @config = ('chat.pl');
+our @use = qw(Chat);
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 

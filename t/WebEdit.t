@@ -18,7 +18,7 @@ use Test::More;
 use URI::Escape;
 
 our $base;
-our @config = qw(web-edit.pl);
+our @use = qw(WebEdit);
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 

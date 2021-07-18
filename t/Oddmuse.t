@@ -118,15 +118,14 @@ is($res->body, "Berta\n", "Oddmuse page content from namespace");
 
 # Start Phoebe
 
-my $config = <<"EOT";
+our @use = qw(Oddmuse);
+our @config = (<<"EOT");
 package App::Phoebe::Oddmuse;
 our \%oddmuse_wikis = ("localhost" => "http://localhost:$oddmuse_port/wiki");
 our \%oddmuse_wiki_names = ("localhost" => "Test");
 our \%oddmuse_wiki_dirs = ("localhost" => "$oddmuse_dir");
 our \$server->{wiki_main_page} = "Welcome";
 EOT
-
-our @config = ('oddmuse.pl', $config);
 our $host = qw(localhost);
 our $port;
 our $base;
@@ -240,8 +239,8 @@ like(query_gemini("$base"), qr(^Hello\n\nBlog:\n)m, "Main page including Welcome
 
 # Unit testing of text formatting rules
 
-ok(require './script/phoebe', "load phoebe");
-ok(require './contrib/oddmuse.pl', "load oddmuse.pl");
+ok(require App::Phoebe, "load phoebe");
+ok(require App::Phoebe::Oddmuse, "load oddmuse.pl");
 
 $page = App::Phoebe::Oddmuse::oddmuse_gemini_text(undef, $host, "", "Testing [Foo:Bar baz]");
 like($page, qr(^Testing baz$)m, "Namespace link with text, text");

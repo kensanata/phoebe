@@ -6,6 +6,7 @@
 ^RELEASE
 ^TEST
 ^update-readme
+^t/README.md
 
 # generated files
 ^pm_to_blib

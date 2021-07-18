@@ -115,16 +115,17 @@ like($res->body, qr/$haiku/, "Oddmuse saved the page");
 my $gopher_port = Mojo::IOLoop::Server->generate_port; # new port for Gopher
 my $gophers_port = Mojo::IOLoop::Server->generate_port; # new port for Gophers
 
-my $config = <<"EOT";
+our @config = (<<"EOT");
 package App::Phoebe::Oddmuse;
 our \%oddmuse_wikis = ("localhost" => "http://localhost:$oddmuse_port/wiki");
 our \%oddmuse_wiki_names = ("localhost" => "Test");
 our \%oddmuse_wiki_dirs = ("localhost" => "$oddmuse_dir");
+
 package App::Phoebe::Gopher;
 our \$gopher_port = $gopher_port;
 EOT
 
-our @config = (qw(gopher.pl oddmuse.pl), $config);
+our @use = qw(Oddmuse Gopher); # the order is impotant!
 our $host = qw(localhost);
 our $port;
 our $base;

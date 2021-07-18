@@ -30,7 +30,7 @@ if (not $ENV{TEST_AUTHOR}) {
 }
 plan skip_all => $msg if $msg;
 
-our @config = qw(speed-bump.pl);
+our @use = qw(SpeedBump);
 our $base;
 our $port;
 our $dir;

@@ -17,7 +17,7 @@ use Modern::Perl;
 use Test::More;
 use utf8;
 
-our @config = qw(heap-dump.pl);
+our @use = qw(RegisteredEditorsOnly);
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 
@@ -25,13 +25,25 @@ require './t/test.pl';
 
 # variables set by test.pl
 our $base;
+our $host;
+our $port;
 our $dir;
 
+my $haiku = <<"EOT";
+The sparrows are so
+loud, proud, foul mouthed and angry
+like trolls on the net
+EOT
+
+my $titan = "titan://$host:$port";
+
+like(query_gemini("$base/page/Haiku"), qr/This page does not yet exist/, "Empty page");
+
 # no client cert
-my $page = query_gemini("$base/do/heap-dump", undef, 0);
-like($page, qr/^60/, "Client certificate required");
-$page = query_gemini("$base/do/heap-dump");
-like($page, qr/^20/, "Heap dump saved");
-ok(-f "$dir/phoebe.pmat", "File exists");
+my $page = query_gemini("$titan/raw/Haiku;size=79;mime=text/plain;token=hello", $haiku, 0);
+like($page, qr/^60 You need a client certificate/, "Client certificate required");
+
+$page = query_gemini("$titan/raw/Haiku;size=79;mime=text/plain;token=hello", $haiku);
+like($page, qr/^30 $base\/page\/Haiku\r$/, "Titan Haiku");
 
 done_testing;

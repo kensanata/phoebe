@@ -28,14 +28,14 @@ our @spaces = qw(localhost/alex);
 our $port;
 our $dir;
 our $base;
-our @config = qw(spartan.pl);
+our @use = qw(Spartan);
 
 my $spartan_port = Mojo::IOLoop::Server->generate_port; # new port for Spartan
 
 # make sure starting phoebe starts serving the spartan port, too
-push(@config, <<"EOF");
+our @config = (<<"EOF");
 package App::Phoebe::Spartan;
-\$spartan_port = $spartan_port;
+our \$spartan_port = $spartan_port;
 EOF
 
 require './t/test.pl';

@@ -18,10 +18,12 @@ use Test::More;
 use File::Slurper qw(read_text);
 use utf8;
 
-our @config = ('debug-ip-numbers.pl',
-	       "package App::Phoebe;\n"
-	       . "\$log->path(\$server->{wiki_dir} . '/log');\n"
-	       . "\$log->level('debug');\n");
+our @use = qw(DebugIpNumbers);
+our @config = (<<'EOT');
+use App::Phoebe qw($server $log);
+$log->path($server->{wiki_dir} . '/log');
+$log->level('debug');
+EOT
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 

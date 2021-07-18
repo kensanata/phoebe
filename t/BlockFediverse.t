@@ -16,7 +16,7 @@
 use Modern::Perl;
 use Test::More;
 
-our @config = qw(block-fediverse.pl);
+our @use = qw(BlockFediverse);
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 

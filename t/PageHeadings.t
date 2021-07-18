@@ -15,21 +15,34 @@
 
 use Modern::Perl;
 use Test::More;
-use utf8; # tests contain UTF-8 characters and it matters
 
-our $base;
-our @config = qw(wikipedia.pl);
+our @use = qw(PageHeadings);
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 
-# make sure starting phoebe starts knows localhost is the proxy
-push(@config, <<"EOF");
-\$App::Phoebe::Wikipedia::host = "localhost";
-EOF
-
 require './t/test.pl';
 
-my $page = query_gemini("$base/");
-like($page, qr/^10/, "Top level is a prompt");
+# variables set by test.pl
+our $base;
+our $dir;
+our $host;
+our $port;
+
+my $titan = "titan://$host:$port";
+
+my $haiku = <<EOT;
+# Hurt
+When I type, it hurts
+When I do not type, it hurts
+My fingers, they hurt
+EOT
+
+# create a regular page, including updating the page index
+like(query_gemini("$titan/raw/2021-07-16;size=80;mime=text/plain;token=hello", $haiku),
+     qr/^30/, "Page redirect after save");
+like(query_gemini("$base/page/2021-07-16"),
+     qr/^20 text\/gemini; charset=UTF-8\r\n# Hurt\n/, "Page name not used as title");
+like(query_gemini("$base/"),
+     qr/^=> $base\/page\/2021-07-16 Hurt/m, "Date page listed");
 
 done_testing;

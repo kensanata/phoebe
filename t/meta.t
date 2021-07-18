@@ -17,14 +17,17 @@ use Modern::Perl;
 use Test::More;
 use File::Slurper qw(read_text read_dir);
 
-for my $module (grep /\.pl$/, read_dir("contrib")) {
-  my $test = $module;
-  $test =~ s/pl$/t/;
+for my $file (grep /\.pm$/, read_dir("lib/App/Phoebe")) {
+  # ok(0 == system($^X, '-c', "lib/App/Phoebe/$file"), "Syntax OK");
+  my $test = $file;
+  $test =~ s/pm$/t/;
   ok(-f "t/$test", "$test exists");
+  my $module = $file;
+  $module =~ s/\.pm//;
   # these tests don't use 'like' to prevent errors from printing the entire source
-  my $source = read_text("contrib/$module");
-  ok($source =~ /^package App::Phoebe::/m, "$module is in a separate package");
-  ok($source =~ /^use App::Phoebe qw/m, "$module uses the App::Phoebe module");
+  my $source = read_text("lib/App/Phoebe/$file");
+  ok($source =~ /^package App::Phoebe::$module/m, "$file is in a separate package");
+  ok($source =~ /^use App::Phoebe qw/m, "$file uses the App::Phoebe module");
 }
 
 done_testing;

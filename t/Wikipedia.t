@@ -15,20 +15,19 @@
 
 use Modern::Perl;
 use Test::More;
+use utf8; # tests contain UTF-8 characters and it matters
 
 our $base;
-our @config = qw(favicon.pl);
+our @use = qw(Wikipedia);
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 
+# make sure starting phoebe starts knows localhost is the proxy
+our @config = '$App::Phoebe::Wikipedia::host = "localhost";';
+
 require './t/test.pl';
 
-# variables set by test.pl
-our $dir;
-our $host;
-our $port;
-
-like(query_web("GET /favicon.ico HTTP/1.0\r\nhost: $host:$port"),
-     qr/^HTTP\/1.1 200 OK/, "Favicon is served via HTTP");
+my $page = query_gemini("$base/");
+like($page, qr/^10/, "Top level is a prompt");
 
 done_testing;

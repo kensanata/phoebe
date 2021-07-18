@@ -15,10 +15,9 @@
 
 use Modern::Perl;
 use Test::More;
-use File::Slurper qw(write_binary);
 
 our $base;
-our @config = qw(toki-pona.pl);
+our @use = qw(Favicon);
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 
@@ -29,16 +28,7 @@ our $dir;
 our $host;
 our $port;
 
-# write fake font file
-write_text("$dir/linja-pona-4.2.woff", "TEST");
-
-like(query_web("GET / HTTP/1.0\r\nhost: $host:$port"),
-     qr/^HTTP\/1.1 200 OK/, "Web is served");
-
-like(query_web("GET /linja-pona-4.2.woff HTTP/1.0\r\nhost: $host:$port"),
-     qr/^TEST/m, "Font is served");
-
-like(query_web("GET /default.css HTTP/1.0\r\nhost: $host:$port"),
-     qr/^pre.toki/m, "CSS is modified");
+like(query_web("GET /favicon.ico HTTP/1.0\r\nhost: $host:$port"),
+     qr/^HTTP\/1.1 200 OK/, "Favicon is served via HTTP");
 
 done_testing;

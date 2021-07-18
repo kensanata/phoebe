@@ -15,9 +15,10 @@
 
 use Modern::Perl;
 use Test::More;
+use File::Slurper qw(write_binary);
 
 our $base;
-our @config = qw(default-css.pl);
+our @use = qw(TokiPona);
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 
@@ -28,10 +29,16 @@ our $dir;
 our $host;
 our $port;
 
-# write fake CSS file
-write_text("$dir/default.css", "TEST");
+# write fake font file
+write_text("$dir/linja-pona-4.2.woff", "TEST");
+
+like(query_web("GET / HTTP/1.0\r\nhost: $host:$port"),
+     qr/^HTTP\/1.1 200 OK/, "Web is served");
+
+like(query_web("GET /linja-pona-4.2.woff HTTP/1.0\r\nhost: $host:$port"),
+     qr/^TEST/m, "Font is served");
 
 like(query_web("GET /default.css HTTP/1.0\r\nhost: $host:$port"),
-     qr/^TEST/m, "New CSS is served via HTTP");
+     qr/^pre.toki/m, "CSS is modified");
 
 done_testing;

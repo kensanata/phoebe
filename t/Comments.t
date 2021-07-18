@@ -18,7 +18,7 @@ use Test::More;
 use File::Slurper qw(write_text);
 use utf8;
 
-our @config = qw(comments.pl);
+our @use = qw(Comments);
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 

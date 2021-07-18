@@ -18,11 +18,12 @@ use Test::More;
 use File::Slurper qw(read_text write_text);
 use utf8;
 
-our @config = ("galleries.pl", <<"EOF");
+our @use = qw(Galleries);
+our @config = (<<'EOF');
 package App::Phoebe::Galleries;
-use App::Phoebe qw(\$server);
-\$galleries_dir = "\$server->{wiki_dir}/galleries";
-\$galleries_host = "localhost";
+use App::Phoebe qw($server);
+our $galleries_dir = "$server->{wiki_dir}/galleries";
+our $galleries_host = "localhost";
 EOF
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};

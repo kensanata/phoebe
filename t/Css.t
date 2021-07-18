@@ -15,35 +15,23 @@
 
 use Modern::Perl;
 use Test::More;
-use utf8;
 
-our @config = qw(registered-editors-only.pl);
+our $base;
+our @use = qw(Css);
 
 plan skip_all => 'Contributions are author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 
 require './t/test.pl';
 
 # variables set by test.pl
-our $base;
+our $dir;
 our $host;
 our $port;
-our $dir;
 
-my $haiku = <<"EOT";
-The sparrows are so
-loud, proud, foul mouthed and angry
-like trolls on the net
-EOT
+# write fake CSS file
+write_text("$dir/default.css", "TEST");
 
-my $titan = "titan://$host:$port";
-
-like(query_gemini("$base/page/Haiku"), qr/This page does not yet exist/, "Empty page");
-
-# no client cert
-my $page = query_gemini("$titan/raw/Haiku;size=79;mime=text/plain;token=hello", $haiku, 0);
-like($page, qr/^60 You need a client certificate/, "Client certificate required");
-
-$page = query_gemini("$titan/raw/Haiku;size=79;mime=text/plain;token=hello", $haiku);
-like($page, qr/^30 $base\/page\/Haiku\r$/, "Titan Haiku");
+like(query_web("GET /default.css HTTP/1.0\r\nhost: $host:$port"),
+     qr/^TEST/m, "New CSS is served via HTTP");
 
 done_testing;

@@ -39,8 +39,12 @@ our $port = Mojo::IOLoop::Server->generate_port;
 our $base = "gemini://$host:$port";
 our $dir = "./" . sprintf("test-%04d", int(rand(10000)));
 
+# Generating the config file for this test
+our @config;
+our @use;
+
 mkdir($dir);
-write_text("$dir/config", <<'EOT');
+my $config = <<'EOT';
 use App::Phoebe qw(@extensions @main_menu port);
 use Modern::Perl;
 push(@main_menu, "=> gemini://localhost:1965/do/test Test");
@@ -67,23 +71,11 @@ our $speed_bump_window = 5;
 package App::Phoebe;
 our @known_fingerprints = qw(
   sha256$0ba6ba61da1385890f611439590f2f0758760708d1375859b2184dcd8f855a00);
-1;
-EOT
 
-our @config;
-if (@config) {
-  mkdir("$dir/conf.d");
-  my $i = 0;
-  for my $config (@config) {
-    if ($config =~ /\n/) {
-      # make sure this is loaded at the very end
-      write_text("$dir/conf.d/__$i.pl", $config);
-      $i++;
-    } else {
-      copy("contrib/$config", "$dir/conf.d/$config") or die "Failed to install $config: $!";
-    }
-  }
-}
+EOT
+$config .= join("\n", @config) if @config;
+$config .= join("", map { "use App::Phoebe::$_;\n" } @use) if @use;
+write_text("$dir/config", $config);
 
 our $pid = fork();
 

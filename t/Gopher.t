@@ -28,17 +28,17 @@ our @hosts = qw(localhost 127.0.0.1); # localhost must come first
 our @spaces = qw(localhost/alex);
 our $dir;
 our $base;
-our @config = qw(gopher.pl);
+our @use = qw(Gopher);
 
 my $gopher_port = Mojo::IOLoop::Server->generate_port; # new port for Gopher
 my $gophers_port = Mojo::IOLoop::Server->generate_port; # new port for Gophers
 
 # make sure starting phoebe starts serving the gopher port, too
-push(@config, <<"EOF");
+our @config = (<<"EOF");
 package App::Phoebe::Gopher;
-\$gopher_port = $gopher_port;
-\$gophers_port = $gophers_port;
-\$gopher_host = $hosts[0];
+our \$gopher_port = $gopher_port;
+our \$gophers_port = $gophers_port;
+our \$gopher_host = "localhost";
 EOF
 
 require './t/test.pl';

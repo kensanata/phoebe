@@ -665,17 +665,17 @@ sub handle_url {
 sub handle_http_header {
   my $stream = shift;
   my $data = shift;
-  $log->debug("Reading HTTP headers");
+  # $log->debug("Reading HTTP headers");
   my @lines = split(/\r\n/, $data->{buffer}, -1); # including the empty line at the end
   foreach (@lines) {
     if (/^(\S+?): (.+?)\s*$/) {
       my $key = lc($1);
       $data->{headers}->{$key} = $2;
       my $data->{header_size} += length($_);
-      $log->debug("Header $key");
+      # $log->debug("Header $key");
     } elsif ($_ eq "") {
       $data->{buffer} =~ s/^.*?\r\n\r\n//s; # possibly HTTP body
-      $log->debug("Handle HTTP request");
+      # $log->debug("Handle HTTP request");
       $data->{headers}->{host} .= ":" . port($stream) if $data->{headers}->{host} and $data->{headers}->{host} !~ /:\d+$/;
       $log->debug("HTTP headers: " . join(", ", map { "$_ => '$data->{headers}->{$_}'" } keys %{$data->{headers}}));
       my $length = $data->{headers}->{'content-length'} || 0;

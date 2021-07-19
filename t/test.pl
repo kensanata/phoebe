@@ -77,7 +77,7 @@ EOT
 $config .= join("\n", @config) if @config;
 $config .= join("", map { "use App::Phoebe::$_;\n" } @use) if @use;
 if ($example) {
-  my $source = read_text("script/phoebe");
+  my $source = read_text("blib/lib/App/Phoebe.pm");
   $source =~ /^    # tested by $0\n((?:    .*\n|\t.*\n|\n)+)/m;
   $example = $1;
   $example =~ s/\t/        /g;

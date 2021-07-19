@@ -59,15 +59,15 @@ C<$log> is how you log things.
 A very simple example to add a contact mail at the bottom of every page; this
 works for both Gemini and the web:
 
-    package App::Phoebe;
-    use Modern::Perl;
-    our (@footer);
+    # tested by t/example-footer.t
+    use App::Phoebe qw(@footer);
     push(@footer, sub { '=> mailto:alex@alexschroeder.ch Mail' });
 
 This prints a very simply footer instead of the usual footer for Gemini, as the
 C<footer> function is redefined. At the same time, the C<@footer> array is still
 used for the web:
 
+    # tested by t/example-footer2.t
     package App::Phoebe;
     use Modern::Perl;
     our (@footer); # HTML only
@@ -75,15 +75,16 @@ used for the web:
     # footer sub is Gemini only
     no warnings qw(redefine);
     sub footer {
-      return '—' x 10 . "\n" . '=> mailto:alex@alexschroeder.ch Mail';
+      return "\n" . '—' x 10 . "\n" . '=> mailto:alex@alexschroeder.ch Mail';
     }
 
 This example also shows how to redefine existing code in your config file
 without the warning "Subroutine … redefined".
 
 Here's a more elaborate example to add a new action the main menu and a handler
-for it:
+for it, for Gemini only:
 
+    # tested by t/example-new-action.t
     package App::Phoebe;
     use Modern::Perl;
     our (@extensions, @main_menu);
@@ -102,6 +103,36 @@ for it:
       }
       return;
     }
+    1;
+
+Here's an example where we wrap one the subroutines in App::Phoebe: we keep a
+code reference to the original, substitute our own, and when it gets called, it
+first calls the old code to print some CSS, and then we append some CSS of our
+own. Also note how we import C<$log>.
+
+    # tested by t/example-dark-mode.t
+    package App::Phoebe::DarkMode;
+    use App::Phoebe qw($log);
+    no warnings qw(redefine);
+
+    # fully qualified because we're in a different package!
+    *old_serve_css_via_http = \&App::Phoebe::serve_css_via_http;
+    *App::Phoebe::serve_css_via_http = \&serve_css_via_http;
+
+    sub serve_css_via_http {
+      my $stream = shift;
+      old_serve_css_via_http($stream);
+      $log->info("Adding more CSS via HTTP (for dark mode)");
+      $stream->write(<<'EOT');
+    @media (prefers-color-scheme: dark) {
+       body { color: #eeeee8; background-color: #333333; }
+       a:link { color: #1e90ff }
+       a:hover { color: #63b8ff }
+       a:visited { color: #7a67ee }
+    }
+    EOT
+    }
+
     1;
 
 =cut

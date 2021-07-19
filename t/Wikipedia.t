@@ -18,6 +18,8 @@ use Test::More;
 use utf8; # tests contain UTF-8 characters and it matters
 
 our $base;
+our $host;
+our $port;
 our @use = qw(Wikipedia);
 
 plan skip_all => 'Contributions are an author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
@@ -49,5 +51,14 @@ like(query_gemini("$base/en?Project%20Gemini"),
 	qr/^20/, "Term");
 
 }
+
+like(query_web("GET /text/en/Test HTTP/1.0\r\nHost: localhost"),
+     qr/^HTTP\/1.1 301.*\r\nLocation: https:\/\/en.wikipedia.org\/wiki\/Test\r\n/, "Redirection to Wikipedia");
+
+like(query_web("GET /text/en/Test HTTP/1.0\r\nX-host: none"),
+     qr/^HTTP\/1.1 400/, "Error for borked request");
+
+like(query_gemini("$base/page/Test"),
+     qr/^20/, "Regular pages still get served");
 
 done_testing;

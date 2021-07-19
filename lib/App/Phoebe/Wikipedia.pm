@@ -35,7 +35,7 @@ use Text::SpanningTable;
 use List::Util qw(sum min max);
 use Encode;
 
-our $host = "vault.transjovian.org";
+our $host;
 
 # Wikipedia
 
@@ -78,7 +78,7 @@ sub wikipedia {
     $stream->write("User-agent: *\n");
     $stream->write("Disallow: /\n");
   } elsif (my ($lang, $term) = $url =~ m!^GET /(?:search/|text/|full/)?(?:([a-z][a-z][a-z]?)/)?(.*) HTTP/1\.[01]$!
-	   and ($host) = $headers->{host} =~ m!^$host(?::$port)?$!) {
+	   and $headers->{host} =~ m!^$host(?::$port)?$!) {
     $lang ||= "www";
     my $url = "https://$lang.wikipedia.org/wiki/$term";
     $log->info("Redirecting to $url");

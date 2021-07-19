@@ -46,6 +46,10 @@ t/Comments.t
 t/Css.t
 t/DebugIpNumbers.t
 t/encoding.t
+t/example-dark-mode.t
+t/example-footer.t
+t/example-footer2.t
+t/example-new-action.t
 t/Favicon.t
 t/Galleries.t
 t/gemini-diagnostics.t

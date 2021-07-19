@@ -6,24 +6,28 @@ Update `Changes` with user-visible changes.
 
 Check the copyright year in the `LICENSE`.
 
-Increase the version in `lib/App/phoebe.pm`.
-
-Use n.nn_nn for developer releases:
-
-```
-make distdir
-mv App-phoebe-3 App-phoebe-3.00_00
-tar czf App-phoebe-3.00_00
-```
-
 Double check the `MANIFEST`. Did we add new files that should be in
 here?
 
+```
+make manifest
+```
+
+Increase the version in `lib/App/Phoebe.pm`.
+
 Commit any changes and tag the release.
 
-Based on [How to upload a script to
-CPAN](https://www.perl.com/article/how-to-upload-a-script-to-cpan/) by
-David Farrell (2016):
+Prepare an upload by using n.nn_nn for a developer release:
+
+```
+make distdir
+mv App-phoebe-4 App-phoebe-4.00_00
+tar czf App-phoebe-4.00_00.tar.gz App-phoebe-4.00_00
+trash App-phoebe-4.00_00
+cpan-upload -u SCHROEDER App-phoebe-4.tar.gz
+```
+
+If you’re happy with the results:
 
 ```
 perl Makefile.PL && make && make dist

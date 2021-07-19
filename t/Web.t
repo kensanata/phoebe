@@ -22,6 +22,7 @@ our $host;
 our $port;
 our $base;
 our $dir;
+our @use = qw(Web);
 
 require './t/test.pl';
 

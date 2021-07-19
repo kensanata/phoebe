@@ -15,7 +15,8 @@
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
 package App::Phoebe::BlockFediverse;
-use App::Phoebe qw(@extensions http_error);
+use App::Phoebe qw(@extensions);
+use App::Phoebe::Web qw(http_error);
 use Modern::Perl;
 
 =head1 App::Phoebe::BlockFediverse

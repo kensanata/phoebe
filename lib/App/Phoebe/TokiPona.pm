@@ -29,6 +29,7 @@ No further configuration is necessary. Simply add it to your F<config> file:
 =cut
 
 package App::Phoebe::TokiPona;
+use App::Phoebe::Web;
 use App::Phoebe qw(@extensions $server $log);
 use File::Slurper qw(read_binary);
 use Modern::Perl;
@@ -59,8 +60,8 @@ sub serve_font_via_http {
 # CSS
 
 no warnings qw(redefine);
-*old_serve_css_via_http = \&App::Phoebe::serve_css_via_http;
-*App::Phoebe::serve_css_via_http = \&serve_css_via_http;
+*old_serve_css_via_http = \&App::Phoebe::Web::serve_css_via_http;
+*App::Phoebe::Web::serve_css_via_http = \&serve_css_via_http;
 
 sub serve_css_via_http {
   my $stream = shift;

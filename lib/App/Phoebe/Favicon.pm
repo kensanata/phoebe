@@ -33,6 +33,7 @@ be merged. 😃
 
 package App::Phoebe::Favicon;
 use App::Phoebe qw(@extensions $log);
+use App::Phoebe::Web;
 use Modern::Perl;
 
 push(@extensions, \&favicon);

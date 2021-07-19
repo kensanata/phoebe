@@ -2,17 +2,23 @@
 
 If you are using contributions or have a config that heavily interacts
 with the Phoebe code, this is a backwards-incompatible upgrade! Please
-review the documentation and rewrite your extensions. For example,
+review the documentation and rewrite your extensions.
+
+Review your conf.d folder; if you are linking any contributions from
+this directory, you will have to change the setup. For example,
 instead of linking web-edit.pl into your conf.d directory, you would
 edit your config file and add:
 
     use App::Phoebe::WebEdit;
 
-- Search is now case insensitive
+Serving a web site is now also plugin. Add the following to
+your config file:
 
-- Separated the Phoebe wiki code from the server startup script such
-  that developers can "use" App::Phoebe and get access to all the
-  variables and functions they need
+    use App::Phoebe::Web;
+
+Other changes:
+
+- Search is now case insensitive
 
 - Changed how contributions work: instead of linking extensions into
   your wiki dir's conf.d directory, you just "use" the appropriate

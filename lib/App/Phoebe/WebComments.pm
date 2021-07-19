@@ -31,10 +31,10 @@ There is no configuration. Simply add it to your F<config> file:
 =cut
 
 package App::Phoebe::WebComments;
-use App::Phoebe qw(@footer @extensions @request_handlers $server $log
-		   handle_http_header port space host_regex space_regex
-		   quote_html http_error wiki_dir with_lock bogus_hash
-		   to_url);
+use App::Phoebe qw(@footer @extensions @request_handlers $server $log port space
+		    host_regex space_regex quote_html wiki_dir with_lock
+		    bogus_hash to_url);
+use App::Phoebe::Web qw(handle_http_header http_error);
 use Modern::Perl;
 use URI::Escape;
 use File::Slurper qw(write_text);

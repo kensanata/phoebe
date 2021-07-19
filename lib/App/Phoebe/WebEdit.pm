@@ -25,9 +25,10 @@ There is no configuration. Simply add it to your F<config> file:
 =cut
 
 package App::Phoebe::WebEdit;
+use App::Phoebe::Web qw(handle_http_header http_error);
 use App::Phoebe qw(@footer @extensions @request_handlers @main_menu $server $log
-		   port space host_regex space_regex handle_http_header text
-		   with_lock wiki_dir bogus_hash http_error to_url quote_html);
+		   port space host_regex space_regex text with_lock wiki_dir
+		   bogus_hash to_url quote_html);
 use Encode qw(decode_utf8 encode_utf8);
 use File::Slurper qw(read_text write_text read_dir);
 use Modern::Perl;

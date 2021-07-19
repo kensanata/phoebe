@@ -15,7 +15,7 @@
 
 use Modern::Perl;
 use Test::More;
-use File::Slurper qw(write_text read_text);
+use File::Slurper qw(write_text read_text read_dir);
 use Mojo::IOLoop;
 use File::Copy;
 use Encode;
@@ -77,12 +77,17 @@ EOT
 $config .= join("\n", @config) if @config;
 $config .= join("", map { "use App::Phoebe::$_;\n" } @use) if @use;
 if ($example) {
-  my $source = read_text("blib/lib/App/Phoebe.pm");
-  $source =~ /^    # tested by $0\n((?:    .*\n|\t.*\n|\n)+)/m;
-  $example = $1;
-  $example =~ s/\t/        /g;
-  $example =~ s/^    //gm;
-  $config .= $example;
+  for my $file ("blib/lib/App/Phoebe.pm", map { "blib/lib/App/Phoebe/$_" } grep /\.pm$/, read_dir("blib/lib/App/Phoebe")) {
+    my $source = read_text($file);
+    if ($source =~ /^(    # tested by $0\n(?:    .*\n|\t.*\n|\n)+)/m) {
+      $example = $1;
+      $example =~ s/\t/        /g;
+      $example =~ s/^    //gm;
+      $config .= $example;
+      last;
+    }
+  }
+  like($example, qr/^# tested by $0\n/, "Example found");
 }
 $config .= "\n1;\n";
 write_text("$dir/config", $config);

@@ -17,7 +17,7 @@ use Modern::Perl;
 use Test::More;
 use File::Slurper qw(write_text write_binary read_binary);
 use utf8; # tests contain UTF-8 characters and it matters
-
+our @use = qw(Web);
 our $host;
 our @hosts = qw(127.0.0.1 localhost);
 our @spaces = qw(127.0.0.1/alex localhost/berta);

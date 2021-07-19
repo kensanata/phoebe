@@ -33,11 +33,12 @@ Then create F<default.css> and make it look good. 😁
 
 package App::Phoebe::Css;
 use App::Phoebe qw($server $log);
+use App::Phoebe::Web;
 use Modern::Perl;
 use File::Slurper qw(read_text);
 
 no warnings 'redefine';
-*App::Phoebe::serve_css_via_http = \&serve_css_via_http;
+*App::Phoebe::Web::serve_css_via_http = \&serve_css_via_http;
 
 sub serve_css_via_http {
   my $stream = shift;

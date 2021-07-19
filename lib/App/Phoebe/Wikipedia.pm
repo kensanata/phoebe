@@ -24,6 +24,9 @@ In your F<config> file, you need to specify which of your hosts it is:
     our $host = "vault.transjovian.org";
     use App::Phoebe::Wikipedia;
 
+You can also use L<App::Phoebe::Web> in which case web requests will get
+redirected to the actual Wikipedia.
+
 =cut
 
 package App::Phoebe::Wikipedia;
@@ -78,7 +81,7 @@ sub wikipedia {
     $stream->write("User-agent: *\n");
     $stream->write("Disallow: /\n");
   } elsif (my ($lang, $term) = $url =~ m!^GET /(?:search/|text/|full/)?(?:([a-z][a-z][a-z]?)/)?(.*) HTTP/1\.[01]$!
-	   and $headers->{host} =~ m!^$host(?::$port)?$!) {
+	   and $headers->{host} and $headers->{host} =~ m!^$host(?::$port)?$!) {
     $lang ||= "www";
     my $url = "https://$lang.wikipedia.org/wiki/$term";
     $log->info("Redirecting to $url");

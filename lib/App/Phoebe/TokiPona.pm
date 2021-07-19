@@ -59,28 +59,14 @@ sub serve_font_via_http {
 # CSS
 
 no warnings qw(redefine);
+*old_serve_css_via_http = \&App::Phoebe::serve_css_via_http;
 *App::Phoebe::serve_css_via_http = \&serve_css_via_http;
 
 sub serve_css_via_http {
   my $stream = shift;
-  $log->info("Serving CSS via HTTP (toki-pona)");
-  $stream->write("HTTP/1.1 200 OK\r\n");
-  $stream->write("Content-Type: text/css\r\n");
-  $stream->write("Cache-Control: public, max-age=86400, immutable\r\n"); # 24h
-  $stream->write("\r\n");
+  old_serve_css_via_http($stream);
+  $log->info("Adding more CSS via HTTP (for toki pona)");
   $stream->write(<<'EOT');
-html { max-width: 70ch; padding: 2ch; margin: auto; }
-body { color: #111111; background-color: #fffff8; }
-a:link { color: #0000ee }
-a:visited { color: #551a8b }
-a:hover { color: #7a67ee }
-@media (prefers-color-scheme: dark) {
-   body { color: #eeeee8; background-color: #333333; }
-   a:link { color: #1e90ff }
-   a:hover { color: #63b8ff }
-   a:visited { color: #7a67ee }
-}
-pre.poetry { font-family: serif; font-style: italic; }
 @font-face {
   font-family: linja-pona;
   src: url('/linja-pona-4.2.woff') format('woff');

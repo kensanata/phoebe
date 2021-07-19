@@ -143,7 +143,7 @@ sub wikipedia_print_link {
   my $term = shift;
   my $type = shift||"text";
   my $title = shift||$term;
-  $stream->write("=> /$type/$lang/" . uri_escape_utf8($term) . " $title\n");
+  $stream->write("=> /$type/$lang/" . uri_escape_utf8($term) . " " . encode_utf8($title) . "\n");
 }
 
 sub wikipedia_serve_text {

@@ -1,3 +1,21 @@
+#!/usr/bin/perl
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
+
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>.
+
+=encoding utf8
+
 =head1 App::Phoebe
 
 This module contains the core of the Phoebe wiki. Import functions and variables
@@ -871,6 +889,8 @@ sub serve_css_via_http {
   $stream->write("Cache-Control: public, max-age=86400, immutable\r\n"); # 24h
   $stream->write("\r\n");
   $stream->write("html { max-width: 70ch; padding: 2ch; margin: auto; color: #111; background: #ffe; }\n");
+  $stream->write(".del { color: rgb(222,56,43); }\n"); # diff: deleted
+  $stream->write(".ins { color: rgb(57,181,74); }\n"); # diff: inserted
 }
 
 sub quote_html {
@@ -1905,8 +1925,8 @@ sub serve_diff_via_http {
   my $old = text($stream, $host, $space, $id, $revision);
   diff($old, $new,
        sub { $stream->write(encode_utf8 "<p>$_\n") for @_ },
-       sub { $stream->write(encode_utf8 "<p style=\"color: rgb(222,56,43)\">" . join("<br>", map { $_||"⏎" } @_) . "\n") },
-       sub { $stream->write(encode_utf8 "<p style=\"color: rgb(57,181,74)\">" . join("<br>", map { $_||"⏎" } @_) . "\n") },
+       sub { $stream->write(encode_utf8 "<p class=\"del\">" . join("<br>", map { $_||"⏎" } @_) . "\n") },
+       sub { $stream->write(encode_utf8 "<p class=\"ins\">" . join("<br>", map { $_||"⏎" } @_) . "\n") },
        sub { "<strong>$_</strong>" });
 }
 

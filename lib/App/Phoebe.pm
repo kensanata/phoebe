@@ -133,10 +133,10 @@ our @EXPORT_OK = qw(@extensions @main_menu @footer $log $server $full_url_regex
 		    text save_page serve_index serve_page serve_raw serve_html
 		    serve_history serve_diff html_page to_html @request_handlers
 		    handle_request process_titan process_gemini valid_id
-		    valid_mime_type valid_size valid_token print_link
+		    valid_mime_type valid_size valid_token print_link all_logs
 		    gemini_link colourize modified changes diff bogus_hash
 		    quote_html write_page @known_fingerprints with_lock wiki_dir
-		    to_url handle_titan footer);
+		    to_url handle_titan footer atom rss files space_links);
 
 # Phoebe variables you can set in the config file
 
@@ -489,11 +489,6 @@ sub process_gemini {
       serve_spaces($stream, $host, $port);
     } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/data$!) {
       serve_data($stream, $host, space($stream, $host, $space));
-    } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?/do/source$!) {
-      success($stream, 'text/plain; charset=UTF-8');
-      seek DATA, 0, 0;
-      local $/ = undef; # slurp
-      $stream->write(encode_utf8 <DATA>);
     } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/match$!) {
       result($stream, "10", "Find page by name (Perl regex)");
     } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/match\?!) {
@@ -594,7 +589,7 @@ sub serve_main_menu {
       if @{$server->{wiki_space}} or keys %{$server->{host}} > 1;
   print_link($stream, $host, $space, "Download data", "do/data");
   # a requirement of the GNU Affero General Public License
-  print_link($stream, $host, undef, "Source code", "do/source");
+  $stream->write("=> https://metacpan.org/pod/App::phoebe Source code\n");
   $stream->write("\n");
 }
 
@@ -1174,25 +1169,6 @@ sub colourize {
     7 => "204;204;204");
     return join("", map { "\033[38;2;$rgb{$_};48;2;$rgb{$_}m$_" } split //, $code) . "\033[0m ";
   }
-  return $code;
-}
-
-# https://en.wikipedia.org/wiki/ANSI_escape_code#3/4_bit
-sub colourize_html {
-  my $stream = shift;
-  my $code = shift;
-  my %rgb = (
-    0 => "0,0,0",
-    1 => "222,56,43",
-    2 => "57,181,74",
-    3 => "255,199,6",
-    4 => "0,111,184",
-    5 => "118,38,113",
-    6 => "44,181,233",
-    7 => "204,204,204");
-  $code = join("", map {
-    "<span style=\"color: rgb($rgb{$_}); background-color: rgb($rgb{$_})\">$_</span>";
-	       } split //, $code);
   return $code;
 }
 

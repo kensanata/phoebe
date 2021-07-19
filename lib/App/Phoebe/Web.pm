@@ -61,7 +61,8 @@ require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(http_error handle_http_header);
 use App::Phoebe qw(@request_handlers port space host_regex space_regex run_extensions text quote_html blog_pages
-		   html_page to_html $server $log @footer);
+		   html_page to_html wiki_dir changes all_logs pages rss atom files $server $log @footer
+		   space_links);
 use Encode qw(encode_utf8 decode_utf8);
 use URI::Escape;
 use Modern::Perl;
@@ -207,14 +208,6 @@ sub process_http {
     } elsif (($space, $n) = $request =~ m!^GET /do/all/atom HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_all_atom_via_http($stream, $host);
-    } elsif ($request =~ m!^GET (?:/($spaces))?/do/source HTTP/1\.[01]$!
-	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-      $stream->write("HTTP/1.1 200 OK\r\n");
-      $stream->write("Content-Type: text/plain; charset=UTF-8\r\n");
-      $stream->write("\r\n");
-      seek DATA, 0, 0;
-      local $/ = undef; # slurp
-      $stream->write(encode_utf8 <DATA>);
     } else {
       $log->debug("No http handler for $request");
       http_error($stream, "Don't know how to handle $request");
@@ -267,7 +260,7 @@ sub serve_main_menu_via_http {
   $stream->write(encode_utf8 "<li>" . link_html($stream, $host, undef, "Index of all spaces", "do/spaces") . "\n")
       if @{$server->{wiki_space}} or keys %{$server->{host}} > 1;
   # a requirement of the GNU Affero General Public License
-  $stream->write(encode_utf8 "<li>" . link_html($stream, $host, undef, "Source", "do/source") . "\n");
+  $stream->write("<li><a href=\"https://metacpan.org/pod/App::phoebe\">Source</a>\n");
   $stream->write("</ul>\n");
   $stream->write("</body>\n");
   $stream->write("</html>\n");
@@ -498,6 +491,25 @@ sub serve_all_changes_via_http {
     $filter);
   return unless $more;
   $stream->write("<p>" . link_html($stream, $host, undef, "More...", "do/all/changes/" . 10 * $n) . "\n");
+}
+
+# https://en.wikipedia.org/wiki/ANSI_escape_code#3/4_bit
+sub colourize_html {
+  my $stream = shift;
+  my $code = shift;
+  my %rgb = (
+    0 => "0,0,0",
+    1 => "222,56,43",
+    2 => "57,181,74",
+    3 => "255,199,6",
+    4 => "0,111,184",
+    5 => "118,38,113",
+    6 => "44,181,233",
+    7 => "204,204,204");
+  $code = join("", map {
+    "<span style=\"color: rgb($rgb{$_}); background-color: rgb($rgb{$_})\">$_</span>";
+	       } split //, $code);
+  return $code;
 }
 
 sub serve_rss_via_http {

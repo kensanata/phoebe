@@ -67,6 +67,7 @@ use Encode qw(encode_utf8 decode_utf8);
 use URI::Escape;
 use Modern::Perl;
 use List::Util qw(min);
+use utf8;
 
 unshift(@request_handlers, '^GET .* HTTP/1\.[01]$' => \&handle_http_header);
 

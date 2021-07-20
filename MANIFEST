@@ -21,6 +21,7 @@ lib/App/Phoebe/Spartan.pm
 lib/App/Phoebe/SpeedBump.pm
 lib/App/Phoebe/StaticFiles.pm
 lib/App/Phoebe/TokiPona.pm
+lib/App/Phoebe/Web.pm
 lib/App/Phoebe/WebComments.pm
 lib/App/Phoebe/WebEdit.pm
 lib/App/Phoebe/Wikipedia.pm
@@ -78,6 +79,7 @@ t/StaticFiles.t
 t/test.pl
 t/TokiPona.t
 t/virtual-hosting.t
+t/Web.t
 t/WebComments.t
 t/WebEdit.t
 t/Wikipedia.t

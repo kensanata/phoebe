@@ -19,6 +19,7 @@ lib/App/Phoebe/PageHeadings.pm
 lib/App/Phoebe/RegisteredEditorsOnly.pm
 lib/App/Phoebe/Spartan.pm
 lib/App/Phoebe/SpeedBump.pm
+lib/App/Phoebe/StaticFiles.pm
 lib/App/Phoebe/TokiPona.pm
 lib/App/Phoebe/WebComments.pm
 lib/App/Phoebe/WebEdit.pm
@@ -73,6 +74,7 @@ t/RegisteredEditorsOnly.t
 t/spaces.t
 t/Spartan.t
 t/SpeedBump.t
+t/StaticFiles.t
 t/test.pl
 t/TokiPona.t
 t/virtual-hosting.t

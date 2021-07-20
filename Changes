@@ -24,6 +24,9 @@ Other changes:
   your wiki dir's conf.d directory, you just "use" the appropriate
   module; all modules now come with documentation and tests
 
+- App::Phoebe::StaticFiles is new; use it to serve static files from
+  directories on your server
+
 - App::Phoebe::Ijirait is new; a MUSH, i.e. a shared world for all
   participants to build and interact in; script/ijirait is also new, a
   custom CLI client for the game

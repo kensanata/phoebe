@@ -14,25 +14,56 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=encoding utf8
+
 =head1 App::Phoebe::SpeedBump
 
-We want to block crawlers that are too fast or that don't follow the
+We want to block crawlers that are too fast or that don’t follow the
 instructions in robots.txt. We do this by keeping a list of recent visitors: for
 every IP number, we remember the timestamps of their last visits. If they make
 more than 30 requests in 60s, we block them for an ever increasing amount of
 seconds, starting with 60s and doubling every time this happens.
 
-There is no configuration required. Simply add it to your F<config> file:
+For every IP number, Phoebe also records whether the last 30 requests were
+“suspicious” or not. A suspicious request is a request that is “disallowed” for
+bots according to “robots.txt” (more or less). If 10 requests or more of the
+last 30 requests in the last 60 seconds are suspicious, the IP number is
+blocked.
 
-    use App::Phoebe::SpeedBump;
+When an IP number is blocked, it is blocked for 60s, and there’s a 120s
+probation time. When you’re blocked, Phoebe responds with a “44” response. This
+means: slow down!
 
-The exact number of requests and the length of this time window (in seconds) can
-be changed in the F<config> file. Here's one way to do that:
+If the IP number is unblocked but gives cause for another block in the probation
+time, it is blocked again and the blocking time is doubled: the IP is blocked
+for 120s and there’s 240s probation time. And if it happens again, it is doubled
+again.
 
+There is no configuration required, but adding a known fingerprint is suggested.
+The C</do/speed-bump> URL shows you more information, if you have a client
+certificate with a known fingerprint.
+
+The exact number of requests and the length of the time window (in seconds) can
+be changed in the F<config> file, too.
+
+ Here’s one way to do all that:
+
+    package App::Phoebe;
+    our @known_fingerprints = qw(
+      sha256$0ba6ba61da1385890f611439590f2f0758760708d1375859b2184dcd8f855a00);
     package App::Phoebe::SpeedBump;
     our $speed_bump_requests = 20;
     our $speed_bump_window = 20;
     use App::Phoebe::SpeedBump;
+
+Here’s how to get the fingerprint from a certificate named F<client-cert.pem>:
+
+    openssl x509 -in client-cert.pem -noout -sha256 -fingerprint \
+    | sed -e 's/://g' -e 's/SHA256 Fingerprint=/sha256$/' \
+    | tr [:upper:] [:lower:]
+
+This should give you the fingerprint in the correct format to add to the list
+above.
 
 =cut
 

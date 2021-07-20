@@ -14,11 +14,13 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=encoding utf8
+
 =head1 App::Phoebe::RegisteredEditorsOnly
 
 This extension limits editing to registered editors only.
 
-You need to set C<@known_fingerprints> in your F<config> file. Here's an example:
+You need to set C<@known_fingerprints> in your F<config> file. Here’s an example:
 
     package App::Phoebe;
     our @known_fingerprints = qw(
@@ -33,10 +35,12 @@ key!) and run the following:
     | sed -e 's/://g' -e 's/SHA256 Fingerprint=/sha256$/' \
     | tr [:upper:] [:lower:]
 
-This should give you your friend's fingerprint in the correct format to add to
-the list above.
+This should give you your friend’s fingerprint in the correct format to add to
+the list above. Add it, and restart the wiki.
 
-Make sure your main menu has a link to the login page:
+You should also have a login link somewhere such that people can login
+immediately. If they don’t, and they try to save, their client is going to ask
+them for a certificate and their edits may or may not be lost. It depends. 😅
 
     => /login Login
 
@@ -53,6 +57,11 @@ This code works by intercepting all C<titan:> links. Specifically:
       people can still edit pages. B<This is probably not what you want!>
 
 =back
+
+If a visitor uses a fingerprint that Phoebe doesn’t know, the fingerprint is
+printed in the log (if your log level is set to “info” or more), so you can get
+it from there in case the user can’t send you their client certificate, or tell
+you what the fingerprint is.
 
 =cut
 

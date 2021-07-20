@@ -909,6 +909,23 @@ There is no configuration. Simply add it to your `config` file:
 
     use App::Phoebe::BlockFediverse;
 
+Sure, we could also think of better caching and all that. I hate the fact that
+other developers are forcing us to build “software that scales” – I hate how
+they think that I have nothing better to do than think about blocking and
+caching. Phoebe is software for the Smolnet, not for people that keep thinking
+about scaling.
+
+The solution implemented is this: if the user agent of a HTTP request matches
+the regular expression, quit immediatly. The result:
+
+    $ curl --header "User-Agent: Pleroma" https://transjovian.org:1965/
+    Blocking Fediverse previews
+
+Yeah, we could respond with a error, but fediverse developers aren’t interested
+in a new architecture for this problem. They think the issue has been solved.
+See [#4486](https://github.com/tootsuite/mastodon/issues/4486), “Mastodon can be
+used as a DDOS tool.”
+
 # App::Phoebe::Chat
 
 For every wiki space, this creates a Gemini-based chat room. Every chat client
@@ -972,6 +989,11 @@ There is no configuration. Simply add it to your `config` file:
 
 Then create `default.css` and make it look good. 😁
 
+The cache control settings make sure that unless explicitly requested by a user
+via a reload button, the CSS file is only fetched once per day. That also means
+that if you change the CSS file, many users might only see a change after 24h.
+That’s the trade-off…
+
 # App::Phoebe::DebugIpNumbers
 
 By default the IP numbers of your visitors are not logged. This small extensions
@@ -1009,9 +1031,9 @@ the galleries).
 
 `$galleries_dir` is the directory where the galleries are. This assumes that
 your galleries are all in one directory. For example, under
-`/home/alex/alexschroeder.ch/gallery` you'd find `2016-altstetten` and many
-others like it. Under `2016-altstetten` you'd find the `data.json` file and
-the various subdirectories.
+`/home/alex/alexschroeder.ch/gallery` you’d find `2016-altstetten` and many
+others like it. Under `2016-altstetten` you’d find the `data.json` and
+`index.html` files (both of which get parsed), and the various subdirectories.
 
 In your `config` file:
 
@@ -1116,8 +1138,11 @@ heap dump to its wiki data directory. See [Devel::MAT::UserGuide](https://metacp
 
 # App::Phoebe::Iapetus
 
-This allows known editors to upload files and pages. You need to set
-`@known_fingerprints` in your `config` file. Here's an example:
+This allows known editors to upload files and pages using the Iapetus protocol.
+See [Iapetus documentation](https://codeberg.org/oppenlab/iapetus).
+
+In order to be a known editor, you need to set `@known_fingerprints` in your
+`config` file. Here’s an example:
 
     package App::Phoebe;
     our @known_fingerprints;
@@ -1126,23 +1151,20 @@ This allows known editors to upload files and pages. You need to set
       sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
     use App::Phoebe::Iapetus;
 
-The way to do it is to request the _certificate_ from your friends (not their
-key!) and run the following, assuming the is named `client-cert.pem`:
+The way to do it is to run the following, assuming the certificate is named
+`client-cert.pem`:
 
     openssl x509 -in client-cert.pem -noout -sha256 -fingerprint \
     | sed -e 's/://g' -e 's/SHA256 Fingerprint=/sha256$/' \
     | tr [:upper:] [:lower:]
 
-This should give you your friend's fingerprint in the correct format to add to
-the list above.
+This should give you the fingerprint in the correct format to add to the list
+above.
 
 Make sure your main menu has a link to the login page. The login page allows
 people to pick the right certificate without interrupting their uploads.
 
     => /login Login
-
-This code works by handling `iapetus:` links. See
-[https://codeberg.org/oppenlab/iapetus](https://codeberg.org/oppenlab/iapetus) for more.
 
 # App::Phoebe::Ijirait
 
@@ -1241,11 +1263,28 @@ There is no configuration. Simply add it to your `config` file:
 
     use App::Phoebe::PageHeadings;
 
+Beware the consequences:
+
+Every time somebody visits the main page, the main page itself is read, and the
+ten blog pages are also read, in order to look for the headings to use; in some
+high traffic situations, this could be problematic.
+
+Every page needs to have a top level heading: the file name is no longer shown
+to users.
+
+Opening pages and looking for a top level heading doesn’t do regular parsing,
+thus if your first top level heading is actually inside code fences (“\`\`\`”) it
+still gets used.
+
+Beware the limitations:
+
+The code doesn’t do the same for requests over the web.
+
 # App::Phoebe::RegisteredEditorsOnly
 
 This extension limits editing to registered editors only.
 
-You need to set `@known_fingerprints` in your `config` file. Here's an example:
+You need to set `@known_fingerprints` in your `config` file. Here’s an example:
 
     package App::Phoebe;
     our @known_fingerprints = qw(
@@ -1260,10 +1299,12 @@ key!) and run the following:
     | sed -e 's/://g' -e 's/SHA256 Fingerprint=/sha256$/' \
     | tr [:upper:] [:lower:]
 
-This should give you your friend's fingerprint in the correct format to add to
-the list above.
+This should give you your friend’s fingerprint in the correct format to add to
+the list above. Add it, and restart the wiki.
 
-Make sure your main menu has a link to the login page:
+You should also have a login link somewhere such that people can login
+immediately. If they don’t, and they try to save, their client is going to ask
+them for a certificate and their edits may or may not be lost. It depends. 😅
 
     => /login Login
 
@@ -1275,6 +1316,11 @@ This code works by intercepting all `titan:` links. Specifically:
 - If you allow editing via the web using [App::Phoebe::WebEdit](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWebEdit), then those
       are not affected, since these edits use HTTP instead of Titan. Thus,
       people can still edit pages. **This is probably not what you want!**
+
+If a visitor uses a fingerprint that Phoebe doesn’t know, the fingerprint is
+printed in the log (if your log level is set to “info” or more), so you can get
+it from there in case the user can’t send you their client certificate, or tell
+you what the fingerprint is.
 
 # App::Phoebe::Spartan
 
@@ -1319,23 +1365,52 @@ denied…"
 
 # App::Phoebe::SpeedBump
 
-We want to block crawlers that are too fast or that don't follow the
+We want to block crawlers that are too fast or that don’t follow the
 instructions in robots.txt. We do this by keeping a list of recent visitors: for
 every IP number, we remember the timestamps of their last visits. If they make
 more than 30 requests in 60s, we block them for an ever increasing amount of
 seconds, starting with 60s and doubling every time this happens.
 
-There is no configuration required. Simply add it to your `config` file:
+For every IP number, Phoebe also records whether the last 30 requests were
+“suspicious” or not. A suspicious request is a request that is “disallowed” for
+bots according to “robots.txt” (more or less). If 10 requests or more of the
+last 30 requests in the last 60 seconds are suspicious, the IP number is
+blocked.
 
-    use App::Phoebe::SpeedBump;
+When an IP number is blocked, it is blocked for 60s, and there’s a 120s
+probation time. When you’re blocked, Phoebe responds with a “44” response. This
+means: slow down!
 
-The exact number of requests and the length of this time window (in seconds) can
-be changed in the `config` file. Here's one way to do that:
+If the IP number is unblocked but gives cause for another block in the probation
+time, it is blocked again and the blocking time is doubled: the IP is blocked
+for 120s and there’s 240s probation time. And if it happens again, it is doubled
+again.
 
-    package App::Phoebe::SpeedBump;
-    our $speed_bump_requests = 20;
-    our $speed_bump_window = 20;
-    use App::Phoebe::SpeedBump;
+There is no configuration required, but adding a known fingerprint is suggested.
+The `/do/speed-bump` URL shows you more information, if you have a client
+certificate with a known fingerprint.
+
+The exact number of requests and the length of the time window (in seconds) can
+be changed in the `config` file, too.
+
+    Here’s one way to do all that:
+
+       package App::Phoebe;
+       our @known_fingerprints = qw(
+         sha256$0ba6ba61da1385890f611439590f2f0758760708d1375859b2184dcd8f855a00);
+       package App::Phoebe::SpeedBump;
+       our $speed_bump_requests = 20;
+       our $speed_bump_window = 20;
+       use App::Phoebe::SpeedBump;
+
+Here’s how to get the fingerprint from a certificate named `client-cert.pem`:
+
+    openssl x509 -in client-cert.pem -noout -sha256 -fingerprint \
+    | sed -e 's/://g' -e 's/SHA256 Fingerprint=/sha256$/' \
+    | tr [:upper:] [:lower:]
+
+This should give you the fingerprint in the correct format to add to the list
+above.
 
 # App::Phoebe::StaticFiles
 

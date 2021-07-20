@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=encoding utf8
+
 =head1 App::Phoebe::Css
 
 By default, Phoebe comes with its own, minimalistic CSS when serving HTML
@@ -28,6 +30,11 @@ There is no configuration. Simply add it to your F<config> file:
     use App::Phoebe::Css;
 
 Then create F<default.css> and make it look good. 😁
+
+The cache control settings make sure that unless explicitly requested by a user
+via a reload button, the CSS file is only fetched once per day. That also means
+that if you change the CSS file, many users might only see a change after 24h.
+That’s the trade-off…
 
 =cut
 

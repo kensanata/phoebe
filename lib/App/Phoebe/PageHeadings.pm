@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=encoding utf8
+
 =head1 App::Phoebe::PageHeadings
 
 This extension hides the page name from visitors, unless they start digging.
@@ -27,6 +29,23 @@ one heading of your page.
 There is no configuration. Simply add it to your F<config> file:
 
     use App::Phoebe::PageHeadings;
+
+Beware the consequences:
+
+Every time somebody visits the main page, the main page itself is read, and the
+ten blog pages are also read, in order to look for the headings to use; in some
+high traffic situations, this could be problematic.
+
+Every page needs to have a top level heading: the file name is no longer shown
+to users.
+
+Opening pages and looking for a top level heading doesn’t do regular parsing,
+thus if your first top level heading is actually inside code fences (“```”) it
+still gets used.
+
+Beware the limitations:
+
+The code doesn’t do the same for requests over the web.
 
 =cut
 

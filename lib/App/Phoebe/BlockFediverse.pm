@@ -14,10 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package App::Phoebe::BlockFediverse;
-use App::Phoebe qw(@extensions);
-use App::Phoebe::Web qw(http_error);
-use Modern::Perl;
+=encoding utf8
 
 =head1 App::Phoebe::BlockFediverse
 
@@ -31,7 +28,29 @@ There is no configuration. Simply add it to your F<config> file:
 
     use App::Phoebe::BlockFediverse;
 
+Sure, we could also think of better caching and all that. I hate the fact that
+other developers are forcing us to build “software that scales” – I hate how
+they think that I have nothing better to do than think about blocking and
+caching. Phoebe is software for the Smolnet, not for people that keep thinking
+about scaling.
+
+The solution implemented is this: if the user agent of a HTTP request matches
+the regular expression, quit immediatly. The result:
+
+    $ curl --header "User-Agent: Pleroma" https://transjovian.org:1965/
+    Blocking Fediverse previews
+
+Yeah, we could respond with a error, but fediverse developers aren’t interested
+in a new architecture for this problem. They think the issue has been solved.
+See L<#4486|https://github.com/tootsuite/mastodon/issues/4486>, “Mastodon can be
+used as a DDOS tool.”
+
 =cut
+
+package App::Phoebe::BlockFediverse;
+use App::Phoebe qw(@extensions);
+use App::Phoebe::Web qw(http_error);
+use Modern::Perl;
 
 push(@extensions, \&block_fediverse);
 

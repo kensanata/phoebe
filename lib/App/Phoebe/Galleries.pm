@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=encoding utf8
+
 =head1 App::Phoebe::Galleries
 
 This extension only makes sense if you have image galleries created by
@@ -26,9 +28,9 @@ the galleries).
 
 C<$galleries_dir> is the directory where the galleries are. This assumes that
 your galleries are all in one directory. For example, under
-F</home/alex/alexschroeder.ch/gallery> you'd find F<2016-altstetten> and many
-others like it. Under F<2016-altstetten> you'd find the F<data.json> file and
-the various subdirectories.
+F</home/alex/alexschroeder.ch/gallery> you’d find F<2016-altstetten> and many
+others like it. Under F<2016-altstetten> you’d find the F<data.json> and
+F<index.html> files (both of which get parsed), and the various subdirectories.
 
 In your F<config> file:
 

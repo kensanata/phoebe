@@ -14,10 +14,15 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=encoding utf8
+
 =head1 App::Phoebe::Iapetus
 
-This allows known editors to upload files and pages. You need to set
-C<@known_fingerprints> in your F<config> file. Here's an example:
+This allows known editors to upload files and pages using the Iapetus protocol.
+See L<Iapetus documentation|https://codeberg.org/oppenlab/iapetus>.
+
+In order to be a known editor, you need to set C<@known_fingerprints> in your
+F<config> file. Here’s an example:
 
     package App::Phoebe;
     our @known_fingerprints;
@@ -26,23 +31,20 @@ C<@known_fingerprints> in your F<config> file. Here's an example:
       sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
     use App::Phoebe::Iapetus;
 
-The way to do it is to request the I<certificate> from your friends (not their
-key!) and run the following, assuming the is named F<client-cert.pem>:
+The way to do it is to run the following, assuming the certificate is named
+F<client-cert.pem>:
 
     openssl x509 -in client-cert.pem -noout -sha256 -fingerprint \
     | sed -e 's/://g' -e 's/SHA256 Fingerprint=/sha256$/' \
     | tr [:upper:] [:lower:]
 
-This should give you your friend's fingerprint in the correct format to add to
-the list above.
+This should give you the fingerprint in the correct format to add to the list
+above.
 
 Make sure your main menu has a link to the login page. The login page allows
 people to pick the right certificate without interrupting their uploads.
 
     => /login Login
-
-This code works by handling C<iapetus:> links. See
-L<https://codeberg.org/oppenlab/iapetus> for more.
 
 =cut
 

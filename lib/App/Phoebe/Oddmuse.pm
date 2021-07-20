@@ -595,10 +595,10 @@ sub normal_to_free {
 }
 
 # this is required when combining gopher with oddmuse!
-*oddmuse_blog_pages_old = \&App::Phoebe::blog_pages;
-*App::Phoebe::blog_pages = \&oddmuse_blog_pages_new;
+*blog_pages_old = \&App::Phoebe::blog_pages;
+*App::Phoebe::blog_pages = \&blog_pages;
 
-sub oddmuse_blog_pages_new {
+sub blog_pages {
   my $stream = shift;
   my $host = shift;
   my $space = shift;
@@ -607,7 +607,7 @@ sub oddmuse_blog_pages_new {
     my $url = "$oddmuse_wikis{$host}?raw=1;action=index;match=^\\d\\d\\d\\d\\-\\d\\d-\\d\\d;n=$n";
     return map { s/_/ /g; $_ } split(/\n/, oddmuse_get_raw($stream, $url) // '');
   }
-  return oddmuse_blog_pages_old($stream, $host, $space, $n);
+  return blog_pages_old($stream, $host, $space, $n);
 }
 
 sub oddmuse_blog {

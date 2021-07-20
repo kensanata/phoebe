@@ -30,7 +30,7 @@ redirected to the actual Wikipedia.
 =cut
 
 package App::Phoebe::Wikipedia;
-use App::Phoebe qw($log @extensions $full_url_regex success result);
+use App::Phoebe qw($log @extensions $full_url_regex success result gemini_link);
 use URI::Escape;
 use Modern::Perl;
 use MediaWiki::API;

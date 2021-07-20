@@ -236,6 +236,7 @@ is($res->code, 302, "Oddmuse save Welcome page");
 $res = $ua->get("http://localhost:$oddmuse_port/wiki?title=2021-06-28&text=Hoi")->result;
 is($res->code, 302, "Oddmuse save blog page");
 like(query_gemini("$base"), qr(^Hello\n\nBlog:\n)m, "Main page including Welcome");
+like(query_gemini("$base/do/blog"), qr(2021-06-28)m, "Blog including 2021-06-28");
 
 # Unit testing of text formatting rules
 

@@ -128,11 +128,12 @@ our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(http_error handle_http_header);
 use App::Phoebe qw(@request_handlers port space host_regex space_regex run_extensions text quote_html blog_pages
 		   html_page to_html wiki_dir changes all_logs pages rss atom files $server $log @footer
-		   space_links);
+		   space_links diff);
+use File::Slurper qw(read_lines read_binary);
 use Encode qw(encode_utf8 decode_utf8);
-use URI::Escape;
-use Modern::Perl;
 use List::Util qw(min);
+use Modern::Perl;
+use URI::Escape;
 use utf8;
 
 unshift(@request_handlers, '^GET .* HTTP/1\.[01]$' => \&handle_http_header);

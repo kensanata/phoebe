@@ -67,6 +67,13 @@ write_text("$dir/page/Berta.gmi", "```type=poetry\nHello!\nYo!\n```\n");
 $page = query_web("GET /page/Berta HTTP/1.0\r\nhost: $host:$port");
 like($page, qr!<pre class="poetry">\nHello\!\nYo\!\n</pre>!, "Class got passed");
 
+$page = query_web("GET /history/Alex HTTP/1.0\r\nhost: $host:$port");
+like($page, qr!History!, "History rendered");
+like($page, qr!<a href="https://$host:$port/page/Alex">Alex \(current\)</a>!, "Change entry");
+
+$page = query_web("GET /diff/Alex/1 HTTP/1.0\r\nhost: $host:$port");
+like($page, qr!Differences for Alex!, "Diff rendered");
+
 $page = query_web("GET /do/changes HTTP/1.0\r\nhost: $host:$port");
 like($page, qr!Changes!, "Changes rendered");
 like($page, qr!<a href="https://$host:$port/page/Alex">Alex \(current\)</a>!, "Change entry");

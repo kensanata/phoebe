@@ -41,21 +41,23 @@ It's a wiki, which means that people can edit the pages without needing an
 account. All they need is a client that speaks both Gemini and Titan, and the
 password. The default password is "hello". 😃
 
-People can also access it using a regular web browser. They'll get a very
-simple, read-only version of the site. (But there's an extension that allows you
-to edit pages from the web, too.)
+Optionally, people can also access it using a regular web browser.
+
+Gemini itself is very simple network protocol, like Gopher or Finger, but with
+TLS. Gemtext is a very simple markup language, a bit like Markdown, but line
+oriented. See L</GEMTEXT>.
 
 To take a look for yourself, check out the test wiki via the web or via the web.
 
 =over
 
-=item L<https://gemini.circumlunar.space/clients.html>
+=item L<What is Gemini?|https://gemini.circumlunar.space/>
 
-=item L<https://git.sr.ht/~kr1sp1n/awesome-gemini>
+=item L<Gemini link collection|https://git.sr.ht/~kr1sp1n/awesome-gemini>
 
-=item L<https://transjovian.org:1965/test>
+=item L<Test site, via the web|https://transjovian.org:1965/test>
 
-=item L<gemini://transjovian.org/test>
+=item L<Test site, via Gemini|gemini://transjovian.org/test>
 
 =back
 
@@ -148,7 +150,8 @@ Manual install:
 
 =head2 Dependencies
 
-Perl libraries you need to install if you want to run Phoebe:
+If you are not using C<cpan> or C<cpanm> to install Phoebe, you'll need to
+install the following dependencies:
 
 =over
 

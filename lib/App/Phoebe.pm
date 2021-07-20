@@ -35,10 +35,10 @@ URLs; return 1 if you handle a URL; each code reference gets called with $stream
 (L<Mojo::IOLoop::Stream>), the first line of the request (a Gemini URL, a Gopher
 selector, a finger user, a HTTP request line), a hash reference for the headers
 (in the case of HTTP requests), and a buffer of bytes (e.g. for Titan or HTTP
-PUT or POST requests)
+PUT or POST requests).
 
 C<@main_menu> adds more lines to the main menu, possibly links that aren't
-simply links to existing pages
+simply links to existing pages.
 
 C<@footer> is a list of code references allowing you to add things like licenses
 or contact information to every page; each code reference gets called with
@@ -47,7 +47,7 @@ $stream (L<Mojo::IOLoop::Stream>), $host, $space, $id, $revision, and $format
 at the end; the alternative is to overwrite the C<footer> or C<html_footer> subs
 – the default implementation for Gemini adds History, Raw text and HTML link,
 and C<@footer> to the bottom of every page; the default implementation for HTTP
-just adds C<@footer> to the bottom of every page
+just adds C<@footer> to the bottom of every page.
 
 If you do hook into Phoebe's code, you probably want to make use of the
 following variables:

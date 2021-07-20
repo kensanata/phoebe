@@ -52,7 +52,9 @@ Phoebe - serve a wiki as a Gemini site
 - [App::Phoebe::RegisteredEditorsOnly](#app-phoebe-registerededitorsonly)
 - [App::Phoebe::Spartan](#app-phoebe-spartan)
 - [App::Phoebe::SpeedBump](#app-phoebe-speedbump)
+- [App::Phoebe::StaticFiles](#app-phoebe-staticfiles)
 - [App::Phoebe::TokiPona](#app-phoebe-tokipona)
+- [App::Phoebe::Web](#app-phoebe-web)
 - [App::Phoebe::WebComments](#app-phoebe-webcomments)
 - [App::Phoebe::WebEdit](#app-phoebe-webedit)
 - [App::Phoebe::Wikipedia](#app-phoebe-wikipedia)
@@ -820,10 +822,10 @@ URLs; return 1 if you handle a URL; each code reference gets called with $stream
 ([Mojo::IOLoop::Stream](https://metacpan.org/pod/Mojo%3A%3AIOLoop%3A%3AStream)), the first line of the request (a Gemini URL, a Gopher
 selector, a finger user, a HTTP request line), a hash reference for the headers
 (in the case of HTTP requests), and a buffer of bytes (e.g. for Titan or HTTP
-PUT or POST requests)
+PUT or POST requests).
 
 `@main_menu` adds more lines to the main menu, possibly links that aren't
-simply links to existing pages
+simply links to existing pages.
 
 `@footer` is a list of code references allowing you to add things like licenses
 or contact information to every page; each code reference gets called with
@@ -832,7 +834,7 @@ $stream ([Mojo::IOLoop::Stream](https://metacpan.org/pod/Mojo%3A%3AIOLoop%3A%3AS
 at the end; the alternative is to overwrite the `footer` or `html_footer` subs
 – the default implementation for Gemini adds History, Raw text and HTML link,
 and `@footer` to the bottom of every page; the default implementation for HTTP
-just adds `@footer` to the bottom of every page
+just adds `@footer` to the bottom of every page.
 
 If you do hook into Phoebe's code, you probably want to make use of the
 following variables:
@@ -845,6 +847,7 @@ A very simple example to add a contact mail at the bottom of every page; this
 works for both Gemini and the web:
 
     # tested by t/example-footer.t
+    use App::Phoebe::Web;
     use App::Phoebe qw(@footer);
     push(@footer, sub { '=> mailto:alex@alexschroeder.ch Mail' });
 
@@ -854,6 +857,7 @@ used for the web:
 
     # tested by t/example-footer2.t
     package App::Phoebe;
+    use App::Phoebe::Web;
     use Modern::Perl;
     our (@footer); # HTML only
     push(@footer, sub { '=> https://alexschroeder.ch/wiki/Contact Contact' });
@@ -888,36 +892,6 @@ for it, for Gemini only:
       }
       return;
     }
-    1;
-
-Here's an example where we wrap one the subroutines in App::Phoebe: we keep a
-code reference to the original, substitute our own, and when it gets called, it
-first calls the old code to print some CSS, and then we append some CSS of our
-own. Also note how we import `$log`.
-
-    # tested by t/example-dark-mode.t
-    package App::Phoebe::DarkMode;
-    use App::Phoebe qw($log);
-    no warnings qw(redefine);
-
-    # fully qualified because we're in a different package!
-    *old_serve_css_via_http = \&App::Phoebe::serve_css_via_http;
-    *App::Phoebe::serve_css_via_http = \&serve_css_via_http;
-
-    sub serve_css_via_http {
-      my $stream = shift;
-      old_serve_css_via_http($stream);
-      $log->info("Adding more CSS via HTTP (for dark mode)");
-      $stream->write(<<'EOT');
-    @media (prefers-color-scheme: dark) {
-       body { color: #eeeee8; background-color: #333333; }
-       a:link { color: #1e90ff }
-       a:hover { color: #63b8ff }
-       a:visited { color: #7a67ee }
-    }
-    EOT
-    }
-
     1;
 
 # App::Phoebe::BlockFediverse
@@ -1360,6 +1334,22 @@ be changed in the `config` file. Here's one way to do that:
     our $speed_bump_window = 20;
     use App::Phoebe::SpeedBump;
 
+# App::Phoebe::StaticFiles
+
+Serving static files... Sometimes it's just easier. All the static files are
+served from `/do/static`, without regard to wiki spaces. You need to define
+routes that map a path to your filesystem.
+
+    package App::Phoebe::StaticFiles;
+    our %routes = (
+      "zürich" => "/home/alex/Pictures/2020/Zürich",
+      "amaryllis" => "/home/alex/Pictures/2021/Amaryllis", );
+    use App::Phoebe::StaticFiles;
+
+The setup does not allow recursive traversal of the file system.
+
+You still need to add a link to `/do/static` somewhere in your wiki.
+
 # App::Phoebe::TokiPona
 
 This extension adds rendering of Toki Pona glyphs to the web output of your
@@ -1371,6 +1361,46 @@ site. For this to work, you need to download the WOFF file from the Linja Pona
 No further configuration is necessary. Simply add it to your `config` file:
 
     use App::Phoebe::TokiPona;
+
+# App::Phoebe::Web
+
+This package allows visitors to use their web browsers to browse Phoebe. HTML is
+served via HTTP on the same port as everything else, i.e. 1965 by default.
+
+There is no configuration. Simply add it to your `config` file:
+
+    use App::Phoebe::Web;
+
+Here's an example where we wrap one the subroutines in App::Phoebe::Web: we keep
+a code reference to the original, substitute our own, and when it gets called,
+it first calls the old code to print some CSS, and then we append some CSS of
+our own. Also note how we import `$log`.
+
+    # tested by t/example-dark-mode.t
+    package App::Phoebe::DarkMode;
+    use App::Phoebe qw($log);
+    use App::Phoebe::Web;
+    no warnings qw(redefine);
+
+    # fully qualified because we're in a different package!
+    *old_serve_css_via_http = \&App::Phoebe::Web::serve_css_via_http;
+    *App::Phoebe::Web::serve_css_via_http = \&serve_css_via_http;
+
+    sub serve_css_via_http {
+      my $stream = shift;
+      old_serve_css_via_http($stream);
+      $log->info("Adding more CSS via HTTP (for dark mode)");
+      $stream->write(<<'EOT');
+    @media (prefers-color-scheme: dark) {
+       body { color: #eeeee8; background-color: #333333; }
+       a:link { color: #1e90ff }
+       a:hover { color: #63b8ff }
+       a:visited { color: #7a67ee }
+    }
+    EOT
+    }
+
+    1;
 
 # App::Phoebe::WebComments
 
@@ -1403,3 +1433,6 @@ In your `config` file, you need to specify which of your hosts it is:
     package App::Phoebe::Wikipedia;
     our $host = "vault.transjovian.org";
     use App::Phoebe::Wikipedia;
+
+You can also use [App::Phoebe::Web](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWeb) in which case web requests will get
+redirected to the actual Wikipedia.

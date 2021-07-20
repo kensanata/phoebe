@@ -14,19 +14,85 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=encoding utf8
+
 =head1 App::Phoebe::Web
 
-This package allows visitors to use their web browsers to browse Phoebe. HTML is
-served via HTTP on the same port as everything else, i.e. 1965 by default.
+Phoebe doesn’t have to live behind another web server like Apache or nginx. It
+can be a (simple) web server, too!
+
+This package gives web visitors read-only access to Phoebe. HTML is served via
+HTTP on the same port as everything else, i.e. 1965 by default.
 
 There is no configuration. Simply add it to your F<config> file:
 
     use App::Phoebe::Web;
 
-Here's an example where we wrap one the subroutines in App::Phoebe::Web: we keep
-a code reference to the original, substitute our own, and when it gets called,
-it first calls the old code to print some CSS, and then we append some CSS of
-our own. Also note how we import C<$log>.
+Beware: these days browser will refuse to connect to sites that have self-signed
+certificates. You’ll have to click buttons and make exceptions and all of that,
+or get your certificate from Let’s Encrypt or the like. That in turn is
+aggravating for your Gemini visitors, since you are changing the certificate
+every few months.
+
+If you want to allow web visitors to comment on your pages, see
+L<App::Phoebe::WebComments>; if you want to allow web visitors to edit pages,
+see L<App::Phoebe::WebEdit>.
+
+You can serve the wiki both on the standard Gemini port and on the standard
+HTTPS port:
+
+    phoebe --port=443 --port=1965
+
+Note that 443 is a priviledge port. Thus, you either need to grant Perl the
+permission to listen on a priviledged port, or you need to run Phoebe as a super
+user. Both are potential security risk, but the first option is much less of a
+problem, I think.
+
+If you want to try this, run the following as root:
+
+    setcap 'cap_net_bind_service=+ep' $(which perl)
+
+Verify it:
+
+    getcap $(which perl)
+
+If you want to undo this:
+
+    setcap -r $(which perl)
+
+If you don't do any of the above, you'll get a permission error on startup:
+"Mojo::Reactor::Poll: Timer failed: Can't create listen socket: Permission
+denied…" You could, of course, always use a traditional web server like Apache
+as a front-end, proxying all requests to your site on port 443 to port 1965.
+This server config also needs access to the same certificates that Phoebe is
+using, for port 443. The example below doesn’t rewrite C</.well-known> URLs
+because these are used by Let’s Encrypt and others.
+
+    <VirtualHost *:80>
+	ServerName transjovian.org
+	RewriteEngine on
+	# Do not redirect /.well-known URL
+	RewriteCond %{REQUEST_URI} !^/\.well-known/
+	RewriteRule ^/(.*) https://%{HTTP_HOST}:1965/$1
+    </VirtualHost>
+    <VirtualHost *:443>
+	ServerName transjovian.org
+	RewriteEngine on
+	# Do not redirect /.well-known URL
+	RewriteCond %{REQUEST_URI} !^/\.well-known/
+	RewriteRule ^/(.*) https://%{HTTP_HOST}:1965/$1
+	SSLEngine on
+	SSLCertificateFile      /var/lib/dehydrated/certs/transjovian.org/cert.pem
+	SSLCertificateKeyFile   /var/lib/dehydrated/certs/transjovian.org/privkey.pem
+	SSLCertificateChainFile /var/lib/dehydrated/certs/transjovian.org/chain.pem
+	SSLVerifyClient None
+    </VirtualHost>
+
+Here’s an example where we wrap one the subroutines in App::Phoebe::Web in order
+to change the default CSS that gets served. We keep a code reference to the
+original, substitute our own, and when it gets called, it first calls the old
+code to print some CSS, and then we append some CSS of our own. Also note how we
+import C<$log>.
 
     # tested by t/example-dark-mode.t
     package App::Phoebe::DarkMode;

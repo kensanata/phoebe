@@ -26,7 +26,6 @@ Phoebe - serve a wiki as a Gemini site
 - [Certificates and File Permission](#certificates-and-file-permission)
 - [Main Page and Title](#main-page-and-title)
 - [robots.txt](#robots-txt)
-- [Limited, read-only HTTP support](#limited-read-only-http-support)
 - [Configuration](#configuration)
 - [Wiki Spaces](#wiki-spaces)
 - [Tokens per Wiki Space](#tokens-per-wiki-space)
@@ -662,40 +661,6 @@ Note that if you've created your own `robots` page, and you haven't decided to
 disallow them all, then you also have to do the right thing for all your spaces,
 if you use them at all.
 
-## Limited, read-only HTTP support
-
-You can actually look at your wiki pages using a browser! But beware: these days
-browser will refuse to connect to sites that have self-signed certificates.
-You'll have to click buttons and make exceptions and all of that, or get your
-certificate from Let's Encrypt or the like. Anyway, it works in theory. If you
-went through the ["Quickstart"](#quickstart), visiting `https://localhost:1965/` should
-work!
-
-Notice that Phoebe doesn't have to live behind another web server like
-Apache or nginx. It's a (simple) web server, too!
-
-Here's how you could serve the wiki both on Gemini, and the standard HTTPS port,
-443:
-
-    phoebe --port=443 --port=1965
-
-Note that 443 is a priviledge port. Thus, you either need to grant Perl the
-permission to listen on a priviledged port, or you need to run Phoebe as a super
-user. Both are potential security risk, but the first option is much less of a
-problem, I think.
-
-If you want to try this, run the following as root:
-
-    setcap 'cap_net_bind_service=+ep' $(which perl)
-
-Verify it:
-
-    getcap $(which perl)
-
-If you want to undo this:
-
-    setcap -r $(which perl)
-
 ## Configuration
 
 See [App::Phoebe](https://metacpan.org/pod/App%3A%3APhoebe) for more information.
@@ -797,10 +762,8 @@ For example:
 
 As you might have guessed, the system is easy to tinker with, if you know some
 Perl. The Transjovian Council has a wiki space dedicated to Phoebe, and it
-includes a section with more configuration examples, including simple comments
-(append-only via Gemini), complex comments (editing via Titan or the web),
-wholesale page editing via the web, user-agent blocking, and so on.
-[gemini://transjovian.org/](gemini://transjovian.org/) [https://transjovian.org:1965/](https://transjovian.org:1965/)
+includes a section with more configuration examples.
+See [gemini://transjovian.org/](gemini://transjovian.org/) or [https://transjovian.org:1965/](https://transjovian.org:1965/).
 
 # LICENSE
 
@@ -1442,17 +1405,81 @@ No further configuration is necessary. Simply add it to your `config` file:
 
 # App::Phoebe::Web
 
-This package allows visitors to use their web browsers to browse Phoebe. HTML is
-served via HTTP on the same port as everything else, i.e. 1965 by default.
+Phoebe doesn’t have to live behind another web server like Apache or nginx. It
+can be a (simple) web server, too!
+
+This package gives web visitors read-only access to Phoebe. HTML is served via
+HTTP on the same port as everything else, i.e. 1965 by default.
 
 There is no configuration. Simply add it to your `config` file:
 
     use App::Phoebe::Web;
 
-Here's an example where we wrap one the subroutines in App::Phoebe::Web: we keep
-a code reference to the original, substitute our own, and when it gets called,
-it first calls the old code to print some CSS, and then we append some CSS of
-our own. Also note how we import `$log`.
+Beware: these days browser will refuse to connect to sites that have self-signed
+certificates. You’ll have to click buttons and make exceptions and all of that,
+or get your certificate from Let’s Encrypt or the like. That in turn is
+aggravating for your Gemini visitors, since you are changing the certificate
+every few months.
+
+If you want to allow web visitors to comment on your pages, see
+[App::Phoebe::WebComments](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWebComments); if you want to allow web visitors to edit pages,
+see [App::Phoebe::WebEdit](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWebEdit).
+
+You can serve the wiki both on the standard Gemini port and on the standard
+HTTPS port:
+
+    phoebe --port=443 --port=1965
+
+Note that 443 is a priviledge port. Thus, you either need to grant Perl the
+permission to listen on a priviledged port, or you need to run Phoebe as a super
+user. Both are potential security risk, but the first option is much less of a
+problem, I think.
+
+If you want to try this, run the following as root:
+
+    setcap 'cap_net_bind_service=+ep' $(which perl)
+
+Verify it:
+
+    getcap $(which perl)
+
+If you want to undo this:
+
+    setcap -r $(which perl)
+
+If you don't do any of the above, you'll get a permission error on startup:
+"Mojo::Reactor::Poll: Timer failed: Can't create listen socket: Permission
+denied…" You could, of course, always use a traditional web server like Apache
+as a front-end, proxying all requests to your site on port 443 to port 1965.
+This server config also needs access to the same certificates that Phoebe is
+using, for port 443. The example below doesn’t rewrite `/.well-known` URLs
+because these are used by Let’s Encrypt and others.
+
+    <VirtualHost *:80>
+        ServerName transjovian.org
+        RewriteEngine on
+        # Do not redirect /.well-known URL
+        RewriteCond %{REQUEST_URI} !^/\.well-known/
+        RewriteRule ^/(.*) https://%{HTTP_HOST}:1965/$1
+    </VirtualHost>
+    <VirtualHost *:443>
+        ServerName transjovian.org
+        RewriteEngine on
+        # Do not redirect /.well-known URL
+        RewriteCond %{REQUEST_URI} !^/\.well-known/
+        RewriteRule ^/(.*) https://%{HTTP_HOST}:1965/$1
+        SSLEngine on
+        SSLCertificateFile      /var/lib/dehydrated/certs/transjovian.org/cert.pem
+        SSLCertificateKeyFile   /var/lib/dehydrated/certs/transjovian.org/privkey.pem
+        SSLCertificateChainFile /var/lib/dehydrated/certs/transjovian.org/chain.pem
+        SSLVerifyClient None
+    </VirtualHost>
+
+Here’s an example where we wrap one the subroutines in App::Phoebe::Web in order
+to change the default CSS that gets served. We keep a code reference to the
+original, substitute our own, and when it gets called, it first calls the old
+code to print some CSS, and then we append some CSS of our own. Also note how we
+import `$log`.
 
     # tested by t/example-dark-mode.t
     package App::Phoebe::DarkMode;

@@ -674,40 +674,6 @@ Note that if you've created your own C<robots> page, and you haven't decided to
 disallow them all, then you also have to do the right thing for all your spaces,
 if you use them at all.
 
-=head2 Limited, read-only HTTP support
-
-You can actually look at your wiki pages using a browser! But beware: these days
-browser will refuse to connect to sites that have self-signed certificates.
-You'll have to click buttons and make exceptions and all of that, or get your
-certificate from Let's Encrypt or the like. Anyway, it works in theory. If you
-went through the L</Quickstart>, visiting C<https://localhost:1965/> should
-work!
-
-Notice that Phoebe doesn't have to live behind another web server like
-Apache or nginx. It's a (simple) web server, too!
-
-Here's how you could serve the wiki both on Gemini, and the standard HTTPS port,
-443:
-
-    phoebe --port=443 --port=1965
-
-Note that 443 is a priviledge port. Thus, you either need to grant Perl the
-permission to listen on a priviledged port, or you need to run Phoebe as a super
-user. Both are potential security risk, but the first option is much less of a
-problem, I think.
-
-If you want to try this, run the following as root:
-
-    setcap 'cap_net_bind_service=+ep' $(which perl)
-
-Verify it:
-
-    getcap $(which perl)
-
-If you want to undo this:
-
-    setcap -r $(which perl)
-
 =head2 Configuration
 
 See L<App::Phoebe> for more information.
@@ -815,10 +781,8 @@ For example:
 
 As you might have guessed, the system is easy to tinker with, if you know some
 Perl. The Transjovian Council has a wiki space dedicated to Phoebe, and it
-includes a section with more configuration examples, including simple comments
-(append-only via Gemini), complex comments (editing via Titan or the web),
-wholesale page editing via the web, user-agent blocking, and so on.
-L<gemini://transjovian.org/> L<https://transjovian.org:1965/>
+includes a section with more configuration examples.
+See L<gemini://transjovian.org/> or L<https://transjovian.org:1965/>.
 
 =head1 LICENSE
 

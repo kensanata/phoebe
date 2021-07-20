@@ -314,8 +314,6 @@ sub speed_bump_status {
   $stream->write("=> /do/speed-bump menu\n");
 }
 
-my $resolver;
-
 sub speed_bump_cidr {
   my $ip = shift;
   my $now = shift;
@@ -327,12 +325,13 @@ sub speed_bump_cidr {
   my $reverse = $ip->reverse_ip();
   $reverse =~ s/in-addr\.arpa\.$/asn.routeviews.org/;
   $log->debug("DNS TXT query for $reverse");
-  $resolver ||= Net::DNS::Resolver->new;
   for my $rr (rr($reverse, "TXT")) {
     next unless $rr->type eq "TXT";
     my @data = $rr->txtdata;
     $log->debug("DNS TXT @data");
-    return join("/", @data[1..2]); # CIDR
+    $cidr = join("/", @data[1..2]);
+    $speed_data->{$ip}->{cidr} = $cidr;
+    return $cidr;
   }
 }
 

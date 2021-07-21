@@ -51,13 +51,13 @@ To take a look for yourself, check out the test wiki via the web or via the web.
 
 =over
 
-=item L<What is Gemini?|https://gemini.circumlunar.space/>
+=item * L<What is Gemini?|https://gemini.circumlunar.space/>
 
-=item L<Gemini link collection|https://git.sr.ht/~kr1sp1n/awesome-gemini>
+=item * L<Gemini link collection|https://git.sr.ht/~kr1sp1n/awesome-gemini>
 
-=item L<Test site, via the web|https://transjovian.org:1965/test>
+=item * L<Test site, via the web|https://transjovian.org:1965/test>
 
-=item L<Test site, via Gemini|gemini://transjovian.org/test>
+=item * L<Test site, via Gemini|gemini://transjovian.org/test>
 
 =back
 
@@ -130,9 +130,9 @@ an example config on how to enable editing via the web.
 
 =over
 
-=item L<https://transjovian.org:1965/phoebe/page/Configuration>
+=item * L<https://transjovian.org:1965/phoebe/page/Configuration>
 
-=item L<gemini://transjovian.org/phoebe/page/Configuration>
+=item * L<gemini://transjovian.org/phoebe/page/Configuration>
 
 =back
 
@@ -155,23 +155,23 @@ install the following dependencies:
 
 =over
 
-=item L<Algorithm::Diff>, or C<libalgorithm-diff-xs-perl>
+=item * L<Algorithm::Diff>, or C<libalgorithm-diff-xs-perl>
 
-=item L<File::ReadBackwards>, or C<libfile-readbackwards-perl>
+=item * L<File::ReadBackwards>, or C<libfile-readbackwards-perl>
 
-=item L<File::Slurper>, or C<libfile-slurper-perl>
+=item * L<File::Slurper>, or C<libfile-slurper-perl>
 
-=item L<Mojolicious>, or C<libmojolicious-perl>
+=item * L<Mojolicious>, or C<libmojolicious-perl>
 
-=item L<IO::Socket::SSL>, or C<libio-socket-ssl-perl>
+=item * L<IO::Socket::SSL>, or C<libio-socket-ssl-perl>
 
-=item L<Modern::Perl>, or C<libmodern-perl-perl>
+=item * L<Modern::Perl>, or C<libmodern-perl-perl>
 
-=item L<URI::Escape>, or C<liburi-escape-xs-perl>
+=item * L<URI::Escape>, or C<liburi-escape-xs-perl>
 
-=item L<Net::IDN::Encode>, or C<libnet-idn-encode-perl>
+=item * L<Net::IDN::Encode>, or C<libnet-idn-encode-perl>
 
-=item L<Encode::Locale>, or C<libencode-locale-perl>
+=item * L<Encode::Locale>, or C<libencode-locale-perl>
 
 =back
 
@@ -185,9 +185,9 @@ libraries:
 
 =over
 
-=item L<Pod::Markdown>, or C<libpod-markdown-perl>
+=item * L<Pod::Markdown>, or C<libpod-markdown-perl>
 
-=item L<Text::Slugify>, which has no Debian package, apparently 😭
+=item * L<Text::Slugify>, which has no Debian package, apparently 😭
 
 =back
 
@@ -261,11 +261,11 @@ with a list of common MIME types.
 
 =over
 
-=item C<image/jpeg> is for photos (usually with the C<jpg> extension)
+=item * C<image/jpeg> is for photos (usually with the C<jpg> extension)
 
-=item C<image/png> is for graphics (usually with the C<png> extension)
+=item * C<image/png> is for graphics (usually with the C<png> extension)
 
-=item C<audio/mpeg> is for sound (usually with the C<mp3> extension)
+=item * C<audio/mpeg> is for sound (usually with the C<mp3> extension)
 
 =back
 
@@ -434,55 +434,55 @@ own F<config> file.
 
 =over
 
-=item C<--wiki_token> is for the token that users editing pages have to provide;
-      the default is "hello"; you can use this option multiple times and give
-      different users different passwords, if you want
+=item * C<--wiki_token> is for the token that users editing pages have to
+      provide; the default is "hello"; you can use this option multiple times
+      and give different users different passwords, if you want
 
-=item C<--wiki_page> is an extra page to show in the main menu; you can use this
-      option multiple times; this is ideal for general items like I<About> or
-      I<Contact>
+=item * C<--wiki_page> is an extra page to show in the main menu; you can use
+      this option multiple times; this is ideal for general items like I<About>
+      or I<Contact>
 
-=item C<--wiki_main_page> is the page containing your header for the main page;
-      that's were you would put your ASCII art header, your welcome message, and
-      so on, see L</Main Page and Title> below
+=item * C<--wiki_main_page> is the page containing your header for the main
+      page; that's were you would put your ASCII art header, your welcome
+      message, and so on, see L</Main Page and Title> below
 
-=item C<--wiki_mime_type> is a MIME type to allow for uploads; text/plain is
+=item * C<--wiki_mime_type> is a MIME type to allow for uploads; text/plain is
       always allowed and doesn't need to be listed; you can also just list the
       type without a subtype, eg. C<image> will allow all sorts of images (make
       sure random people can't use your server to exchange images – set a
       password using C<--wiki_token>)
 
-=item C<--wiki_page_size_limit> is the number of bytes to allow for uploads,
+=item * C<--wiki_page_size_limit> is the number of bytes to allow for uploads,
       both for pages and for files; the default is 10000 (10kB)
 
-=item C<--host> is the hostname to serve; the default is C<localhost> – you
+=item * C<--host> is the hostname to serve; the default is C<localhost> – you
       probably want to pick the name of your machine, if it is reachable from
       the Internet; if you use it multiple times, each host gets its own wiki
       space (see C<--wiki_space> below)
 
-=item C<--port> is the port to use; the default is 1965
+=item * C<--port> is the port to use; the default is 1965
 
-=item C<--wiki_dir> is the wiki data directory to use; the default is either the
-      value of the C<PHOEBE_DATA_DIR> environment variable, or the "./wiki"
+=item * C<--wiki_dir> is the wiki data directory to use; the default is either
+      the value of the C<PHOEBE_DATA_DIR> environment variable, or the "./wiki"
       subdirectory
 
-=item C<--wiki_space> adds an extra space that acts as its own wiki; a
+=item * C<--wiki_space> adds an extra space that acts as its own wiki; a
       subdirectory with the same name gets created in your wiki data directory
       and thus you shouldn't name spaces like any of the files and directories
       already there (see L</Wiki Directory>); not that settings such as
       C<--wiki_page> and C<--wiki_main_page> apply to all spaces, but the page
       content will be different for every wiki space
 
-=item C<--cert_file> is the certificate PEM file to use; the default is
+=item * C<--cert_file> is the certificate PEM file to use; the default is
       F<cert.pem>
 
-=item C<--key_file> is the private key PEM file to use; the default is
+=item * C<--key_file> is the private key PEM file to use; the default is
       F<key.pem>
 
-=item C<--log_level> is the log level to use (C<fatal>, C<error>, C<warn>,
+=item * C<--log_level> is the log level to use (C<fatal>, C<error>, C<warn>,
       C<info>, C<debug>); the default is C<warn>
 
-=item C<--log_file> is the log file to use; the default is undefined, which
+=item * C<--log_file> is the log file to use; the default is undefined, which
       means that STDERR is used
 
 =back
@@ -687,11 +687,11 @@ three wikis in total:
 
 =over
 
-=item C<gemini://localhost/> is the main space that continues to be available
+=item * C<gemini://localhost/> is the main space that continues to be available
 
-=item C<gemini://localhost/alex/> is the wiki space for Alex
+=item * C<gemini://localhost/alex/> is the wiki space for Alex
 
-=item C<gemini://localhost/berta/> is the wiki space for Berta
+=item * C<gemini://localhost/berta/> is the wiki space for Berta
 
 =back
 

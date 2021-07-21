@@ -435,15 +435,15 @@ own `config` file.
 
 # OPTIONS
 
-- `--wiki_token` is for the token that users editing pages have to provide;
-      the default is "hello"; you can use this option multiple times and give
-      different users different passwords, if you want
-- `--wiki_page` is an extra page to show in the main menu; you can use this
-      option multiple times; this is ideal for general items like _About_ or
-      _Contact_
-- `--wiki_main_page` is the page containing your header for the main page;
-      that's were you would put your ASCII art header, your welcome message, and
-      so on, see ["Main Page and Title"](#main-page-and-title) below
+- `--wiki_token` is for the token that users editing pages have to
+      provide; the default is "hello"; you can use this option multiple times
+      and give different users different passwords, if you want
+- `--wiki_page` is an extra page to show in the main menu; you can use
+      this option multiple times; this is ideal for general items like _About_
+      or _Contact_
+- `--wiki_main_page` is the page containing your header for the main
+      page; that's were you would put your ASCII art header, your welcome
+      message, and so on, see ["Main Page and Title"](#main-page-and-title) below
 - `--wiki_mime_type` is a MIME type to allow for uploads; text/plain is
       always allowed and doesn't need to be listed; you can also just list the
       type without a subtype, eg. `image` will allow all sorts of images (make
@@ -456,8 +456,8 @@ own `config` file.
       the Internet; if you use it multiple times, each host gets its own wiki
       space (see `--wiki_space` below)
 - `--port` is the port to use; the default is 1965
-- `--wiki_dir` is the wiki data directory to use; the default is either the
-      value of the `PHOEBE_DATA_DIR` environment variable, or the "./wiki"
+- `--wiki_dir` is the wiki data directory to use; the default is either
+      the value of the `PHOEBE_DATA_DIR` environment variable, or the "./wiki"
       subdirectory
 - `--wiki_space` adds an extra space that acts as its own wiki; a
       subdirectory with the same name gets created in your wiki data directory
@@ -832,6 +832,30 @@ used for the web:
     sub footer {
       return "\n" . '—' x 10 . "\n" . '=> mailto:alex@alexschroeder.ch Mail';
     }
+
+This example shows you how to add a new route (a new path served by the wiki).
+Instead of just writing "Test" to the page, you could of course run arbitrary
+Perl code.
+
+    # tested by t/example-route.t
+    our @config = (<<'EOT');
+    use App::Phoebe qw(@extensions @main_menu port host_regex success);
+    use Modern::Perl;
+    push(@main_menu, "=> /do/test Test");
+    push(@extensions, \&serve_test);
+    sub serve_test {
+      my $stream = shift;
+      my $url = shift;
+      my $hosts = host_regex();
+      my $port = port($stream);
+      if ($url =~ m!^gemini://($hosts):$port/do/test$!) {
+        success($stream, 'text/plain; charset=UTF-8');
+        $stream->write("Test\n");
+        return 1;
+      }
+      return;
+    }
+    EOT
 
 This example also shows how to redefine existing code in your config file
 without the warning "Subroutine … redefined".
@@ -1276,8 +1300,8 @@ This code works by intercepting all `titan:` links. Specifically:
 - If you allow simple comments using [App::Phoebe::Comments](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AComments), then these
       are not affected, since these comments use Gemini instead of Titan. Thus,
       people can still leave comments.
-- If you allow editing via the web using [App::Phoebe::WebEdit](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWebEdit), then those
-      are not affected, since these edits use HTTP instead of Titan. Thus,
+- If you allow editing via the web using [App::Phoebe::WebEdit](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWebEdit), then
+      those are not affected, since these edits use HTTP instead of Titan. Thus,
       people can still edit pages. **This is probably not what you want!**
 
 If a visitor uses a fingerprint that Phoebe doesn’t know, the fingerprint is

@@ -48,12 +48,12 @@ This code works by intercepting all C<titan:> links. Specifically:
 
 =over
 
-=item If you allow simple comments using L<App::Phoebe::Comments>, then these
+=item * If you allow simple comments using L<App::Phoebe::Comments>, then these
       are not affected, since these comments use Gemini instead of Titan. Thus,
       people can still leave comments.
 
-=item If you allow editing via the web using L<App::Phoebe::WebEdit>, then those
-      are not affected, since these edits use HTTP instead of Titan. Thus,
+=item * If you allow editing via the web using L<App::Phoebe::WebEdit>, then
+      those are not affected, since these edits use HTTP instead of Titan. Thus,
       people can still edit pages. B<This is probably not what you want!>
 
 =back

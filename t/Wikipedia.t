@@ -50,6 +50,11 @@ like(query_gemini("$base/en?Project%20Gemini"),
    like(query_gemini("$base/text/en/Project%20Gemini"),
 	qr/^20/, "Term");
 
+   # test cases from the logs
+   like(query_gemini("$base/search/ja/%E3%83%AB%E3%82%B9%E3%83%84%E3%83%AA%E3%82%BE%E3%83%BC%E3%83%88"),
+	qr/^20/, "Search Japanese term");
+   like(query_gemini("$base/text/ja/%E3%83%AB%E3%82%B9%E3%83%84%E3%83%AA%E3%82%BE%E3%83%BC%E3%83%88"),
+	qr/^20/, "Show Japanese term");
 }
 
 like(query_web("GET /text/en/Test HTTP/1.0\r\nHost: localhost"),

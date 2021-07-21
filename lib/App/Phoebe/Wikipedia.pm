@@ -113,7 +113,7 @@ sub wikipedia_serve_search {
     return;
   }
   result($stream, "20", "text/gemini;lang=$lang");
-  $stream->write("# Searching for " . uri_unescape($term) . "\n");
+  $stream->write("# Searching for " . encode_utf8(uri_unescape($term)) . "\n");
   foreach (@$articles) {
     wikipedia_print_link($stream, $lang, $_->{title}, 'text', $_->{title});
   }

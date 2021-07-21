@@ -80,6 +80,30 @@ used for the web:
       return "\n" . '—' x 10 . "\n" . '=> mailto:alex@alexschroeder.ch Mail';
     }
 
+This example shows you how to add a new route (a new path served by the wiki).
+Instead of just writing "Test" to the page, you could of course run arbitrary
+Perl code.
+
+    # tested by t/example-route.t
+    our @config = (<<'EOT');
+    use App::Phoebe qw(@extensions @main_menu port host_regex success);
+    use Modern::Perl;
+    push(@main_menu, "=> /do/test Test");
+    push(@extensions, \&serve_test);
+    sub serve_test {
+      my $stream = shift;
+      my $url = shift;
+      my $hosts = host_regex();
+      my $port = port($stream);
+      if ($url =~ m!^gemini://($hosts):$port/do/test$!) {
+	success($stream, 'text/plain; charset=UTF-8');
+	$stream->write("Test\n");
+	return 1;
+      }
+      return;
+    }
+    EOT
+
 This example also shows how to redefine existing code in your config file
 without the warning "Subroutine … redefined".
 

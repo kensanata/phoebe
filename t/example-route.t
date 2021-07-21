@@ -15,29 +15,37 @@
 
 use Modern::Perl;
 use Test::More;
-use utf8;
 
-plan skip_all => 'Contributions are an author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
-
-our @use = qw(HeapDump);
+our $example = 1;
 
 our @config = (<<'EOT');
-package App::Phoebe;
-our @known_fingerprints = qw(
-    sha256$0ba6ba61da1385890f611439590f2f0758760708d1375859b2184dcd8f855a00);
+use App::Phoebe qw(@extensions @main_menu port);
+use Modern::Perl;
+push(@main_menu, "=> gemini://localhost:1965/do/test Test");
+push(@extensions, \&serve_test);
+sub serve_test {
+  my $stream = shift;
+  my $url = shift;
+  my $hosts = host_regex();
+  my $port = port($stream);
+  if ($url =~ m!^gemini://($hosts):$port/do/test$!) {
+    $stream->write("20 text/plain\r\n");
+    $stream->write("Test\n");
+    return 1;
+  }
+  return;
+}
 EOT
 
 require './t/test.pl';
 
 # variables set by test.pl
 our $base;
-our $dir;
 
-# no client cert
-my $page = query_gemini("$base/do/heap-dump", undef, 0);
-like($page, qr/^60/, "Client certificate required");
-$page = query_gemini("$base/do/heap-dump");
-like($page, qr/^20/, "Heap dump saved");
-ok(-f "$dir/phoebe.pmat", "File exists");
+like(query_gemini("$base/"),
+     qr/^=> gemini:\/\/localhost:1965\/do\/test Test\n/m, "Extension installed Test menu");
+
+like(query_gemini("$base/do/test"),
+     qr/^Test\n/m, "Extension runs");
 
 done_testing;

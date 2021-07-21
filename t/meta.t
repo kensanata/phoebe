@@ -31,7 +31,8 @@ for my $file (sort grep /\.pm$/, read_dir("blib/lib/App/Phoebe")) {
   ok($source =~ /^=head1 /m, "$file has some documentation");
 }
 
-for my $file (qw(script/phoebe), map { "blib/lib/App/Phoebe/$_" } sort grep /\.pm$/, read_dir("blib/lib/App/Phoebe")) {
+for my $file (qw(script/phoebe blib/lib/App/Phoebe.pm),
+	      map { "blib/lib/App/Phoebe/$_" } sort grep /\.pm$/, read_dir("blib/lib/App/Phoebe")) {
   my $source = read_text($file);
   for my $test ($source =~ /# tested by (\S+)/g) {
     ok(-f $test, "$test exists");

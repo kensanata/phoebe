@@ -17,9 +17,15 @@ use Modern::Perl;
 use Test::More;
 use utf8;
 
+plan skip_all => 'Contributions are an author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
+
 our @use = qw(RegisteredEditorsOnly);
 
-plan skip_all => 'Contributions are an author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
+our @config = (<<'EOT');
+package App::Phoebe;
+our @known_fingerprints = qw(
+    sha256$0ba6ba61da1385890f611439590f2f0758760708d1375859b2184dcd8f855a00);
+EOT
 
 require './t/test.pl';
 

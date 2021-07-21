@@ -46,33 +46,10 @@ our @use;
 
 mkdir($dir);
 my $config = <<'EOT';
-use App::Phoebe qw(@extensions @main_menu port);
+# package is App::Phoebe
 use Modern::Perl;
-push(@main_menu, "=> gemini://localhost:1965/do/test Test");
-push(@extensions, \&serve_test);
-sub serve_test {
-  my $stream = shift;
-  my $url = shift;
-  my $hosts = host_regex();
-  my $port = port($stream);
-  if ($url =~ m!^gemini://($hosts):$port/do/test$!) {
-    $stream->write("20 text/plain\r\n");
-    $stream->write("Test\n");
-    return 1;
-  }
-  return;
-}
 no warnings 'redefine';
 sub get_ip_numbers { '127.0.0.1' }
-
-package App::Phoebe::SpeedBump;
-our $speed_bump_requests = 2;
-our $speed_bump_window = 5;
-
-package App::Phoebe;
-our @known_fingerprints = qw(
-  sha256$0ba6ba61da1385890f611439590f2f0758760708d1375859b2184dcd8f855a00);
-
 EOT
 $config .= join("\n", @config) if @config;
 $config .= join("", map { "use App::Phoebe::$_;\n" } @use) if @use;
@@ -89,8 +66,7 @@ if ($example) {
   }
   # test $example at the end
 }
-$config .= "\n1;\n";
-write_text("$dir/config", $config);
+write_text("$dir/config", $config . "\n1;\n") if $config;
 
 our $pid = fork();
 
@@ -210,3 +186,5 @@ plan skip_all => "Giving up after ${total}s\n" unless $ok;
 # that the plan is not to skil all. If we don't wait, we'll get the following
 # error: "Parse errors: Bad plan. You planned 0 tests but ran 1."
 like($example, qr/^# tested by $0\n/, "Example found") if $ok and $example;
+
+1;

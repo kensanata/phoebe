@@ -27,6 +27,12 @@ plan skip_all => $msg if $msg;
 
 our @use = qw(Iapetus);
 
+our @config = (<<'EOT');
+package App::Phoebe;
+our @known_fingerprints = qw(
+    sha256$0ba6ba61da1385890f611439590f2f0758760708d1375859b2184dcd8f855a00);
+EOT
+
 require './t/test.pl';
 
 # variables set by test.pl

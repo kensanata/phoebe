@@ -112,6 +112,14 @@ like(query_gopher("alex/page/2021-02-05", 1), qr(^lo$)m, "Different Page Text in
 like(query_gopher("do/index"), qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gopher_port$/m, "Index");
 like(query_gopher("do/index", 1), qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gophers_port$/m, "Index via TLS");
 
+# match
+like(query_gopher("do/match\t05"), qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gopher_port$/m, "Match");
+like(query_gopher("do/match\t05", 1), qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gophers_port$/m, "Match via TLS");
+
+# search
+like(query_gopher("do/search\tyo"), qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gopher_port$/m, "Search");
+like(query_gopher("do/search\tyo", 1), qr/^02021-02-05\tpage\/2021-02-05\tlocalhost\t$gophers_port$/m, "Search via TLS");
+
 # verify that gemini still works
 $page = query_gemini("$base/");
 like($page, qr/Welcome to Phoebe/, "Main menu via Gemini");

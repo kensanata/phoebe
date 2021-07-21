@@ -160,7 +160,7 @@ our @EXPORT_OK = qw(@extensions @main_menu @footer $log $server $full_url_regex
 		    valid_mime_type valid_size valid_token print_link all_logs
 		    gemini_link colourize modified changes diff bogus_hash
 		    quote_html write_page @known_fingerprints with_lock wiki_dir
-		    to_url handle_titan footer atom rss files space_links);
+		    to_url handle_titan footer atom rss files space_links search);
 
 # Phoebe variables you can set in the config file
 

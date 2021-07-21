@@ -95,7 +95,7 @@ need some more code.
 
 package App::Phoebe::Gopher;
 use App::Phoebe qw(get_ip_numbers $log $server @extensions port space pages blog_pages
-		   space_regex reserved_regex run_extensions text);
+		   space_regex reserved_regex run_extensions text search);
 use Modern::Perl;
 use URI::Escape;
 use List::Util qw(min);
@@ -332,7 +332,7 @@ sub gopher_serve_match {
   my $query = shift;
   $log->info("Serving index of all pages matching $query via Gopher");
   my @pages = pages($stream, $host, $space, $query);
-  $stream->write("There are no pages.\n") unless @pages;
+  $stream->write("iThere are no pages matching $query.\n") unless @pages;
   for my $id (@pages) {
     gopher_link($stream, $host, $space, $id);
   }
@@ -344,11 +344,8 @@ sub gopher_serve_search {
   my $space = shift;
   my $query = shift;
   $log->info("Serving search for $query via Gopher");
-  my @pages = search($stream, $host, $space, $query, sub { highlight($stream, @_) });
-  $stream->write("There are no pages.\n") unless @pages;
-  for my $id (@pages) {
-    gopher_link($stream, $host, $space, $id);
-  }
+  my @pages = search($stream, $host, $space, $query, sub { gopher_link($stream, @_[0..2]) });
+  $stream->write("iThere are no pages containing $query.\n") unless @pages;
 }
 
 1;

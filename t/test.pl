@@ -87,7 +87,7 @@ if ($example) {
       last;
     }
   }
-  like($example, qr/^# tested by $0\n/, "Example found");
+  # test $example at the end
 }
 $config .= "\n1;\n";
 write_text("$dir/config", $config);
@@ -205,3 +205,8 @@ for (qw(1 1 1 1 1)) {
 }
 
 plan skip_all => "Giving up after ${total}s\n" unless $ok;
+
+# We cannot test $example up above; we must run this test once we established
+# that the plan is not to skil all. If we don't wait, we'll get the following
+# error: "Parse errors: Bad plan. You planned 0 tests but ran 1."
+like($example, qr/^# tested by $0\n/, "Example found") if $ok and $example;

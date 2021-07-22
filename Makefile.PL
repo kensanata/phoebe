@@ -85,7 +85,8 @@ dev:
 
 # Update the README file. The Perl script no only converts the POD
 # documentation to Markdown, it also adds a table of contents.
-README.md: script/phoebe lib/App/Phoebe.pm $(sort $(wildcard lib/App/Phoebe/*.pm))
+README.md: script/phoebe script/gemini script/titan script/spartan \
+  script/ijirait lib/App/Phoebe.pm $(sort $(wildcard lib/App/Phoebe/*.pm))
 	./update-readme $^
 
 # Run the test using multiple jobs.

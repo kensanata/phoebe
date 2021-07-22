@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::Chat
+=head1 NAME
+
+App::Phoebe::Chat - add a Gemini-based chat room to ever Phoebe wiki space
+
+=head1 DESCRIPTION
 
 For every wiki space, this creates a Gemini-based chat room. Every chat client
 needs two URLs, the "listen" and the "say" URL.

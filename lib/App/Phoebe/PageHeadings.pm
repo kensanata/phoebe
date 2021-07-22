@@ -16,7 +16,11 @@
 
 =encoding utf8
 
-=head1 App::Phoebe::PageHeadings
+=head1 NAME
+
+App::Phoebe::PageHeadings - use headings instead of file names
+
+=head1 DESCRIPTION
 
 This extension hides the page name from visitors, unless they start digging.
 

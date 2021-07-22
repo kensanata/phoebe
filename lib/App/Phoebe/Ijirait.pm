@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::Ijirait
+=head1 NAME
+
+App::Phoebe::Ijirait - a Gemini-based MUSH running on Phoebe
+
+=head1 DESCRIPTION
 
 The ijirait are red-eyed shape shifters, and a game one plays via the Gemini
 protocol, and Ijiraq is also one of the moons of Saturn.

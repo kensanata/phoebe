@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::WebComments
+=head1 NAME
+
+App::Phoebe::WebComments - allow comments on a Phoebe wiki via the web
+
+=head1 DESCRIPTION
 
 This extension allows visitors on the web to add comments.
 

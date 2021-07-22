@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::Wikipedia
+=head1 NAME
+
+App::Phoebe::Wikipedia - serve a Wikipedia proxy from Phoebe
+
+=head1 DESCRIPTION
 
 This extension turns one of your hosts into a Wikipedia proxy.
 

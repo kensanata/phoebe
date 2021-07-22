@@ -5,9 +5,10 @@ use Text::Slugify qw(slugify);
 use File::Slurper qw(read_text write_text);
 die "Read which Perl script?" unless @ARGV;
 my @pods = map { read_text($_) } @ARGV;
-# skip the first file, increase heading level for all subsequent files
-for (@pods[1..-1]) {
-  s/^=head(\d)/"=head".($1+1)/gem;
+for (@pods) {
+  s/^=head(\d) NAME\n\n(\S+).*/=head$1 $2/m; # replace NAME with the lib on the next paragraph
+  s/^=head(\d) DESCRIPTION\n\n//m; # remove DESCRIPTION
+  s/^=head(\d) ([A-Z ]+)$/"=head$1 ".ucfirst(lc($2))/gem; # change OPTIONS to Options
 }
 my $pod = join("\n", @pods);
 my $parser = Pod::Markdown->new;

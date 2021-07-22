@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::Spartan
+=head1 NAME
+
+App::Phoebe::Spartan - implement the Spartan protocol for Phoebe
+
+=head1 DESCRIPTION
 
 This extension serves your Gemini pages via the Spartan protocol and generates a
 few automatic pages for you, such as the main page.

@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::MokuPona
+=head1 NAME
+
+App::Phoebe::MokuPona - serve files from moku pona
+
+=head1 DESCRIPTION
 
 This serves files from your moku pona directory. See L<App::mokupona>.
 

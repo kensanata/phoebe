@@ -16,7 +16,11 @@
 
 =encoding utf8
 
-=head1 App::Phoebe::RegisteredEditorsOnly
+=head1 NAME
+
+App::Phoebe::RegisteredEditorsOnly -
+
+=head1 DESCRIPTION
 
 This extension limits editing to registered editors only.
 

@@ -16,7 +16,11 @@
 
 =encoding utf8
 
-=head1 App::Phoebe::Web
+=head1 NAME
+
+App::Phoebe::Web - all Phoebe to serve pages via the web
+
+=head1 DESCRIPTION
 
 Phoebe doesn’t have to live behind another web server like Apache or nginx. It
 can be a (simple) web server, too!

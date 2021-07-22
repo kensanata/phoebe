@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::Oddmuse
+=head1 NAME
+
+App::Phoebe::Oddmuse - act as a Gemini proxy for an Oddmuse wiki
+
+=head1 DESCRIPTION
 
 This extension allows you to serve files from an Oddmuse wiki instead of a real
 Phoebe wiki directory.

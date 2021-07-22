@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::Favicon
+=head1 NAME
+
+App::Phoebe::Favicon - serve a favicon via the web for Phoebe
+
+=head1 DESCRIPTION
 
 This adds an ominous looking Jupiter planet SVG icon as the favicon for the web
 view of your site.

@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::StaticFiles
+=head1 NAME
+
+App::Phoebe::StaticFiles - serve static files via a Phoebe wiki
+
+=head1 DESCRIPTION
 
 Serving static files... Sometimes it's just easier. All the static files are
 served from C</do/static>, without regard to wiki spaces. You need to define

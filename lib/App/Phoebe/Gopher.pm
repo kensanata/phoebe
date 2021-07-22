@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::Gopher
+=head1 NAME
+
+App::Phoebe::Gopher - serving a Phoebe wiki via the Gopher protocol
+
+=head1 DESCRIPTION
 
 This extension serves your Gemini pages via Gopher and generates a few automatic
 pages for you, such as the main page.

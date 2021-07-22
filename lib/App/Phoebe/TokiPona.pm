@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::TokiPona
+=head1 NAME
+
+App::Phoebe::TokiPona - serve a linja pona via the web
+
+=head1 DESCRIPTION
 
 This extension adds rendering of Toki Pona glyphs to the web output of your
 site. For this to work, you need to download the WOFF file from the Linja Pona

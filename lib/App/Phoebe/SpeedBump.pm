@@ -16,7 +16,11 @@
 
 =encoding utf8
 
-=head1 App::Phoebe::SpeedBump
+=head1 NAME
+
+App::Phoebe::SpeedBump - defend Phoebe against bots and leeches
+
+=head1 DESCRIPTION
 
 We want to block crawlers that are too fast or that don’t follow the
 instructions in robots.txt. We do this by keeping a list of recent visitors: for

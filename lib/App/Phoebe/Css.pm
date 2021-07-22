@@ -16,7 +16,11 @@
 
 =encoding utf8
 
-=head1 App::Phoebe::Css
+=head1 NAME
+
+App::Phoebe::Css - use a CSS file for Phoebe wiki served on the web
+
+=head1 DESCRIPTION
 
 By default, Phoebe comes with its own, minimalistic CSS when serving HTML
 rendition of pages: they all refer to C</default.css> and when this URL is

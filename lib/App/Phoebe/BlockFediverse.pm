@@ -16,7 +16,11 @@
 
 =encoding utf8
 
-=head1 App::Phoebe::BlockFediverse
+=head1 NAME
+
+App::Phoebe::BlockFediverse - block Fediverse instances from Phoebe wiki
+
+=head1 DESCRIPTION
 
 This extension blocks the Fediverse user agent from your website (Mastodon,
 Friendica, Pleroma). The reason is this: when these sites federate a status

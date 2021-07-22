@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::DebugIpNumbers
+=head1 NAME
+
+App::Phoebe::DebugIpNumbers - log visitor IP numbers for Phoebe
+
+=head1 DESCRIPTION
 
 By default the IP numbers of your visitors are not logged. This small extensions
 allows you to log them anyway if you're trying to figure out whether a bot is
@@ -23,6 +27,10 @@ going crazy.
 There is no configuration. Simply add it to your F<config> file:
 
     use App::Phoebe::DebugIpNumbers;
+
+Phoebe tries not to collect visitor data. Logging visitor IP numbers goes
+against this. If your aim is detect and block crazy bots by having C<fail2ban>
+watch the log files, consider using L<App::Phoebe::SpeedBump> instead.
 
 =cut
 

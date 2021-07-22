@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-=head1 App::Phoebe::HeapDump
+=head1 NAME
+
+App::Phoebe::HeapDump - debugging Phoebe memory leaks
+
+=head1 DESCRIPTION
 
 Perhaps you find yourself in a desperate situation: your server is leaking
 memory and you don't know where. This extension provides a way to use

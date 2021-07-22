@@ -1,12 +1,9 @@
-# NAME
-
-Phoebe - serve a wiki as a Gemini site
+# Phoebe
 
 **Table of Contents**
 
-- [Name](#name)
+- [Phoebe](#phoebe)
 - [Synopsis](#synopsis)
-- [Description](#description)
 - [Gemtext](#gemtext)
 - [Editing the wiki](#editing-the-wiki)
 - [Editing via the web](#editing-via-the-web)
@@ -33,6 +30,11 @@ Phoebe - serve a wiki as a Gemini site
 - [Multiple Certificates](#multiple-certificates)
 - [See also](#see-also)
 - [License](#license)
+- [Gemini](#gemini)
+- [Client Certificates](#client-certificates)
+- [Titan](#titan)
+- [Spartan](#spartan)
+- [Ijirait Client](#ijirait-client)
 - [App::Phoebe](#app-phoebe)
 - [App::Phoebe::BlockFediverse](#app-phoebe-blockfediverse)
 - [App::Phoebe::Chat](#app-phoebe-chat)
@@ -58,7 +60,7 @@ Phoebe - serve a wiki as a Gemini site
 - [App::Phoebe::WebEdit](#app-phoebe-webedit)
 - [App::Phoebe::Wikipedia](#app-phoebe-wikipedia)
 
-# SYNOPSIS
+# Synopsis
 
 **phoebe** \[**--host=**_hostname_ ...\] \[**--port=**_port_\]
 \[**--cert\_file=**_filename_\] \[**--key\_file=**_filename_\]
@@ -67,8 +69,6 @@ Phoebe - serve a wiki as a Gemini site
 \[**--wiki\_page=**_pagename_ ...\] \[**--wiki\_main\_page=**_pagename_\]
 \[**--wiki\_mime\_type=**_mimetype_ ...\] \[**--wiki\_page\_size\_limit=**_n_\]
 \[**--wiki\_space=**_space_ ...\]
-
-# DESCRIPTION
 
 Phoebe does two and a half things:
 
@@ -92,7 +92,7 @@ To take a look for yourself, check out the test wiki via the web or via the web.
 - [Test site, via the web](https://transjovian.org:1965/test)
 - [Test site, via Gemini](gemini://transjovian.org/test)
 
-# GEMTEXT
+# Gemtext
 
 Pages are written in gemtext, a lightweight hypertext format. You can use your
 favourite text editor to write them.
@@ -131,7 +131,7 @@ A line starting with ">", followed by a space and some text is a quote.
     The monologue at the end is fantastic, with the city lights and the rain.
     > I've seen things you people wouldn't believe.
 
-# EDITING THE WIKI
+# Editing the wiki
 
 How do you edit a Phoebe wiki? You need to use a Titan-enabled client.
 
@@ -162,7 +162,7 @@ an example config on how to enable editing via the web.
 - [https://transjovian.org:1965/phoebe/page/Configuration](https://transjovian.org:1965/phoebe/page/Configuration)
 - [gemini://transjovian.org/phoebe/page/Configuration](gemini://transjovian.org/phoebe/page/Configuration)
 
-# INSTALLATION
+# Installation
 
 Using `cpan`:
 
@@ -382,7 +382,7 @@ least it'll work.
     openssl req -new -x509 -newkey rsa \
     -days 1825 -nodes -out cert.pem -keyout key.pem
 
-# FILES
+# Files
 
 Your home directory should now also contain a wiki directory called `wiki`,
 your wiki directory. In it, you'll find a few more files:
@@ -433,7 +433,7 @@ even more Perl files where you can add new features and change how Phoebe works
 configurations that you can copy into this directory without having to edit your
 own `config` file.
 
-# OPTIONS
+# Options
 
 - `--wiki_token` is for the token that users editing pages have to
       provide; the default is "hello"; you can use this option multiple times
@@ -474,7 +474,7 @@ own `config` file.
 - `--log_file` is the log file to use; the default is undefined, which
       means that STDERR is used
 
-## FILES
+## Files
 
 If you allow uploads of binary files, these are stored separately from the
 regular pages; the wiki doesn't keep old revisions of files around. If somebody
@@ -484,7 +484,7 @@ You definitely don't want random people uploading all sorts of images, videos
 and binaries to your server. Make sure you set up those [tokens](#security)
 using `--wiki_token`!
 
-# NOTES
+# Notes
 
 ## Security
 
@@ -524,7 +524,7 @@ IP numbers, in which case you will need to tell them about it using in order to
 comply with the
 [GDPR](https://en.wikipedia.org/wiki/General_Data_Protection_Regulation).
 
-# EXAMPLE
+# Example
 
 Here's an example for how to start Phoebe. It listens on `localhost` port 1965,
 adds the "Welcome" and the "About" page to the main menu, and allows editing
@@ -758,23 +758,155 @@ For example:
         --cert_file=/var/lib/dehydrated/certs/alexschroeder.ch/cert.pem \
         --key_file=/var/lib/dehydrated/certs/alexschroeder.ch/privkey.pem
 
-# SEE ALSO
+# See also
 
 As you might have guessed, the system is easy to tinker with, if you know some
 Perl. The Transjovian Council has a wiki space dedicated to Phoebe, and it
 includes a section with more configuration examples.
 See [gemini://transjovian.org/](gemini://transjovian.org/) or [https://transjovian.org:1965/](https://transjovian.org:1965/).
 
-# LICENSE
+# License
 
 GNU Affero General Public License
+
+# Gemini
+
+This is a test client. All it does is dump the response.
+
+- The first line is the server fingerprint on STDERR
+- The second line is the response header on STDERR
+- The rest is the response itself
+
+Usage:
+
+    gemini gemini://alexschroeder.ch/Test
+
+Download an image:
+
+    ./gemini gemini://alexschroeder.ch:1965/do/gallery/2016-aminona/thumbs/Bisse_de_Tsittoret.jpg \
+      > Bisse_de_Tsittoret.jpg
+
+Download all the images on a page:
+
+    for url in $(./gemini gemini://alexschroeder.ch:1965/do/gallery/2016-aminona \
+                 | grep thumbs | cut --delimiter=' ' --fields=2); do
+      echo $url
+      ./gemini "$url" > $(basename "$url")
+    done
+
+In the shell script above, the first call to gemini gets the page with all the
+links, grep then filters for the links to thumbnails, extract the URL using cut
+(assuming a space between "=>" and the URL), and download each URL, and save the
+output in the filename indicated by the URL.
+
+## Client Certificates
+
+You can provide a certificate and a key file:
+
+        gemini --cert_file=cert.pem --key_file=key.pem \
+          gemini://campaignwiki.org/play/ijirait
+
+# Titan
+
+This is a script to upload content to a Titan-enabled site like Gemini Wiki. It
+takes a varying number of arguments:
+
+**--url=URL** specifies the Titan URL to use; this should be really similar to
+the Gemini URL you used to read the page.
+
+**--token=TOKEN** specifies the token to use; this is optional but spammers and
+vandals basically ensured that any site out on the Internet needs some sort of
+protection; how to get a token depends on the site you're editing.
+
+**--mime=MIMETYPE** specifies the MIME type to send to the server. If you don't
+specify a MIME type, the `file` utility is used to determine the MIME type of
+the file you're uploading.
+
+**FILES...** are the files to upload, if any; this is optional: you can also use
+a pipe, or type a few words by hand (terminating it with a Ctrl-D, the end of
+transmission byte).
+
+Note that if you specify multiple files, the URL must end in a slash and all the
+filenames are used as page names. So, uploading `Alex.gmi` and `Berta.gmi` to
+`titan://localhost/` will create `gemini://localhost/Alex` and
+`gemini://localhost/Berta`.
+
+The following two options control the use of client certificates:
+
+**--cert\_file=FILE** specifies an optional client certificate to use; if you
+don't specify one, the default is to try to use `client-cert.pem` in the
+current directory.
+
+**--key\_file=FILE** specifies an optional client certificate key to use; if you
+don't specify one, the default is to try to use `client-key.pem` in the current
+directory.
+
+Usage:
+
+    echo "This is my test." > test.txt
+    titan --url=titan://transjovian.org/test/raw/testing --token=hello text.txt
+
+Or from a pipe:
+
+    echo "This is my test." \
+      | titan --url=titan://transjovian.org/test/raw/testing --token=hello
+
+# Spartan
+
+This is a test client. All it does is dump the response.
+
+    spartan URL
+
+- The first line is the response header on STDERR
+- The rest is the response itself on STDOUT
+
+Usage:
+
+    spartan spartan://mozz.us/
+
+Send some text:
+
+    echo "Hello $USER!" | script/spartan spartan://mozz.us/echo
+
+# Ijirait Client
+
+This is a test client.
+
+First, generate your client certificate for as many or as few days as you like:
+
+    openssl req -new -x509 -newkey ec -subj "/CN=Alex" \
+      -pkeyopt ec_paramgen_curve:prime256v1 -days 100 \
+      -nodes -out cert.pem -keyout key.pem
+
+Then start this program to play:
+
+    ijirait --cert=cert.pem --key=key.pem \
+      --url=gemini://campaignwiki.org/play/ijirait
+
+You can also use it to stream, i.e. get notified of events in real time:
+
+    ijirait --cert=cert.pem --key=key.pem --stream \
+      --url=gemini://campaignwiki.org/play/ijirait/stream
+
+&#x3d;=head2 Dependencies
+
+Here are the Debian package names to satisfy the dependencies. Alternatively,
+use `cpan` or `cpanm` to install them.
+
+- [Modern::Perl](https://metacpan.org/pod/Modern%3A%3APerl) from `libmodern-perl-perl`
+- [Mojo::IOLoop](https://metacpan.org/pod/Mojo%3A%3AIOLoop) from `libmojolicious-perl`
+- [Term::ReadLine::Gnu](https://metacpan.org/pod/Term%3A%3AReadLine%3A%3AGnu) from `libterm-readline-gnu-perl`
+- [URI::Escape::XS](https://metacpan.org/pod/URI%3A%3AEscape%3A%3AXS) from `liburi-escape-xs-perl`
+- [Encode::Locale](https://metacpan.org/pod/Encode%3A%3ALocale) from `libencode-locale-perl`
+
+    \-item [Text::Wrapper](https://metacpan.org/pod/Text%3A%3AWrapper) from `libtext-wrapper-perl`
 
 # App::Phoebe
 
 This module contains the core of the Phoebe wiki. Import functions and variables
 from this module to write extensions, or to run it some other way. Usually,
-`script/phoebe` is used to start a Phoebe server. This is why all the necessary
-documentation can be found there.
+`script/phoebe` is used to start a Phoebe server. This is why all the
+documentation regarding server startup can be found there.
 
 This section describes some hooks you can use to customize your wiki using the
 `config` file, or using a Perl file (ending in `*.pl` or `*.pm`) in the
@@ -990,6 +1122,10 @@ going crazy.
 There is no configuration. Simply add it to your `config` file:
 
     use App::Phoebe::DebugIpNumbers;
+
+Phoebe tries not to collect visitor data. Logging visitor IP numbers goes
+against this. If your aim is detect and block crazy bots by having `fail2ban`
+watch the log files, consider using [App::Phoebe::SpeedBump](https://metacpan.org/pod/App%3A%3APhoebe%3A%3ASpeedBump) instead.
 
 # App::Phoebe::Favicon
 

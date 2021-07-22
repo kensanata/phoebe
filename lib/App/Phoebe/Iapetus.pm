@@ -16,7 +16,11 @@
 
 =encoding utf8
 
-=head1 App::Phoebe::Iapetus
+=head1 NAME
+
+App::Phoebe::Iapetus - uploads using the Iapetus protocol
+
+=head1 DESCRIPTION
 
 This allows known editors to upload files and pages using the Iapetus protocol.
 See L<Iapetus documentation|https://codeberg.org/oppenlab/iapetus>.

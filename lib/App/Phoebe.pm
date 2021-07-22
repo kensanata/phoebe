@@ -16,12 +16,16 @@
 
 =encoding utf8
 
-=head1 App::Phoebe
+=head1 NAME
+
+App::Phoebe - a Gemini-based wiki
+
+=head1 DESCRIPTION
 
 This module contains the core of the Phoebe wiki. Import functions and variables
 from this module to write extensions, or to run it some other way. Usually,
-F<script/phoebe> is used to start a Phoebe server. This is why all the necessary
-documentation can be found there.
+F<script/phoebe> is used to start a Phoebe server. This is why all the
+documentation regarding server startup can be found there.
 
 This section describes some hooks you can use to customize your wiki using the
 F<config> file, or using a Perl file (ending in F<*.pl> or F<*.pm>) in the

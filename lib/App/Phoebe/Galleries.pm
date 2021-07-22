@@ -16,7 +16,11 @@
 
 =encoding utf8
 
-=head1 App::Phoebe::Galleries
+=head1 NAME
+
+App::Phoebe::Galleries - serving sitelen mute image galleries via Gemini
+
+=head1 DESCRIPTION
 
 This extension only makes sense if you have image galleries created by
 F<fgallery> or L<App::sitelenmute>.

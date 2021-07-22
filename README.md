@@ -33,8 +33,7 @@
 - [Client Certificates](#client-certificates)
 - [Titan](#titan)
 - [Spartan](#spartan)
-- [ijirait](#ijirait)
-- [Dependencies](#dependencies)
+- [Ijirait](#ijirait)
 - [App::Phoebe](#app-phoebe)
 - [App::Phoebe::BlockFediverse](#app-phoebe-blockfediverse)
 - [App::Phoebe::Chat](#app-phoebe-chat)
@@ -871,7 +870,7 @@ Send some text:
 
     echo "Hello $USER!" | script/spartan spartan://mozz.us/echo
 
-# ijirait
+# Ijirait
 
 This is a command-line client for Ijirait, a Gemini-based MUSH that can be run
 by Phoebe. See [App::Phoebe::Ijirait](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AIjirait).
@@ -891,8 +890,6 @@ You can also use it to stream, i.e. get notified of events in real time:
 
     ijirait --cert=cert.pem --key=key.pem --stream \
       --url=gemini://campaignwiki.org/play/ijirait/stream
-
-## Dependencies
 
 Here are the Debian package names to satisfy the dependencies. Use `cpan` or
 `cpanm` to install them.

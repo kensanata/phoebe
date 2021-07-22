@@ -19,6 +19,6 @@ $parser->parse_string_document($pod);
 my @toc = $pod =~ /\n=head[12] (.*)/g;
 foreach (@toc) {$_ = ucfirst lc if /^[A-Z ]+$/ }
 my $toc = "**Table of Contents**\n\n"
-    . join("\n", map { "- [$_](#" . slugify($_) . ")" } @toc)
+    . join("\n", map { my $item = $_; s/::/-/g; "- [$item](#" . slugify($_) . ")" } @toc)
     . "\n\n";
 write_text('README.md', "# Phoebe Wiki\n\n" . $toc . $markdown);

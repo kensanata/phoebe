@@ -18,7 +18,7 @@
 
 =head1 NAME
 
-ijirait - a MUSH client for Ijirait
+Ijirait - a MUSH client for Ijirait
 
 =head1 DESCRIPTION
 
@@ -40,8 +40,6 @@ You can also use it to stream, i.e. get notified of events in real time:
 
     ijirait --cert=cert.pem --key=key.pem --stream \
       --url=gemini://campaignwiki.org/play/ijirait/stream
-
-=head2 Dependencies
 
 Here are the Debian package names to satisfy the dependencies. Use C<cpan> or
 C<cpanm> to install them.

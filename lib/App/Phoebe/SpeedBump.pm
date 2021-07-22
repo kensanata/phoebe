@@ -331,7 +331,7 @@ sub speed_bump_status {
   $stream->write(" From    To Warns Block Until Probation IP\n");
   for my $ip (sort {
     $speed_data->{$b}->{visits}->[0] <=> $speed_data->{$a}->{visits}->[0] } keys %$speed_data) {
-    $stream->write(sprintf("%s %s %2d/%2d %s %s     %s $ip %s\n",
+    $stream->write(sprintf("%s %s %2d/%2d %s %s     %s %-37s %s\n",
 			   speed_bump_time($speed_data->{$ip}->{visits}->[-1], $now),
 			   speed_bump_time($speed_data->{$ip}->{visits}->[0], $now),
 			   sum(@{$speed_data->{$ip}->{warnings}} || 0),
@@ -339,6 +339,7 @@ sub speed_bump_status {
 			   speed_bump_time($speed_data->{$ip}->{seconds}),
 			   speed_bump_time($speed_data->{$ip}->{until}, $now),
 			   speed_bump_time($speed_data->{$ip}->{probation}, $now),
+			   $ip,
 			   $speed_data->{$ip}->{cidr} || ""));
   }
   if (%$speed_cidr_data) {

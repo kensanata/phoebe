@@ -111,4 +111,13 @@ like($page, qr(^20), "Request 2");
 $page = query_gemini("$base/");
 like($page, qr(^44 60), "Request 3 is blocked for 60s");
 
+$page = query_gemini("$base/do/speed-bump/status");
+#  From    To Warns Block Until Probation IP
+#   -5s   -5s  2/ 2   60s   55s      115s 127.0.0.1
+like($page, qr(^ +0s +0s +2\/ 2\ +60s +60s +120s +127\.0\.0\.1)m, "Blocked for 60s!");
+
+# also making sure all the data from the old JSON file expired
+unlike($page, qr(18\.135\.104\.61), "IP number no longer found");
+unlike($page, qr(CIDR\n.*18\.132\.0\.0/14), "CIDR number no longer found");
+
 done_testing();

@@ -16,9 +16,14 @@
 
 =encoding utf8
 
-=head1 Ijirait Client
+=head1 NAME
 
-This is a test client.
+ijirait - a MUSH client for Ijirait
+
+=head1 DESCRIPTION
+
+This is a command-line client for Ijirait, a Gemini-based MUSH that can be run
+by Phoebe. See L<App::Phoebe::Ijirait>.
 
 First, generate your client certificate for as many or as few days as you like:
 
@@ -38,8 +43,8 @@ You can also use it to stream, i.e. get notified of events in real time:
 
 =head2 Dependencies
 
-Here are the Debian package names to satisfy the dependencies. Alternatively,
-use C<cpan> or C<cpanm> to install them.
+Here are the Debian package names to satisfy the dependencies. Use C<cpan> or
+C<cpanm> to install them.
 
 =over
 

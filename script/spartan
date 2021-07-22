@@ -16,19 +16,21 @@
 
 =encoding utf8
 
-=head1 Spartan
+=head1 NAME
 
-This is a test client. All it does is dump the response.
+Spartan - a command line client for the Spartan protocol
+
+=head1 SYNOPSIS
+
+B<titan> [B<--help>] [B<--verbose>] I<URL>
+
+=head1 DESCRIPTION
+
+This is a very simple test client. All it does is print the response. The header
+is printed to standard error so the rest can be redirected to get just the
+content.
 
     spartan URL
-
-=over
-
-=item The first line is the response header on STDERR
-
-=item The rest is the response itself on STDOUT
-
-=back
 
 Usage:
 
@@ -78,7 +80,7 @@ my ($host, $port) = split(/:/, $authority);
 $port ||= 300;
 $path ||= "/";
 
-say "Contacting $host:$port" if $verbose;
+warn "Contacting $host:$port\n" if $verbose;
 
 my $data = "";
 if (not -t *STDIN) {
@@ -115,7 +117,7 @@ Mojo::IOLoop->client({address => $host, port => $port} => sub {
     }});
   # Write request
   my $size = length($data);
-  say "Requesting $host $path $size" if $verbose;
+  warn "Requesting $host $path $size\n" if $verbose;
   $stream->write("$host $path $size\r\n$data")});
 
 # Start event loop if necessary

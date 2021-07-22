@@ -110,7 +110,8 @@ sub speed_bump {
 	 or $speed_data->{$ip}->{until} < $now)
 	and (not $speed_data->{$ip}->{probation}
 	     or $speed_data->{$ip}->{probation} < $now)
-	and (not @{$speed_data->{$ip}->{visits}}
+	and (not $speed_data->{$ip}->{visits}
+	     or @{$speed_data->{$ip}->{visits}} == 0
 	     or $speed_data->{$ip}->{visits}->[0] < $now - $speed_bump_window)) {
       delete($speed_data->{$ip});
     }

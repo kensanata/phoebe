@@ -297,7 +297,8 @@ sub speed_bump_compute_cidr_blocks {
     next unless $cidr;
     $count{$cidr}++;
     $until{$cidr} ||= $speed_data->{$ip}->{until};
-    $until{$cidr} = $speed_data->{$ip}->{until} if $speed_data->{$ip}->{until} > $until{$cidr};
+    $until{$cidr} = $speed_data->{$ip}->{until}
+      if $speed_data->{$ip}->{until} and $speed_data->{$ip}->{until} > $until{$cidr};
   }
   # only copy the blocked-until timestamp for those CIDRs that were listed at least three times
   for my $cidr (keys %count) {
@@ -328,7 +329,8 @@ sub speed_bump_status {
   $stream->write("```\n");
   #               <-4s> <-4s> <2/2> <-4s> <-4s>    <-4s>
   $stream->write(" From    To Warns Block Until Probation IP\n");
-  for my $ip (keys %$speed_data) {
+  for my $ip (sort {
+    $speed_data->{$b}->{visits}->[0] <=> $speed_data->{$a}->{visits}->[0] } keys %$speed_data) {
     $stream->write(sprintf("%s %s %2d/%2d %s %s     %s $ip %s\n",
 			   speed_bump_time($speed_data->{$ip}->{visits}->[-1], $now),
 			   speed_bump_time($speed_data->{$ip}->{visits}->[0], $now),

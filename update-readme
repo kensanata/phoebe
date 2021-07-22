@@ -7,7 +7,8 @@ die "Read which Perl script?" unless @ARGV;
 my @pods = map { read_text($_) } @ARGV;
 for (@pods) {
   s/^=head(\d) NAME\n\n(\S+).*/=head$1 $2/m; # replace NAME with the lib on the next paragraph
-  s/^=head(\d) DESCRIPTION\n\n//m; # remove DESCRIPTION
+  s/^=head(\d) DESCRIPTION\n\n//m;
+  s/^=head(\d) SYNOPSIS\n\n//m;
   s/^=head(\d) ([A-Z ]+)$/"=head$1 ".ucfirst(lc($2))/gem; # change OPTIONS to Options
 }
 my $pod = join("\n", @pods);
@@ -20,5 +21,4 @@ foreach (@toc) {$_ = ucfirst lc if /^[A-Z ]+$/ }
 my $toc = "**Table of Contents**\n\n"
     . join("\n", map { "- [$_](#" . slugify($_) . ")" } @toc)
     . "\n\n";
-$markdown =~ s/\n# /\n$toc# /; # not the first one
-write_text('README.md', $markdown);
+write_text('README.md', "# Phoebe Wiki\n\n" . $toc . $markdown);

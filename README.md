@@ -1,9 +1,8 @@
-# Phoebe
+# Phoebe Wiki
 
 **Table of Contents**
 
 - [Phoebe](#phoebe)
-- [Synopsis](#synopsis)
 - [Gemtext](#gemtext)
 - [Editing the wiki](#editing-the-wiki)
 - [Editing via the web](#editing-via-the-web)
@@ -34,7 +33,8 @@
 - [Client Certificates](#client-certificates)
 - [Titan](#titan)
 - [Spartan](#spartan)
-- [Ijirait Client](#ijirait-client)
+- [ijirait](#ijirait)
+- [Dependencies](#dependencies)
 - [App::Phoebe](#app-phoebe)
 - [App::Phoebe::BlockFediverse](#app-phoebe-blockfediverse)
 - [App::Phoebe::Chat](#app-phoebe-chat)
@@ -60,7 +60,7 @@
 - [App::Phoebe::WebEdit](#app-phoebe-webedit)
 - [App::Phoebe::Wikipedia](#app-phoebe-wikipedia)
 
-# Synopsis
+# Phoebe
 
 **phoebe** \[**--host=**_hostname_ ...\] \[**--port=**_port_\]
 \[**--cert\_file=**_filename_\] \[**--key\_file=**_filename_\]
@@ -771,11 +771,11 @@ GNU Affero General Public License
 
 # Gemini
 
-This is a test client. All it does is dump the response.
+**gemini** \[**--help**\] \[**--verbose**\] \[**--cert\_file=**_filename_
+**--key\_file=**_filename_\] _URL_
 
-- The first line is the server fingerprint on STDERR
-- The second line is the response header on STDERR
-- The rest is the response itself
+This is a very simple client. All it does is print the response. The header is
+printed to standard error so the rest can be redirected to get just the content.
 
 Usage:
 
@@ -783,7 +783,7 @@ Usage:
 
 Download an image:
 
-    ./gemini gemini://alexschroeder.ch:1965/do/gallery/2016-aminona/thumbs/Bisse_de_Tsittoret.jpg \
+    gemini gemini://alexschroeder.ch:1965/do/gallery/2016-aminona/thumbs/Bisse_de_Tsittoret.jpg \
       > Bisse_de_Tsittoret.jpg
 
 Download all the images on a page:
@@ -808,8 +808,10 @@ You can provide a certificate and a key file:
 
 # Titan
 
-This is a script to upload content to a Titan-enabled site like Gemini Wiki. It
-takes a varying number of arguments:
+**titan** \[**--help**\] **--url=**_URL_ \[**--token=**_TOKEN_\] \[**--mime=**_MIMETYPE_\]
+\[**--cert\_file=**_FILE_ **--key\_file=**_FILE_\] \[_FILES_ ...\]
+
+This is a script to upload content to a Titan-enabled site like Phoebe.
 
 **--url=URL** specifies the Titan URL to use; this should be really similar to
 the Gemini URL you used to read the page.
@@ -853,12 +855,13 @@ Or from a pipe:
 
 # Spartan
 
-This is a test client. All it does is dump the response.
+**titan** \[**--help**\] \[**--verbose**\] _URL_
+
+This is a very simple test client. All it does is print the response. The header
+is printed to standard error so the rest can be redirected to get just the
+content.
 
     spartan URL
-
-- The first line is the response header on STDERR
-- The rest is the response itself on STDOUT
 
 Usage:
 
@@ -868,9 +871,10 @@ Send some text:
 
     echo "Hello $USER!" | script/spartan spartan://mozz.us/echo
 
-# Ijirait Client
+# ijirait
 
-This is a test client.
+This is a command-line client for Ijirait, a Gemini-based MUSH that can be run
+by Phoebe. See [App::Phoebe::Ijirait](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AIjirait).
 
 First, generate your client certificate for as many or as few days as you like:
 
@@ -888,18 +892,17 @@ You can also use it to stream, i.e. get notified of events in real time:
     ijirait --cert=cert.pem --key=key.pem --stream \
       --url=gemini://campaignwiki.org/play/ijirait/stream
 
-&#x3d;=head2 Dependencies
+## Dependencies
 
-Here are the Debian package names to satisfy the dependencies. Alternatively,
-use `cpan` or `cpanm` to install them.
+Here are the Debian package names to satisfy the dependencies. Use `cpan` or
+`cpanm` to install them.
 
 - [Modern::Perl](https://metacpan.org/pod/Modern%3A%3APerl) from `libmodern-perl-perl`
 - [Mojo::IOLoop](https://metacpan.org/pod/Mojo%3A%3AIOLoop) from `libmojolicious-perl`
 - [Term::ReadLine::Gnu](https://metacpan.org/pod/Term%3A%3AReadLine%3A%3AGnu) from `libterm-readline-gnu-perl`
 - [URI::Escape::XS](https://metacpan.org/pod/URI%3A%3AEscape%3A%3AXS) from `liburi-escape-xs-perl`
 - [Encode::Locale](https://metacpan.org/pod/Encode%3A%3ALocale) from `libencode-locale-perl`
-
-    \-item [Text::Wrapper](https://metacpan.org/pod/Text%3A%3AWrapper) from `libtext-wrapper-perl`
+- [Text::Wrapper](https://metacpan.org/pod/Text%3A%3AWrapper) from `libtext-wrapper-perl`
 
 # App::Phoebe
 

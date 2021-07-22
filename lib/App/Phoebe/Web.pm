@@ -18,7 +18,7 @@
 
 =head1 NAME
 
-App::Phoebe::Web - all Phoebe to serve pages via the web
+App::Phoebe::Web - serve Phoebe wiki pages via the web
 
 =head1 DESCRIPTION
 

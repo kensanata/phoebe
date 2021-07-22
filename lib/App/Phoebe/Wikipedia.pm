@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Phoebe::Wikipedia - serve a Wikipedia proxy from Phoebe
+App::Phoebe::Wikipedia - act as Wikipedia proxy from Phoebe
 
 =head1 DESCRIPTION
 

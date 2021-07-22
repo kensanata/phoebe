@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Phoebe::Chat - add a Gemini-based chat room to ever Phoebe wiki space
+App::Phoebe::Chat - add a Gemini-based chat room for every Phoebe wiki space
 
 =head1 DESCRIPTION
 

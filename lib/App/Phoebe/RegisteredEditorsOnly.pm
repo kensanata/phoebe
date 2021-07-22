@@ -18,13 +18,14 @@
 
 =head1 NAME
 
-App::Phoebe::RegisteredEditorsOnly -
+App::Phoebe::RegisteredEditorsOnly - only known users may edit Phoebe wiki pages
 
 =head1 DESCRIPTION
 
-This extension limits editing to registered editors only.
-
-You need to set C<@known_fingerprints> in your F<config> file. Here’s an example:
+This extension limits editing to registered editors only. In order to register
+an editor, you need to know the client certificate's fingerprint, and add it to
+the Phoebe wiki F<config> file. Do this by setting C<@known_fingerprints>.
+Here’s an example:
 
     package App::Phoebe;
     our @known_fingerprints = qw(
@@ -32,15 +33,20 @@ You need to set C<@known_fingerprints> in your F<config> file. Here’s an examp
       sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
     use App::Phoebe::RegisteredEditorsOnly;
 
-The way to do it is to request the I<certificate> from your friends (not their
-key!) and run the following:
+If you have your editor’s client certificate (not their key!), run the
+following to get the fingerprint:
 
     openssl x509 -in client-cert.pem -noout -sha256 -fingerprint \
     | sed -e 's/://g' -e 's/SHA256 Fingerprint=/sha256$/' \
     | tr [:upper:] [:lower:]
 
-This should give you your friend’s fingerprint in the correct format to add to
-the list above. Add it, and restart the wiki.
+This should give you the fingerprint in the correct format to add to the list
+above. Add it, and restart Phoebe.
+
+If a visitor uses a fingerprint that Phoebe doesn’t know, the fingerprint is
+printed in the log (if your log level is set to “info” or more), so you can get
+it from there in case the user can’t send you their client certificate, or tell
+you what the fingerprint is.
 
 You should also have a login link somewhere such that people can login
 immediately. If they don’t, and they try to save, their client is going to ask
@@ -50,22 +56,15 @@ them for a certificate and their edits may or may not be lost. It depends. 😅
 
 This code works by intercepting all C<titan:> links. Specifically:
 
-=over
+If you allow simple comments using L<App::Phoebe::Comments>, then these are not
+affected, since these comments use Gemini instead of Titan. Thus, people can
+still leave comments.
 
-=item * If you allow simple comments using L<App::Phoebe::Comments>, then these
-      are not affected, since these comments use Gemini instead of Titan. Thus,
-      people can still leave comments.
-
-=item * If you allow editing via the web using L<App::Phoebe::WebEdit>, then
-      those are not affected, since these edits use HTTP instead of Titan. Thus,
-      people can still edit pages. B<This is probably not what you want!>
+If you allow editing via the web using L<App::Phoebe::WebEdit>, then those are
+not affected, since these edits use HTTP instead of Titan. Thus, people can
+still edit pages. B<This is probably not what you want!>
 
 =back
-
-If a visitor uses a fingerprint that Phoebe doesn’t know, the fingerprint is
-printed in the log (if your log level is set to “info” or more), so you can get
-it from there in case the user can’t send you their client certificate, or tell
-you what the fingerprint is.
 
 =cut
 

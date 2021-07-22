@@ -51,6 +51,16 @@ There is no configuration. Simply add it to your F<config> file:
 
     use App::Phoebe::Chat;
 
+As a user, first connect using a client that can stream:
+
+    gemini --cert_file=cert.pem --key_file=key.pem \
+      gemini://localhost/do/chat/listen
+
+Then connect with a client that let's you post what you type:
+
+    gemini-chat --cert_file=cert.pem --key_file=key.pem \
+      "gemini://localhost/do/chat/say"
+
 =cut
 
 package App::Phoebe::Chat;
@@ -134,7 +144,7 @@ sub chat_register {
   if (@lines) {
     $stream->write("Replaying some recent messages:\n");
     $stream->write(encode_utf8 "$_->{name}: $_->{text}\n") for @lines;
-    $stream->write("Welcome! 🥳🚀🚀\n"); # don't UTF-8 encode, as it is already encoded!
+    $stream->write(encode_utf8 "Welcome! 🥳🚀🚀\n");
   }
   $log->debug("Added $name to the chat");
 }

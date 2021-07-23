@@ -52,7 +52,7 @@ C<cpanm> to install them.
 
 =item L<Term::ReadLine::Gnu> from C<libterm-readline-gnu-perl>
 
-=item L<URI::Escape::XS> from C<liburi-escape-xs-perl>
+=item L<URI::Escape> from C<liburi-escape-xs-perl>
 
 =item L<Encode::Locale> from C<libencode-locale-perl>
 
@@ -68,13 +68,12 @@ use Pod::Text;
 use Getopt::Long;
 use Term::ReadLine; # install Term::ReadLine::Gnu
 use Term::ANSIColor qw(colorstrip colored);
-use URI::Escape::XS qw(uri_escape uri_unescape);
+use URI::Escape qw(uri_escape uri_unescape);
 use Encode::Locale;
 use Encode qw(decode_utf8 encode_utf8 decode encode);
 use Text::Wrapper;
 use File::Slurper qw(read_text write_text);
 use IPC::Open2;
-use utf8;
 
 my $cert;
 my $key;

@@ -20,7 +20,8 @@ prereq_ok("Testing prerequisites",
 	   qw(B Encode File::Basename File::Path File::Temp Getopt::Long
 	      IO::Socket::IP List::Util Mojo::IOLoop Mojo::IOLoop::Server
 	      Mojo::Log Mojo::JSON Mojo::UserAgent Pod::Text Socket Term::ReadLine
-	      Test::More utf8 warnings Exporter Data::Dumper MIME::Base64),
+	      Test::More utf8 warnings Exporter Data::Dumper MIME::Base64
+	      Pod::Checker Term::ANSIColor),
 	   # Skip modules used for some of the plugins. This is a judgement call.
 	   # Do we need them or not? Most people won't be installing these, I'm
 	   # sure.

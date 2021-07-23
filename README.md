@@ -14,7 +14,7 @@
 - [Troubleshooting](#troubleshooting)
 - [Files](#files)
 - [Options](#options)
-- [Files](#files)
+- [Uploads](#uploads)
 - [Notes](#notes)
 - [Security](#security)
 - [Privacy](#privacy)
@@ -461,7 +461,7 @@ own `config` file.
 - `--wiki_space` adds an extra space that acts as its own wiki; a
       subdirectory with the same name gets created in your wiki data directory
       and thus you shouldn't name spaces like any of the files and directories
-      already there (see ["Wiki Directory"](#wiki-directory)); not that settings such as
+      already there (see ["FILES"](#files)); not that settings such as
       `--wiki_page` and `--wiki_main_page` apply to all spaces, but the page
       content will be different for every wiki space
 - `--cert_file` is the certificate PEM file to use; the default is
@@ -473,7 +473,7 @@ own `config` file.
 - `--log_file` is the log file to use; the default is undefined, which
       means that STDERR is used
 
-## Files
+## Uploads
 
 If you allow uploads of binary files, these are stored separately from the
 regular pages; the wiki doesn't keep old revisions of files around. If somebody
@@ -1078,6 +1078,16 @@ There is no configuration. Simply add it to your `config` file:
 
     use App::Phoebe::Chat;
 
+As a user, first connect using a client that can stream:
+
+    gemini --cert_file=cert.pem --key_file=key.pem \
+      gemini://localhost/do/chat/listen
+
+Then connect with a client that let's you post what you type:
+
+    gemini-chat --cert_file=cert.pem --key_file=key.pem \
+      "gemini://localhost/do/chat/say"
+
 # App::Phoebe::Comments
 
 Add a comment link to footers such that visitors can comment via Gemini.
@@ -1405,9 +1415,10 @@ The code doesn’t do the same for requests over the web.
 
 # App::Phoebe::RegisteredEditorsOnly
 
-This extension limits editing to registered editors only.
-
-You need to set `@known_fingerprints` in your `config` file. Here’s an example:
+This extension limits editing to registered editors only. In order to register
+an editor, you need to know the client certificate's fingerprint, and add it to
+the Phoebe wiki `config` file. Do this by setting `@known_fingerprints`.
+Here’s an example:
 
     package App::Phoebe;
     our @known_fingerprints = qw(
@@ -1415,15 +1426,20 @@ You need to set `@known_fingerprints` in your `config` file. Here’s an example
       sha256$54c0b95dd56aebac1432a3665107d3aec0d4e28fef905020ed6762db49e84ee1);
     use App::Phoebe::RegisteredEditorsOnly;
 
-The way to do it is to request the _certificate_ from your friends (not their
-key!) and run the following:
+If you have your editor’s client certificate (not their key!), run the
+following to get the fingerprint:
 
     openssl x509 -in client-cert.pem -noout -sha256 -fingerprint \
     | sed -e 's/://g' -e 's/SHA256 Fingerprint=/sha256$/' \
     | tr [:upper:] [:lower:]
 
-This should give you your friend’s fingerprint in the correct format to add to
-the list above. Add it, and restart the wiki.
+This should give you the fingerprint in the correct format to add to the list
+above. Add it, and restart Phoebe.
+
+If a visitor uses a fingerprint that Phoebe doesn’t know, the fingerprint is
+printed in the log (if your log level is set to “info” or more), so you can get
+it from there in case the user can’t send you their client certificate, or tell
+you what the fingerprint is.
 
 You should also have a login link somewhere such that people can login
 immediately. If they don’t, and they try to save, their client is going to ask
@@ -1433,17 +1449,13 @@ them for a certificate and their edits may or may not be lost. It depends. 😅
 
 This code works by intercepting all `titan:` links. Specifically:
 
-- If you allow simple comments using [App::Phoebe::Comments](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AComments), then these
-      are not affected, since these comments use Gemini instead of Titan. Thus,
-      people can still leave comments.
-- If you allow editing via the web using [App::Phoebe::WebEdit](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWebEdit), then
-      those are not affected, since these edits use HTTP instead of Titan. Thus,
-      people can still edit pages. **This is probably not what you want!**
+If you allow simple comments using [App::Phoebe::Comments](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AComments), then these are not
+affected, since these comments use Gemini instead of Titan. Thus, people can
+still leave comments.
 
-If a visitor uses a fingerprint that Phoebe doesn’t know, the fingerprint is
-printed in the log (if your log level is set to “info” or more), so you can get
-it from there in case the user can’t send you their client certificate, or tell
-you what the fingerprint is.
+If you allow editing via the web using [App::Phoebe::WebEdit](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWebEdit), then those are
+not affected, since these edits use HTTP instead of Titan. Thus, people can
+still edit pages. **This is probably not what you want!**
 
 # App::Phoebe::Spartan
 

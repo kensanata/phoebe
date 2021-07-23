@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+=encoding utf8
+
 =head1 NAME
 
 App::Phoebe::Chat - add a Gemini-based chat room for every Phoebe wiki space

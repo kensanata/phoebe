@@ -64,8 +64,6 @@ If you allow editing via the web using L<App::Phoebe::WebEdit>, then those are
 not affected, since these edits use HTTP instead of Titan. Thus, people can
 still edit pages. B<This is probably not what you want!>
 
-=back
-
 =cut
 
 package App::Phoebe::RegisteredEditorsOnly;

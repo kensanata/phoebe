@@ -469,7 +469,7 @@ own F<config> file.
 =item * C<--wiki_space> adds an extra space that acts as its own wiki; a
       subdirectory with the same name gets created in your wiki data directory
       and thus you shouldn't name spaces like any of the files and directories
-      already there (see L</Wiki Directory>); not that settings such as
+      already there (see L</FILES>); not that settings such as
       C<--wiki_page> and C<--wiki_main_page> apply to all spaces, but the page
       content will be different for every wiki space
 
@@ -487,7 +487,7 @@ own F<config> file.
 
 =back
 
-=head2 FILES
+=head2 UPLOADS
 
 If you allow uploads of binary files, these are stored separately from the
 regular pages; the wiki doesn't keep old revisions of files around. If somebody

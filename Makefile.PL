@@ -16,6 +16,8 @@ WriteMakefile(
     'script/gemini',
     'script/gemini-chat',
     'script/titan',
+    'script/ijirait',
+    'script/spartan',
   ],
   PREREQ_PM => {
     # t/prerequisites.t is serious about all these!

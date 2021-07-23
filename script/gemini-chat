@@ -18,7 +18,12 @@
 
 =head1 NAME
 
-Gemini Chat - a client that keeps sending the lines you type to one URL
+gemini-chat - a command line client for the Gemini protocol to send lines you type
+
+=head1 SYNOPSIS
+
+B<gemini-chat> [B<--help>] [B<--cert_file=>I<filename>
+B<--key_file=>I<filename>] I<URL>
 
 =head1 DESCRIPTION
 
@@ -33,6 +38,10 @@ Then you connect the chat client to the I<say> URL using C<gemini-chat>:
 
     gemini-chat --cert=cert.pem --key=key.pem \
       gemini://transjovian.org/do/chat/say
+
+At the prompt, type your message. What effectively happens is that all you type
+ends up being sent to the server via a Gemini request:
+C<gemini://transjovian.org/do/chat/say?your%20text%20here>.
 
 To generate your client certificate for 100 days and using “Alex” as your common
 name:

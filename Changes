@@ -1,3 +1,8 @@
+NEW
+
+- Both ijirait and titan scripts no longer use --url= as there is
+  exactly one URL and it is mandatory.
+
 4.00
 
 If you are using contributions or have a config that heavily interacts

@@ -18,7 +18,7 @@
 
 =head1 NAME
 
-Gemini - a command line client for the Gemini protocol
+gemini - a command line client for the Gemini protocol
 
 =head1 SYNOPSIS
 

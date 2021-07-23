@@ -18,12 +18,12 @@
 
 =head1 NAME
 
-Titan - a text and file uploader for using the Titan protocol
+titan - a command line client to upload texts and files using the Titan protocol
 
 =head1 SYNOPSIS
 
-B<titan> [B<--help>] B<--url=>I<URL> [B<--token=>I<TOKEN>] [B<--mime=>I<MIMETYPE>]
-[B<--cert_file=>I<FILE> B<--key_file=>I<FILE>] [I<FILES> ...]
+B<titan> [B<--help>] [B<--token=>I<TOKEN>] [B<--mime=>I<MIMETYPE>]
+[B<--cert_file=>I<FILE> B<--key_file=>I<FILE>] I<URL> [I<FILES> ...]
 
 =head1 DESCRIPTION
 
@@ -84,14 +84,12 @@ my $cert_key;
 my $token;
 my $help;
 my $mime;
-my $url;
 
 GetOptions ("cert_file=s" => \$cert_file,
 	    "cert_key=s" => \$cert_key,
 	    "token=s"  => \$token,
 	    "mime=s"  => \$mime,
-	    "help"  => \$help,
-	    "url=s"  => \$url,)
+	    "help"  => \$help,)
     or die("Error in command line arguments\n");
 
 # Help comes first
@@ -102,7 +100,7 @@ if ($help) {
 }
 
 # Remaining arguments
-my (@files) = @ARGV;
+my ($url, @files) = @ARGV;
 $token //= '';
 
 die "⚠ You must provide an URL\n" unless $url;

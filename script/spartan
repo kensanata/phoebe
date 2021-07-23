@@ -18,11 +18,11 @@
 
 =head1 NAME
 
-Spartan - a command line client for the Spartan protocol
+spartan - a command line client for the Spartan protocol
 
 =head1 SYNOPSIS
 
-B<titan> [B<--help>] [B<--verbose>] I<URL>
+B<spartan> [B<--help>] [B<--verbose>] I<URL>
 
 =head1 DESCRIPTION
 

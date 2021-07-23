@@ -31,9 +31,12 @@
 - [License](#license)
 - [Gemini](#gemini)
 - [Client Certificates](#client-certificates)
-- [Titan](#titan)
-- [Spartan](#spartan)
+- [Gemini](#gemini)
 - [Ijirait](#ijirait)
+- [phoebe-ctl](#phoebe-ctl)
+- [Commands](#commands)
+- [Spartan](#spartan)
+- [Titan](#titan)
 - [App::Phoebe](#appphoebe)
 - [App::Phoebe::BlockFediverse](#appphoebeblockfediverse)
 - [App::Phoebe::Chat](#appphoebechat)
@@ -805,6 +808,141 @@ You can provide a certificate and a key file:
         gemini --cert_file=cert.pem --key_file=key.pem \
           gemini://campaignwiki.org/play/ijirait
 
+# Gemini
+
+All `gemini-chat` does is repeatedly post stuff to a Gemini URL. For example,
+assume that there is a Phoebe wiki with chat enabled via [App::Phoebe::Chat](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AChat).
+First, you connect to the _listen_ URL using `gemini`:
+
+    gemini --cert_file=cert.pem --key_file=key.pem \
+      gemini://localhost/do/chat/listen
+
+Then you connect the chat client to the _say_ URL using `gemini-chat`:
+
+    gemini-chat --cert=cert.pem --key=key.pem \
+      gemini://transjovian.org/do/chat/say
+
+To generate your client certificate for 100 days and using “Alex” as your common
+name:
+
+    openssl req -new -x509 -newkey ec -subj "/CN=Alex" \
+      -pkeyopt ec_paramgen_curve:prime256v1 -days 100 \
+      -nodes -out cert.pem -keyout key.pem
+
+# Ijirait
+
+This is a command-line client for Ijirait, a Gemini-based MUSH that can be run
+by Phoebe. See [App::Phoebe::Ijirait](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AIjirait).
+
+First, generate your client certificate for as many or as few days as you like:
+
+    openssl req -new -x509 -newkey ec -subj "/CN=Alex" \
+      -pkeyopt ec_paramgen_curve:prime256v1 -days 100 \
+      -nodes -out cert.pem -keyout key.pem
+
+Then start this program to play:
+
+    ijirait --cert=cert.pem --key=key.pem \
+      --url=gemini://campaignwiki.org/play/ijirait
+
+You can also use it to stream, i.e. get notified of events in real time:
+
+    ijirait --cert=cert.pem --key=key.pem --stream \
+      --url=gemini://campaignwiki.org/play/ijirait/stream
+
+Here are the Debian package names to satisfy the dependencies. Use `cpan` or
+`cpanm` to install them.
+
+- [Modern::Perl](https://metacpan.org/pod/Modern%3A%3APerl) from `libmodern-perl-perl`
+- [Mojo::IOLoop](https://metacpan.org/pod/Mojo%3A%3AIOLoop) from `libmojolicious-perl`
+- [Term::ReadLine::Gnu](https://metacpan.org/pod/Term%3A%3AReadLine%3A%3AGnu) from `libterm-readline-gnu-perl`
+- [URI::Escape::XS](https://metacpan.org/pod/URI%3A%3AEscape%3A%3AXS) from `liburi-escape-xs-perl`
+- [Encode::Locale](https://metacpan.org/pod/Encode%3A%3ALocale) from `libencode-locale-perl`
+- [Text::Wrapper](https://metacpan.org/pod/Text%3A%3AWrapper) from `libtext-wrapper-perl`
+
+# phoebe-ctl
+
+This script helps you maintain your Phoebe installation.
+
+- **--wiki\_dir=**_DIR_
+
+    This the wiki data directory to use; the default is either the value of the
+    `GEMINI_WIKI_DATA_DIR` environment variable, or the `./wiki` subdirectory. Use
+    it to specify a space, too.
+
+- **--log=**_NUMBER_
+
+    This is the log level to use. 1 only prints errors; 2 also prints warnings (this
+    is the default); 3 prints any kind of information; 4 prints all sorts of info
+    the developer wanted to see as they were fixing bugs.
+
+## Commands
+
+**phoebe-ctl help**
+
+This is what you're reading right now.
+
+**phoebe-ctl update-changes**
+
+This command looks at all the pages in the `page` directory and generates new
+entries for your changes log into `changes.log`.
+
+**phoebe-ctl erase-page**
+
+This command removes pages from the `page` directory, removes all the kept
+revisions in the `keep` directory, and all the mentions in the `change.log`.
+Use this if spammers and vandals created page names you want to eliminate.
+
+**phoebe-ctl html-export** \[**--source=**`subdirectory` ...\]
+\[**--target=**`directory`\] \[**--no-extension**\]
+
+This command converts all the pages in the subdirectories provided to HTML and
+writes the HTML files into the target directory. The subdirectories must exist
+inside your wiki data directory. The default wiki data directory is `wiki` and
+the default source subdirectory is undefined, so the actual files to be
+processed are `wiki/page/*.gmi`; if you're using virtual hosting, the
+subdirectory might be your host name; if you're using spaces, those need to be
+appended as well.
+
+Example:
+
+    phoebe-ctl html-export --wiki_dir=/home/alex/phoebe \
+      --source=transjovian.org \
+      --source=transjovian.org/phoebe \
+      --source=transjovian.org/gemini \
+      --source=transjovian.org/titan \
+      --target=/home/alex/transjovian.org
+
+This will create HTML files in `/home/alex/transjovian.org`,
+`/home/alex/transjovian.org/phoebe`, `/home/alex/transjovian.org/gemini`, and
+`/home/alex/transjovian.org/titan`.
+
+Note that the _links_ in these HTML files do not include the `.html` extension
+(e.g. `/test`), so this relies on your web server doing the right thing: if a
+visitor requests `/test` the web server must serve `/test.html`. If that
+doesn't work, perhaps using `--no-extension` is your best bet: the HTML files
+will be written without the `.html` extension. This should also work for local
+browsing, although it does look strange, all those pages with the `.html`
+extension.
+
+# Spartan
+
+**titan** \[**--help**\] \[**--verbose**\] _URL_
+
+This is a very simple test client. All it does is print the response. The header
+is printed to standard error so the rest can be redirected to get just the
+content.
+
+    spartan URL
+
+Usage:
+
+    spartan spartan://mozz.us/
+
+Send some text:
+
+    echo "Hello $USER!" | script/spartan spartan://mozz.us/echo
+
 # Titan
 
 **titan** \[**--help**\] **--url=**_URL_ \[**--token=**_TOKEN_\] \[**--mime=**_MIMETYPE_\]
@@ -851,55 +989,6 @@ Or from a pipe:
 
     echo "This is my test." \
       | titan --url=titan://transjovian.org/test/raw/testing --token=hello
-
-# Spartan
-
-**titan** \[**--help**\] \[**--verbose**\] _URL_
-
-This is a very simple test client. All it does is print the response. The header
-is printed to standard error so the rest can be redirected to get just the
-content.
-
-    spartan URL
-
-Usage:
-
-    spartan spartan://mozz.us/
-
-Send some text:
-
-    echo "Hello $USER!" | script/spartan spartan://mozz.us/echo
-
-# Ijirait
-
-This is a command-line client for Ijirait, a Gemini-based MUSH that can be run
-by Phoebe. See [App::Phoebe::Ijirait](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AIjirait).
-
-First, generate your client certificate for as many or as few days as you like:
-
-    openssl req -new -x509 -newkey ec -subj "/CN=Alex" \
-      -pkeyopt ec_paramgen_curve:prime256v1 -days 100 \
-      -nodes -out cert.pem -keyout key.pem
-
-Then start this program to play:
-
-    ijirait --cert=cert.pem --key=key.pem \
-      --url=gemini://campaignwiki.org/play/ijirait
-
-You can also use it to stream, i.e. get notified of events in real time:
-
-    ijirait --cert=cert.pem --key=key.pem --stream \
-      --url=gemini://campaignwiki.org/play/ijirait/stream
-
-Here are the Debian package names to satisfy the dependencies. Use `cpan` or
-`cpanm` to install them.
-
-- [Modern::Perl](https://metacpan.org/pod/Modern%3A%3APerl) from `libmodern-perl-perl`
-- [Mojo::IOLoop](https://metacpan.org/pod/Mojo%3A%3AIOLoop) from `libmojolicious-perl`
-- [Term::ReadLine::Gnu](https://metacpan.org/pod/Term%3A%3AReadLine%3A%3AGnu) from `libterm-readline-gnu-perl`
-- [URI::Escape::XS](https://metacpan.org/pod/URI%3A%3AEscape%3A%3AXS) from `liburi-escape-xs-perl`
-- [Encode::Locale](https://metacpan.org/pod/Encode%3A%3ALocale) from `libencode-locale-perl`
-- [Text::Wrapper](https://metacpan.org/pod/Text%3A%3AWrapper) from `libtext-wrapper-perl`
 
 # App::Phoebe
 

@@ -734,14 +734,21 @@ sub delete {
 }
 
 sub rooms {
-  my ($stream, $p) = @_;
+  my ($stream, $p, $option) = @_;
   $log->debug("Listing all rooms");
   success($stream);
   $stream->write("# Rooms\n");
+  $stream->write("=> /play/ijirait/rooms?ghosts Rooms with ghosts (rooms ghosts)\n") unless $option eq "ghosts";
+  my %location;
   my $now = time;
+  foreach my $o (@{$data->{people}}) {
+    # mark active people
+    push(@{$location{$o->{location}}}, $o->{name} . ($now - $o->{ts} < 600 ? "*" : ""))
+  }
   for my $room (sort { ($b->{ts}||0) <=> ($a->{ts}||0) } @{$data->{rooms}}) {
     $stream->write(encode_utf8 "* $room->{name}");
     $stream->write(", last activity " . timespan($now - $room->{ts})) if $room->{ts};
+    $stream->write(" (" . join(", ", @{$location{$room->{id}}}) . ")") if $option eq "ghosts" and $location{$room->{id}};
     $stream->write("\n");
   }
   $stream->write("=> /play/ijirait Back\n");

@@ -4,7 +4,7 @@ use ExtUtils::MakeMaker;
 os_unsupported if $^O eq 'MSWin32';
 
 WriteMakefile(
-  NAME             => 'App::phoebe',
+  NAME             => 'App::Phoebe',
   VERSION_FROM     => 'lib/App/Phoebe.pm',
   ABSTRACT         => 'a Gemini-based wiki',
   AUTHOR           => 'Alex Schroeder',

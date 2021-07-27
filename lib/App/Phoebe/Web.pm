@@ -332,7 +332,7 @@ sub serve_main_menu_via_http {
   $stream->write(encode_utf8 "<li>" . link_html($stream, $host, undef, "Index of all spaces", "do/spaces") . "\n")
       if @{$server->{wiki_space}} or keys %{$server->{host}} > 1;
   # a requirement of the GNU Affero General Public License
-  $stream->write("<li><a href=\"https://metacpan.org/pod/App::phoebe\">Source</a>\n");
+  $stream->write("<li><a href=\"https://metacpan.org/pod/App::Phoebe\">Source</a>\n");
   $stream->write("</ul>\n");
   $stream->write("</body>\n");
   $stream->write("</html>\n");

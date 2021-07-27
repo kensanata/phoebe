@@ -626,7 +626,7 @@ sub serve_main_menu {
       if @{$server->{wiki_space}} or keys %{$server->{host}} > 1;
   print_link($stream, $host, $space, "Download data", "do/data");
   # a requirement of the GNU Affero General Public License
-  $stream->write("=> https://metacpan.org/pod/App::phoebe Source code\n");
+  $stream->write("=> https://metacpan.org/pod/App::Phoebe Source code\n");
   $stream->write("\n");
 }
 

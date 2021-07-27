@@ -140,7 +140,7 @@ an example config on how to enable editing via the web.
 
 Using C<cpan>:
 
-    cpan App::phoebe
+    cpan App::Phoebe
 
 Manual install:
 
@@ -202,7 +202,7 @@ I'm going to assume that you're going to create a new user just to be safe.
 Now you're in your home directory, F</home/phoebe>. We're going to install
 things right here.
 
-    cpan App::phoebe
+    cpan App::Phoebe
 
 Start Phoebe. It's going to prompt you for a hostname and create certificates
 for you. If in doubt, answer C<localhost>. The certificate and a private key are

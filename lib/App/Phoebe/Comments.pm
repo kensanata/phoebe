@@ -39,7 +39,7 @@ There is no configuration. Simply add it to your F<config> file:
 
 package App::Phoebe::Comments;
 use App::Phoebe qw(@footer @extensions $log with_lock port space host_regex space_regex
-		   result valid_id valid_token wiki_dir write_page);
+		   result valid_id valid_token wiki_dir write_page decode_query);
 use Encode qw(decode_utf8);
 use Modern::Perl;
 use URI::Escape;
@@ -78,7 +78,10 @@ sub process_comment_requests {
   } elsif ($url =~ m!^gemini://($hosts)(?::$port)?(?:/($spaces))?/do/comment/([^/#?]+)/([^/#?]+)$!) {
     result($stream, "10", "Short comment");
   } elsif (($host, $space, $id, $token, $query) = $url =~ m!^gemini://($hosts)(?::$port)?(?:/($spaces))?/do/comment/([^/#?]+)/([^/#?]+)\?([^#]+)!) {
-    append_comment($stream, $host, space($host, $space), map { decode_utf8(uri_unescape($_)) } $id, $token, $query);
+    append_comment($stream, $host, space($host, $space),
+		   decode_utf8(uri_unescape($id)),
+		   decode_utf8(uri_unescape($token)),
+		   decode_query($query));
   } else {
     return 0;
   }

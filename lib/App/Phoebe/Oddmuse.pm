@@ -64,7 +64,7 @@ C<localhost>. I need to recreate some of the Apache configuration, here.
 package App::Phoebe::Oddmuse;
 use App::Phoebe qw(@request_handlers @extensions @main_menu $server $log $full_url_regex
 		   success result reserved_regex port gemini_link modified changes diff
-		   colourize quote_html bogus_hash print_link);
+		   colourize quote_html bogus_hash print_link decode_query);
 use Mojo::UserAgent;
 use Modern::Perl;
 use MIME::Base64;
@@ -233,13 +233,13 @@ sub oddmuse_process_request {
   } elsif ($url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/match$!) {
     result($stream, "10", "Find page by name (Perl regex)");
   } elsif (($host, $space, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/match\?([^#]+)!) {
-    oddmuse_serve_match($stream, $host, $space, decode_utf8(uri_unescape($query)));
+    oddmuse_serve_match($stream, $host, $space, decode_query($query));
   } elsif ($url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/search$!) {
     result($stream, "10", "Find page by content (Perl regex)");
   } elsif (($host, $space, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/search\?([^#]+)!) {
-    oddmuse_serve_search($stream, $host, $space, decode_utf8(uri_unescape($query)));
+    oddmuse_serve_search($stream, $host, $space, decode_query($query));
   } elsif (($host, $space, $id, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/comment/([^/#?]+)(?:\?([^#]+))?$!) {
-    oddmuse_comment($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), decode_utf8(uri_unescape($query)));
+    oddmuse_comment($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), decode_query($query));
   } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/atom$!) {
     oddmuse_serve_atom($stream, $host, $space, 'rc');
   } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/rss$!) {

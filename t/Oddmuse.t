@@ -253,12 +253,14 @@ like(query_gemini("$base/do/comment/2021-06-28?lalala"),
 like(query_gemini("$base/do/comment/2021-06-28?hello"),
      qr(^10)m, "Input required");
 $haiku = <<EOT;
-The city cries but
+The+city cries but
 Our metal worms dig deeper
 Every day, alas.
 EOT
 like(query_gemini("$base/do/comment/2021-06-28?" . uri_escape($haiku)),
      qr(^30 $base/page/Comments_on_2021-06-28)m, "Redirect");
+like(query_gemini("$base/page/Comments_on_2021-06-28"),
+     qr(The city cries), "Comment saved, plusses handled");
 
 # Unit testing of text formatting rules
 

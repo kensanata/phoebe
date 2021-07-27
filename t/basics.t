@@ -185,6 +185,9 @@ for my $item(qw(2017-12-25 2017-12-26 2017-12-27)) {
 like($page, qr/2017-12-27.*2017-12-26.*2017-12-25/s,
      "search menu sorted newest first");
 
+# handle + in queries
+like(query_gemini("$base/do/match?with+space"), qr/^# Search page titles for with space/m, "Space");
+
 # changes
 $page = query_gemini("$base/do/changes");
 like($page, qr/^=> $base\/page\/Haiku Haiku \(current\)/m, "Current revision of Haiku in recent changes");

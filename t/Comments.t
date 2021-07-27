@@ -65,10 +65,10 @@ like(query_gemini("$base/do/comment/Comments%20on%20Test/hello?Lalala"),
 like(query_gemini("$base/page/Comments%20on%20Test"),
      qr/^🗨 Lalala/m, "First comment saved");
 
-like(query_gemini("$base/do/comment/Comments%20on%20Test/hello?lol"),
+like(query_gemini("$base/do/comment/Comments%20on%20Test/hello?lol+lol"),
      qr/^30 $base\/page\/Comments%20on%20Test/, "Redirect after comment");
 
 like(query_gemini("$base/page/Comments%20on%20Test"),
-     qr/^🗨 lol/m, "Second Comment saved");
+     qr/^🗨 lol lol/m, "Second Comment saved, plus handled");
 
 done_testing;

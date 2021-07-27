@@ -164,7 +164,8 @@ our @EXPORT_OK = qw(@extensions @main_menu @footer $log $server $full_url_regex
 		    valid_mime_type valid_size valid_token print_link all_logs
 		    gemini_link colourize modified changes diff bogus_hash
 		    quote_html write_page @known_fingerprints with_lock wiki_dir
-		    to_url handle_titan footer atom rss files space_links search);
+		    to_url handle_titan footer atom rss files space_links search
+		    decode_query);
 
 # Phoebe variables you can set in the config file
 
@@ -520,11 +521,11 @@ sub process_gemini {
     } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/match$!) {
       result($stream, "10", "Find page by name (Perl regex)");
     } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/match\?!) {
-      serve_match($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($query)));
+      serve_match($stream, $host, space($stream, $host, $space), decode_query($query));
     } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/search$!) {
       result($stream, "10", "Find page by content (Perl regex)");
     } elsif ($query and ($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/search\?!) {
-      serve_search($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($query))); # search terms include spaces
+      serve_search($stream, $host, space($stream, $host, $space), decode_query($query)); # search terms include spaces
     } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/new$!) {
       result($stream, "10", "New page");
       # no URI escaping required
@@ -577,6 +578,14 @@ sub process_gemini {
   $log->error("Error: $@") if $@;
   alarm(0);
   $stream->close_gracefully();
+}
+
+sub decode_query {
+  my $query = shift;
+  return $query unless $query;
+  $query = decode_utf8(uri_unescape($query));
+  $query =~ s/\+/ /g;
+  return $query;
 }
 
 sub run_extensions {

@@ -248,8 +248,6 @@ sub oddmuse_process_request {
     oddmuse_serve_atom($stream, $host, $space, 'journal');
   } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/blog/rss$!) {
     oddmuse_serve_rss($stream, $host, $space, 'journal');
-  } elsif (($host, $space, $id) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/config(?:/(config|conf\.d/[^/]+\.p[lm]$))?$!) {
-    oddmuse_serve_config($stream, $id); # ignore the host
   } elsif (($query) = $url =~ m!^GET (\S*) HTTP/1\.[01]$!
 	   and ($host) = $headers->{host} =~ m!^$hosts(?::$port)(.*)$!) {
     $log->info("Redirecting to https://$host$query");
@@ -959,7 +957,7 @@ sub oddmuse_serve_atom {
   $stream->write("<updated>"
       . sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", $year + 1900, $mon + 1, $mday, $hour, $min, $sec)
       . "</updated>\n");
-  $stream->write("<generator uri=\"gemini://$host:$port/\" version=\"1.0\">Gemini Wiki + Config</generator>\n");
+  $stream->write("<generator uri=\"gemini://$host:$port/\" version=\"1.0\">Phoebe + Config</generator>\n");
   # now get the data and print the entries
   my $url = "$oddmuse_wikis{$host}?action=$action;raw=1;full=1";
   if ($space) {
@@ -983,33 +981,6 @@ sub oddmuse_serve_atom {
     $stream->write("</entry>\n");
   };
   $stream->write("</feed>\n");
-}
-
-sub oddmuse_serve_config {
-  my $stream = shift;
-  my $file = shift;
-  $log->info("Serving Config");
-  my $dir = $server->{wiki_dir};
-  my @config;
-  push(@config, "config") if -f "$dir/config";
-  push(@config, map { "conf.d/$_" } grep(/\.p[lm]$/, read_dir("$dir/conf.d"))) if -d "$dir/conf.d";
-  $log->debug("Config files found: @config");
-  @config = grep(/^$file$/, @config) if $file;
-  if (@config == 0) {
-    if ($file) {
-      result($stream, "40", "This config file does not exist");
-    } else {
-      result($stream, "40", "This site does not use any config files");
-    }
-  } elsif (@config == 1) {
-    success($stream, 'text/plain');
-    $stream->write(encode_utf8 read_text("$dir/" . shift @config));
-  } else {
-    success($stream);
-    $stream->write("# Config Files\n");
-    $stream->write("=> /do/config/" . join('/', map { uri_escape($_) } split('/'))
-		   . " " . encode_utf8($_) . "\n") for @config;
-  }
 }
 
 sub oddmuse_comment {

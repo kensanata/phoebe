@@ -17,6 +17,7 @@ use Modern::Perl;
 use Test::More;
 use Mojo::IOLoop;
 use Mojo::UserAgent;
+use URI::Escape;
 use Encode;
 use Encode::Locale;
 use File::Slurper qw(write_text);
@@ -237,6 +238,27 @@ $res = $ua->get("http://localhost:$oddmuse_port/wiki?title=2021-06-28&text=Hoi")
 is($res->code, 302, "Oddmuse save blog page");
 like(query_gemini("$base"), qr(^Hello\n\nBlog:\n)m, "Main page including Welcome");
 like(query_gemini("$base/do/blog"), qr(2021-06-28)m, "Blog including 2021-06-28");
+
+# Leaving a comment
+
+like(query_gemini("$base/page/2021-06-28"),
+     qr(=> $base/do/comment/2021-06-28 Leave a short comment)m,
+     "2021-06-28 has link to comments");
+like(query_gemini("$base/do/comment/2021-06-28", undef, 0), # no cert!
+     qr(^60)m, "Client certificate required in order to comment");
+like(query_gemini("$base/do/comment/2021-06-28"),
+     qr(^10)m, "Token required");
+like(query_gemini("$base/do/comment/2021-06-28?lalala"),
+     qr(^59)m, "Wrong token");
+like(query_gemini("$base/do/comment/2021-06-28?hello"),
+     qr(^10)m, "Input required");
+$haiku = <<EOT;
+The city cries but
+Our metal worms dig deeper
+Every day, alas.
+EOT
+like(query_gemini("$base/do/comment/2021-06-28?" . uri_escape($haiku)),
+     qr(^30 $base/page/Comments_on_2021-06-28)m, "Redirect");
 
 # Unit testing of text formatting rules
 

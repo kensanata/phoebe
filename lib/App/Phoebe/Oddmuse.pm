@@ -70,6 +70,7 @@ use Modern::Perl;
 use MIME::Base64;
 use URI::Escape;
 use List::Util qw(uniq);
+use File::Slurper qw(read_dir read_text write_text);
 use Encode qw(encode_utf8 decode_utf8);
 use DateTime::Format::ISO8601;
 use utf8; # the source contains UTF-8 encoded strings

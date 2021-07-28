@@ -417,8 +417,9 @@ sub oddmuse_gemini_text {
   $text =~ s/^(```.*?\n```)\n/push(@escaped, $1); "\x03" . $ref++ . "\x04\n"/mesg;
   $text =~ s/^<pre>\n?(.*?\n)<\/pre>\n?/push(@escaped, "```\n$1```\n"); "\x03" . $ref++ . "\x04\n"/mesg;
   $text =~ s/^((\|.*\|\n)*\|.*\|)/push(@escaped, "```\n$1\n```"); "\x03" . $ref++ . "\x04\n"/meg;
-  my @blocks = split(/\n\n+|(?=\\\\\n)|\n(?=\*|=>)|\n\> *\n/, $text);
+  my @blocks = split(/\n\n+|(?=\\\\\n)|\n(?=[*-]|=>)|\n\> *\n/, $text);
   for my $block (@blocks) {
+    $block =~ s/^- /* /g; # fix list items
     $block =~ s/\s+/ /g; # unwrap lines
     $block =~ s/^\s+//; # trim
     $block =~ s/\s+$//; # trim
@@ -469,6 +470,7 @@ sub oddmuse_gemini_text {
   $text =~ s/\n\\\\ //g; # remove paragraph separation for linebreaks
   $text =~ s/^\* (.*)\n(=> \S+ \1)/$2/mg; # remove list items that are just links
   $text =~ s/^(=?>.*\n)\n(?==>)/$1/mg; # remove empty lines between links or between links and quotes
+  $text =~ s/^(\* .*\n)\n(?=\* )/$1/mg; # remove empty lines between list items
   $text =~ s/^Tags: .*/Tags:/m;
   $text =~ s/\x03(\d+)\x04/$escaped[$1]/ge;
   return $text . "\n";

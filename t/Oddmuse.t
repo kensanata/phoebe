@@ -293,4 +293,13 @@ This is a table.
 And this is the end.});
 like($page, qr(^This is a table\.\n\n```\n\|hello\|\n\|kitten\|\n```\n\nAnd this is the end\.$)m, "table");
 
+$page = App::Phoebe::Oddmuse::oddmuse_gemini_text(undef, $host, "", qq{
+This is a list.
+
+* first
+- second
+
+And this is the end.});
+like($page, qr(^This is a list\.\n\n\* first\n\* second\n\nAnd this is the end\.$)m, "list");
+
 done_testing();

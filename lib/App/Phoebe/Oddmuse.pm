@@ -656,6 +656,41 @@ sub oddmuse_serve_index {
   }
 }
 
+sub oddmuse_serve_match {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  my $term = shift;
+  $log->info("Serving pages matching $term");
+  success($stream);
+  $stream->write(encode_utf8 "# Pages matching ‘$term’\n");
+  # we need to call our own: if we import pages from App:Phoebe, we get a copy
+  # and would have to remap that just like we do App::Phoebe::pages below
+  my @pages = oddmuse_pages_new($stream, $host, $space, $term);
+  for my $id (@pages) {
+    print_link($stream, $host, $space, normal_to_free($id), "page/$id");
+  }
+}
+
+sub oddmuse_serve_search {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  my $term = shift;
+  $log->info("Serving search for $term");
+  success($stream);
+  $stream->write(encode_utf8 "# Search ‘$term’\n");
+  my $url = "$oddmuse_wikis{$host}?raw=1&search=" . uri_escape_utf8($term);
+  my $page = oddmuse_get_raw($stream, $url) // return;
+  my @entries = split(/\n\n+/, $page);
+  shift @entries; # skip head
+  foreach my $entry (@entries) {
+    my $data = parse_data($entry);
+    my $id = $data->{title};
+    print_link($stream, $host, $space, normal_to_free($id), "page/$id");
+  }
+}
+
 # this is required when combining gopher with oddmuse!
 *oddmuse_pages_old = \&App::Phoebe::pages;
 *App::Phoebe::pages = \&oddmuse_pages_new;
@@ -668,7 +703,7 @@ sub oddmuse_pages_new {
   if (exists $oddmuse_wikis{$host}) {
     my $url = "$oddmuse_wikis{$host}?raw=1;action=index";
     $url .= ";ns=$space" if $space;
-    $url .= ";match=" . uri_escape($re) if $re;
+    $url .= ";match=" . uri_escape_utf8($re) if $re;
     return map { s/_/ /g; $_ } split(/\n/, oddmuse_get_raw($stream, $url));
   }
   return oddmuse_pages_old($stream, $host, $space, $re);
@@ -840,40 +875,6 @@ sub oddmuse_serve_diff {
 	 sub { $stream->write(encode_utf8 "> \033[31m$_\033[0m\n") for map { $_||"⏎" } @_ },
 	 sub { $stream->write(encode_utf8 "> \033[32m$_\033[0m\n") for map { $_||"⏎" } @_ },
 	 sub { "\033[1m$_[0]\033[22m" });
-  }
-}
-
-sub oddmuse_serve_match {
-  my $stream = shift;
-  my $host = shift;
-  my $space = shift;
-  my $term = shift;
-  $log->info("Serving pages matching $term");
-  success($stream);
-  $stream->write(encode_utf8 "# Pages matching ‘$term’\n");
-  my $url = "$oddmuse_wikis{$host}?raw=1;action=index;match=" . uri_escape_utf8($term);
-  my @pages = split(/\n/, oddmuse_get_raw($stream, $url)) // return;
-  for my $id (@pages) {
-    print_link($stream, $host, $space, normal_to_free($id), "page/$id");
-  }
-}
-
-sub oddmuse_serve_search {
-  my $stream = shift;
-  my $host = shift;
-  my $space = shift;
-  my $term = shift;
-  $log->info("Serving search for $term");
-  success($stream);
-  $stream->write(encode_utf8 "# Search ‘$term’\n");
-  my $url = "$oddmuse_wikis{$host}?raw=1&search=" . uri_escape_utf8($term);
-  my $page = oddmuse_get_raw($stream, $url) // return;
-  my @entries = split(/\n\n+/, $page);
-  shift @entries; # skip head
-  foreach my $entry (@entries) {
-    my $data = parse_data($entry);
-    my $id = $data->{title};
-    print_link($stream, $host, $space, normal_to_free($id), "page/$id");
   }
 }
 

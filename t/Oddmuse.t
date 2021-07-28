@@ -179,6 +179,12 @@ $page = query_gemini("$base/Travels/do/index");
 like($page, qr(All Pages), "Index");
 like($page, qr(^=> $base/Travels/page/Test Test$)m, "Page link");
 
+like(query_gemini("$base/Travels/do/match"), qr(^10), "Match");
+like(query_gemini("$base/Travels/do/match?test"), qr(^=> $base/Travels/page/Test Test$)m, "Page link");
+
+like(query_gemini("$base/Travels/do/search"), qr(^10), "Search");
+like(query_gemini("$base/Travels/do/search?alex"), qr(^=> $base/Travels/page/Test Test$)m, "Page link");
+
 $page = query_gemini("$base/do/all/changes");
 like($page, qr(^=> $base/page/Test Test)m, "All changes");
 like($page, qr(^=> $base/Travels/page/Test \[Travels\] Test)m, "All changes (namespace)");

@@ -2,7 +2,7 @@
 
 **Table of Contents**
 
-- [Phoebe](#phoebe)
+- [phoebe](#phoebe)
 - [Gemtext](#gemtext)
 - [Editing the wiki](#editing-the-wiki)
 - [Editing via the web](#editing-via-the-web)
@@ -29,14 +29,14 @@
 - [Multiple Certificates](#multiple-certificates)
 - [See also](#see-also)
 - [License](#license)
-- [Gemini](#gemini)
+- [gemini](#gemini)
 - [Client Certificates](#client-certificates)
-- [Gemini](#gemini)
-- [Ijirait](#ijirait)
+- [gemini-chat](#gemini-chat)
+- [ijirait](#ijirait)
 - [phoebe-ctl](#phoebe-ctl)
 - [Commands](#commands)
-- [Spartan](#spartan)
-- [Titan](#titan)
+- [spartan](#spartan)
+- [titan](#titan)
 - [App::Phoebe](#appphoebe)
 - [App::Phoebe::BlockFediverse](#appphoebeblockfediverse)
 - [App::Phoebe::Chat](#appphoebechat)
@@ -62,7 +62,7 @@
 - [App::Phoebe::WebEdit](#appphoebewebedit)
 - [App::Phoebe::Wikipedia](#appphoebewikipedia)
 
-# Phoebe
+# phoebe
 
 **phoebe** \[**--host=**_hostname_ ...\] \[**--port=**_port_\]
 \[**--cert\_file=**_filename_\] \[**--key\_file=**_filename_\]
@@ -168,7 +168,7 @@ an example config on how to enable editing via the web.
 
 Using `cpan`:
 
-    cpan App::phoebe
+    cpan App::Phoebe
 
 Manual install:
 
@@ -213,7 +213,7 @@ I'm going to assume that you're going to create a new user just to be safe.
 Now you're in your home directory, `/home/phoebe`. We're going to install
 things right here.
 
-    cpan App::phoebe
+    cpan App::Phoebe
 
 Start Phoebe. It's going to prompt you for a hostname and create certificates
 for you. If in doubt, answer `localhost`. The certificate and a private key are
@@ -771,7 +771,7 @@ See [gemini://transjovian.org/](gemini://transjovian.org/) or [https://transjovi
 
 GNU Affero General Public License
 
-# Gemini
+# gemini
 
 **gemini** \[**--help**\] \[**--verbose**\] \[**--cert\_file=**_filename_
 **--key\_file=**_filename_\] _URL_
@@ -808,7 +808,10 @@ You can provide a certificate and a key file:
         gemini --cert_file=cert.pem --key_file=key.pem \
           gemini://campaignwiki.org/play/ijirait
 
-# Gemini
+# gemini-chat
+
+**gemini-chat** \[**--help**\] \[**--cert\_file=**_filename_
+**--key\_file=**_filename_\] _URL_
 
 All `gemini-chat` does is repeatedly post stuff to a Gemini URL. For example,
 assume that there is a Phoebe wiki with chat enabled via [App::Phoebe::Chat](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AChat).
@@ -822,6 +825,10 @@ Then you connect the chat client to the _say_ URL using `gemini-chat`:
     gemini-chat --cert=cert.pem --key=key.pem \
       gemini://transjovian.org/do/chat/say
 
+At the prompt, type your message. What effectively happens is that all you type
+ends up being sent to the server via a Gemini request:
+`gemini://transjovian.org/do/chat/say?your%20text%20here`.
+
 To generate your client certificate for 100 days and using “Alex” as your common
 name:
 
@@ -829,7 +836,10 @@ name:
       -pkeyopt ec_paramgen_curve:prime256v1 -days 100 \
       -nodes -out cert.pem -keyout key.pem
 
-# Ijirait
+# ijirait
+
+**ijirait** \[**--help**\] \[**--verbose**\] \[**--stream**\] \[**--cert\_file=**_filename_
+**--key\_file=**_filename_\] _URL_
 
 This is a command-line client for Ijirait, a Gemini-based MUSH that can be run
 by Phoebe. See [App::Phoebe::Ijirait](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AIjirait).
@@ -842,13 +852,13 @@ First, generate your client certificate for as many or as few days as you like:
 
 Then start this program to play:
 
-    ijirait --cert=cert.pem --key=key.pem \
-      --url=gemini://campaignwiki.org/play/ijirait
+    ijirait --cert_file=cert.pem --key_file=key.pem \
+      gemini://campaignwiki.org/play/ijirait
 
 You can also use it to stream, i.e. get notified of events in real time:
 
-    ijirait --cert=cert.pem --key=key.pem --stream \
-      --url=gemini://campaignwiki.org/play/ijirait/stream
+    ijirait --cert_file=cert.pem --key_file=key.pem --stream \
+      gemini://campaignwiki.org/play/ijirait/stream
 
 Here are the Debian package names to satisfy the dependencies. Use `cpan` or
 `cpanm` to install them.
@@ -856,7 +866,7 @@ Here are the Debian package names to satisfy the dependencies. Use `cpan` or
 - [Modern::Perl](https://metacpan.org/pod/Modern%3A%3APerl) from `libmodern-perl-perl`
 - [Mojo::IOLoop](https://metacpan.org/pod/Mojo%3A%3AIOLoop) from `libmojolicious-perl`
 - [Term::ReadLine::Gnu](https://metacpan.org/pod/Term%3A%3AReadLine%3A%3AGnu) from `libterm-readline-gnu-perl`
-- [URI::Escape::XS](https://metacpan.org/pod/URI%3A%3AEscape%3A%3AXS) from `liburi-escape-xs-perl`
+- [URI::Escape](https://metacpan.org/pod/URI%3A%3AEscape) from `liburi-escape-xs-perl`
 - [Encode::Locale](https://metacpan.org/pod/Encode%3A%3ALocale) from `libencode-locale-perl`
 - [Text::Wrapper](https://metacpan.org/pod/Text%3A%3AWrapper) from `libtext-wrapper-perl`
 
@@ -925,9 +935,9 @@ will be written without the `.html` extension. This should also work for local
 browsing, although it does look strange, all those pages with the `.html`
 extension.
 
-# Spartan
+# spartan
 
-**titan** \[**--help**\] \[**--verbose**\] _URL_
+**spartan** \[**--help**\] \[**--verbose**\] _URL_
 
 This is a very simple test client. All it does is print the response. The header
 is printed to standard error so the rest can be redirected to get just the
@@ -943,10 +953,10 @@ Send some text:
 
     echo "Hello $USER!" | script/spartan spartan://mozz.us/echo
 
-# Titan
+# titan
 
-**titan** \[**--help**\] **--url=**_URL_ \[**--token=**_TOKEN_\] \[**--mime=**_MIMETYPE_\]
-\[**--cert\_file=**_FILE_ **--key\_file=**_FILE_\] \[_FILES_ ...\]
+**titan** \[**--help**\] \[**--token=**_TOKEN_\] \[**--mime=**_MIMETYPE_\]
+\[**--cert\_file=**_FILE_ **--key\_file=**_FILE_\] _URL_ \[_FILES_ ...\]
 
 This is a script to upload content to a Titan-enabled site like Phoebe.
 

@@ -10,6 +10,7 @@ Double check the `MANIFEST`. Did we add new files that should be in
 here?
 
 ```
+perl Makefile.PL
 make manifest
 ```
 
@@ -20,11 +21,12 @@ Commit any changes and tag the release.
 Prepare an upload by using n.nn_nn for a developer release:
 
 ```
+perl Makefile.PL
 make distdir
-mv App-phoebe-4 App-phoebe-4.00_00
-tar czf App-phoebe-4.00_00.tar.gz App-phoebe-4.00_00
-trash App-phoebe-4.00_00
-cpan-upload -u SCHROEDER App-phoebe-4.00_00.tar.gz
+mv App-Phoebe-4.01 App-Phoebe-4.01_00
+tar czf App-Phoebe-4.01_00.tar.gz App-Phoebe-4.01_00
+trash App-Phoebe-4.01_00
+cpan-upload -u SCHROEDER App-Phoebe-4.01_00.tar.gz
 ```
 
 If you’re happy with the results:

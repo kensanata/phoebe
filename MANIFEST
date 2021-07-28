@@ -59,7 +59,6 @@ t/gemini-diagnostics.t
 t/Gopher.t
 t/HeapDump.t
 t/html-spaces.t
-t/html.t
 t/Iapetus.t
 t/Ijirait.t
 t/locks.t

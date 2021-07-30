@@ -114,7 +114,7 @@ developers available on Community Wiki. L<https://communitywiki.org/wiki/Titan>
 Known clients:
 
 This repository comes with a Perl script called F<titan> to upload files.
-L<https://alexschroeder.ch/cgit/phoebe/plain/titan>
+L<https://alexschroeder.ch/cgit/phoebe/plain/script/titan>
 
 I<Gemini Write> is an extension for the Emacs Gopher and Gemini client
 I<Elpher>. L<https://alexschroeder.ch/cgit/gemini-write/>

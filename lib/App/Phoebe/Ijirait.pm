@@ -57,6 +57,7 @@ use Modern::Perl;
 use Encode qw(encode_utf8 decode_utf8);
 use File::Slurper qw(read_binary write_binary read_text);
 use Mojo::JSON qw(decode_json encode_json);
+use Mojo::Util qw(gzip);
 use List::Util qw(first);
 use Graph::Easy;
 use URI::Escape;
@@ -81,6 +82,7 @@ our $commands = {
   look     => \&look,
   type     => \&type,
   save     => \&save,
+  backup   => \&backup,
   say      => \&speak, # can't use say!
   who      => \&who,
   go       => \&go,
@@ -533,6 +535,14 @@ sub cleanup() {
     }
     $room->{words} = \@words;
   }
+}
+
+sub backup() {
+  my $stream = shift;
+  my $bytes = encode_json $data;
+  $bytes =~ s/"fingerprint":"[^"]+"/"fingerprint":""/g;
+  success($stream, "application/json+gzip");
+  $stream->write(gzip $bytes);
 }
 
 sub who {

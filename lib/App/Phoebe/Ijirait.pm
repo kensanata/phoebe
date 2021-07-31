@@ -49,6 +49,10 @@ serve just one of them:
     our $host = "campaignwiki.org";
     use App::Phoebe::Ijirait;
 
+The help file, if you have one, is F<ijirait-help.gmi> in your wiki data
+directory. Feel free to get a copy of
+L<gemini://transjovian.org/ijiraq/page/Help>.
+
 =cut
 
 package App::Phoebe::Ijirait;

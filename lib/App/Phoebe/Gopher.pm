@@ -284,13 +284,12 @@ sub gopher_serve_page {
 sub gopher_plain_text {
   $_ = shift;
   my $text_wrapper = Text::Wrapper->new;
-  my $link_wrapper = Text::Wrapper->new(par_start => "→ ", body_start => "  ");
   my $bullet_wrapper = Text::Wrapper->new(par_start => "• ", body_start => "  ");
   my $quote_wrapper = Text::Wrapper->new(par_start => "> ", body_start => "> ");
+  s/^=> .*\n//gm;
   my @lines = grep { !/^```/ } split(/\n/);
   for (@lines) {
     next if /^\s*$/;
-    next if s/^=> \S+\s+(\S.*\n*)/$link_wrapper->wrap($1)/e; # drop URL
     next if s/^\* (.*)/$bullet_wrapper->wrap($1)/e;
     next if s/^> (.*)/$quote_wrapper->wrap($1)/e;
     next if s/^## (.*)/"$1\n" . '-' x length($1) . "\n\n"/e;
@@ -300,6 +299,8 @@ sub gopher_plain_text {
   }
   # drop trailing newlines added to paragraphs by the Text::Wrapper code, except for the last one
   my $text = join("\n", map { s/\n+$//; $_ } @lines) . "\n";
+  # drop extra empty lines: one empty line is enough
+  $text =~ s/\n\n\n+/\n\n/gm;
   return $text;
 }
 

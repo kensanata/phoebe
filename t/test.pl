@@ -159,8 +159,9 @@ sub query_gemini {
 
 sub query_web {
   my $query = shift;
+  my $cert = shift // 1; # suppress use of client certificate in the test
   $query .= "\r\n" unless $query =~ /^POST/; # add empty line for GET requests
-  return query_gemini($query);
+  return query_gemini($query, undef, $cert);
 }
 
 my $total = 0;

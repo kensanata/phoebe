@@ -64,6 +64,8 @@ sub add_edit_link_to_footer {
   }
 }
 
+# note that the requests handled here must be protected in
+# App::Phoebe::RegisteredEditorsOnly!
 push(@extensions, \&process_edit_requests);
 
 sub process_edit_requests {
@@ -103,8 +105,10 @@ sub serve_edit_via_http {
   $stream->write("<body>\n");
   $stream->write(encode_utf8 "<h1>" . quote_html($id) . "</h1>\n");
   $stream->write("<form method=\"POST\">\n");
-  $stream->write("<p><label for=\"token\">Token:</label>\n");
-  $stream->write("<br><input type=\"text\" id=\"token\" name=\"token\" required>\n");
+  if (@{$server->{wiki_token}} > 0) {
+    $stream->write("<p><label for=\"token\">Token:</label>\n");
+    $stream->write("<br><input type=\"text\" id=\"token\" name=\"token\" required>\n");
+  }
   $stream->write("<p><label for=\"text\">Text:</label>\n");
   my $text = text($stream, $host, $space, $id);
   # textarea can be empty in order to delete a page

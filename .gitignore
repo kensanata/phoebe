@@ -11,3 +11,4 @@ debian/App-phoebe*
 debian/libapp-phoebe-perl*
 *.bak
 *.pem
+*.p12

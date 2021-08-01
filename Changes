@@ -1,4 +1,13 @@
-NEW
+4.01
+
+- It's now App::Phoebe instead of App::phoebe.
+
+- App::Phoebe::RegisteredEditorsOnly now works if you use
+  App::Phoebe::WebEdit.
+
+- App::Phoebe::Ijirait has a backup command to allow players to
+  download the world data (without fingerprints); the rooms command
+  now allows you to list ghosts (inactive characters).
 
 - Both ijirait and titan scripts no longer use --url= as there is
   exactly one URL and it is mandatory.

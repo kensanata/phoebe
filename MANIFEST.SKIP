@@ -21,6 +21,7 @@
 
 # certificates, keys, archives
 \.pem$
+\.p12$
 \.tar\.gz$
 
 # directories

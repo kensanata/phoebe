@@ -23,10 +23,10 @@ Prepare an upload by using n.nn_nn for a developer release:
 ```
 perl Makefile.PL
 make distdir
-mv App-Phoebe-4.01 App-Phoebe-4.01_00
-tar czf App-Phoebe-4.01_00.tar.gz App-Phoebe-4.01_00
-trash App-Phoebe-4.01_00
-cpan-upload -u SCHROEDER App-Phoebe-4.01_00.tar.gz
+mv App-Phoebe-4.01 App-Phoebe-4.01_01
+tar czf App-Phoebe-4.01_01.tar.gz App-Phoebe-4.01_01
+trash App-Phoebe-4.01_01
+cpan-upload -u SCHROEDER App-Phoebe-4.01_01.tar.gz
 ```
 
 If you’re happy with the results:

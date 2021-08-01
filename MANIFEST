@@ -52,6 +52,7 @@ t/example-dark-mode.t
 t/example-footer.t
 t/example-footer2.t
 t/example-new-action.t
+t/example-registered-editors-only.t
 t/example-route.t
 t/Favicon.t
 t/Galleries.t

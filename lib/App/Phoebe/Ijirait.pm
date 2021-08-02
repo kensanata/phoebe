@@ -749,6 +749,7 @@ sub delete {
 
 sub rooms {
   my ($stream, $p, $option) = @_;
+  $option //= "";
   $log->debug("Listing all rooms");
   success($stream);
   $stream->write("# Rooms\n");

@@ -55,7 +55,7 @@ use URI::Escape;
 push(@extensions, \&static_web_routes);
 
 sub static_web_routes {
-  my ($stream, $request, $headers, $buffer) = @_;
+  my ($stream, $request, $headers) = @_;
   my $hosts = host_regex();
   my $port = port($stream);
   my ($host, $route, $file);

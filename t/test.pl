@@ -161,7 +161,16 @@ sub query_web {
   my $query = shift;
   my $cert = shift // 1; # suppress use of client certificate in the test
   $query .= "\r\n" unless $query =~ /^POST/; # add empty line for GET requests
-  return query_gemini($query, undef, $cert);
+  my $response = query_gemini($query, undef, $cert);
+  # fixup encoding for two trivial cases of encoding html
+  my $header_end = index($response, "\r\n\r\n");
+  if (substr($response, 0, $header_end + 2) =~ /content-type: text\/[a-z]+; charset=(\S+)/i
+      or substr($response, $header_end + 4) =~ /<meta charset=\"(\S+)\">/i) {
+    my $encoding = $1;
+    $response = substr($response, 0, $header_end + 4)
+	. decode($encoding, substr($response, $header_end + 4));
+  }
+  return $response;
 }
 
 my $total = 0;

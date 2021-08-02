@@ -39,6 +39,9 @@ You still need to add a link to C</do/static> somewhere in your wiki.
 =cut
 
 package App::Phoebe::StaticFiles;
+require Exporter;
+our @ISA = qw(Exporter);
+our @EXPORT_OK = qw(%routes mime_type);
 use App::Phoebe qw(@extensions $log host_regex port success result);
 use File::Slurper qw(read_text read_binary read_dir);
 use Encode qw(encode_utf8 decode_utf8);

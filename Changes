@@ -1,3 +1,7 @@
+NEXT
+
+- 
+
 4.01
 
 - It's now App::Phoebe instead of App::phoebe.
@@ -11,6 +15,10 @@
 
 - Both ijirait and titan scripts no longer use --url= as there is
   exactly one URL and it is mandatory.
+
+- App::Phoebe::Gopher no longer prints links for plain text pages.
+
+- App::Phoebe::WebStaticFiles is new.
 
 4.00
 

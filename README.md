@@ -60,6 +60,7 @@
 - [App::Phoebe::Web](#appphoebeweb)
 - [App::Phoebe::WebComments](#appphoebewebcomments)
 - [App::Phoebe::WebEdit](#appphoebewebedit)
+- [App::Phoebe::WebStaticFiles](#appphoebewebstaticfiles)
 - [App::Phoebe::Wikipedia](#appphoebewikipedia)
 
 # phoebe
@@ -1839,6 +1840,26 @@ This package allows visitors on the web to edit your pages.
 There is no configuration. Simply add it to your `config` file:
 
     use App::Phoebe::WebEdit;
+
+# App::Phoebe::WebStaticFiles
+
+Serving static files, via the web. This is an add-on to [App::Phoebe::Web](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWeb) and
+[App::Phoebe::StaticFiles](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AStaticFiles).
+
+Here is an example setup where we assume that the route contains an UTF-8
+encoded characters, and the directory name used also contains UTF-8 encoded
+characters.
+
+    package App::Phoebe::StaticFiles;
+    use utf8;
+    our %routes = (
+      "zürich" => "/home/alex/Pictures/2020/Zürich",
+      "amaryllis" => "/home/alex/Pictures/2021/Amaryllis", );
+    use App::Phoebe::WebStaticFiles;
+
+The setup does not allow recursive traversal of the file system.
+
+You still need to add a link to `/do/static` somewhere in your wiki.
 
 # App::Phoebe::Wikipedia
 

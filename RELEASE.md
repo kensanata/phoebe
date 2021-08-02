@@ -33,5 +33,5 @@ If you’re happy with the results:
 
 ```
 perl Makefile.PL && make && make dist
-cpan-upload -u SCHROEDER App-phoebe-4.tar.gz
+cpan-upload -u SCHROEDER App-Phoebe-4.01.tar.gz
 ```

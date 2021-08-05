@@ -62,7 +62,7 @@ use Encode qw(encode_utf8 decode_utf8);
 use File::Slurper qw(read_binary write_binary read_text);
 use Mojo::JSON qw(decode_json encode_json);
 use Mojo::Util qw(gzip);
-use List::Util qw(first);
+use List::Util qw(first none);
 use Graph::Easy;
 use URI::Escape;
 use utf8;
@@ -103,6 +103,7 @@ our $commands = {
   reveal   => \&reveal,
   secrets  => \&secrets,
   home     => \&home,
+  find     => \&find,
 };
 
 our $ijrait_commands_without_cert = {
@@ -928,6 +929,75 @@ sub secrets {
   $stream->write(encode_utf8 "# Secrets\n");
   $stream->write(encode_utf8 "Are you sure you want all the secrets to be revealed? If you are, please use the full command: “secrets are something I do not care for!”\n");
   $stream->write("=> /play/ijirait Back\n");
+}
+
+sub find {
+  my ($stream, $p, $name) = @_;
+  if (not $name) {
+    success($stream);
+    $log->debug("Missing a name in route finding");
+    $stream->write(encode_utf8 "# Missing a name\n");
+    $stream->write(encode_utf8 "You need to provide the name of an existing person: “find <name>”.\n");
+    $stream->write(encode_utf8 "You can get a list of all existing persons using “who”.\n");
+    $stream->write("=> /play/ijirait/who Who\n");
+    $stream->write("=> /play/ijirait Back\n");
+    return;
+  }
+  my $to;
+  my $o = first { $_->{name} eq $name } @{$data->{people}};
+  if ($o) {
+    $to = $o->{location};
+  } else {
+    my $room = first { $_->{name} eq $name } @{$data->{rooms}};
+    $to = $room->{id} if $room;
+  }
+  if (not $to) {
+    success($stream);
+    $log->debug("Cannot find '$name'");
+    $stream->write(encode_utf8 "# Cannot find “$name”\n");
+    $stream->write(encode_utf8 "You need to provide the name of an existing room or person: “find <name>”.\n");
+    $stream->write(encode_utf8 "You can get a list of all existing rooms using “rooms”.\n");
+    $stream->write(encode_utf8 "You can get a list of all existing persons using “who”.\n");
+    $stream->write("=> /play/ijirait/rooms Rooms\n");
+    $stream->write("=> /play/ijirait/who Who\n");
+    $stream->write("=> /play/ijirait Back\n");
+    return;
+  }
+  my $route = find_route($p->{location}, $to);
+  if (not @$route) {
+    success($stream);
+    $log->debug("Cannot find a route to '$name'");
+    $stream->write(encode_utf8 "# Cannot find a way\n");
+    $stream->write(encode_utf8 "There seems to be no way to get from here to $name.\n");
+    $stream->write(encode_utf8 "One of you must use the “connect” command to connect back to the rest of the game.\n");
+    $stream->write("=> /play/ijirait Back\n");
+    return;
+  }
+  success($stream);
+  $log->debug("Find '$name'");
+  $stream->write(encode_utf8 "# How to find $name\n");
+  my $room = uri_escape_utf8 $route->[0]->{direction};
+  $stream->write(encode_utf8 "=> /play/ijirait/$room $route->[0]->{name} ($route->[0]->{direction})\n");
+  for (1 .. $#$route) {
+    $stream->write(encode_utf8 "* $route->[$_]->{name} ($route->[$_]->{direction})\n");
+  }
+  $stream->write("=> /play/ijirait Back\n");
+}
+
+sub find_route {
+  my ($from, $to) = @_;
+  my %rooms = map { $_->{id} => $_ } @{$data->{rooms}};
+  # breadth first!
+  my @routes = map { [ $_ ] } @{$rooms{$from}->{exits}};
+  my $route;
+  while ($route = shift(@routes)) {
+    my $last = $route->[$#$route];
+    return $route if $last->{destination} == $to;
+    for my $exit (@{$rooms{$last->{destination}}->{exits}}) {
+      push(@routes, [@$route, $exit]) if none { $exit == $_ } @$route;
+    }
+  }
+  return [];
 }
 
 1;

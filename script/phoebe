@@ -104,24 +104,21 @@ A line starting with ">", followed by a space and some text is a quote.
 
 How do you edit a Phoebe wiki? You need to use a Titan-enabled client.
 
-Titan is a companion protocol to Gemini: it allows clients to upload files to
-Gemini sites, if servers allow this. On Phoebe, you can edit "raw" pages. That
-is, at the bottom of a page you'll see a link to the "raw" page. If you follow
-it, you'll see the page content as plain text. You can submit a changed version
-of this text to the same URL using Titan. There is more information for
-developers available on Community Wiki. L<https://communitywiki.org/wiki/Titan>
+L<Titan|https://transjovian.org:1965/titan> is a companion protocol to Gemini:
+it allows clients to upload files to Gemini sites, if servers allow this. On
+Phoebe, you can edit "raw" pages. That is, at the bottom of a page you'll see a
+link to the "raw" page. If you follow it, you'll see the page content as plain
+text. You can submit a changed version of this text to the same URL using Titan.
 
 Known clients:
 
-This repository comes with a Perl script called F<titan> to upload files.
-L<https://alexschroeder.ch/cgit/phoebe/plain/script/titan>
+This repository comes with a Perl script called L<titan> to upload files.
 
-I<Gemini Write> is an extension for the Emacs Gopher and Gemini client
-I<Elpher>. L<https://alexschroeder.ch/cgit/gemini-write/>
-L<https://thelambdalab.xyz/elpher/>
+L<Gemini Write|https://alexschroeder.ch/cgit/gemini-write/> is an extension for
+the Emacs Gopher and Gemini client L<Elpher|https://thelambdalab.xyz/elpher/>.
 
-Gemini & Titan for Bash are two shell functions that allow you to download and
-upload files. L<https://alexschroeder.ch/cgit/gemini-titan/about/>
+L<Gemini & Titan for Bash|https://alexschroeder.ch/cgit/gemini-titan/about/> are
+two shell functions that allow you to download and upload files.
 
 =head2 Editing via the web
 

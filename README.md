@@ -138,24 +138,21 @@ A line starting with ">", followed by a space and some text is a quote.
 
 How do you edit a Phoebe wiki? You need to use a Titan-enabled client.
 
-Titan is a companion protocol to Gemini: it allows clients to upload files to
-Gemini sites, if servers allow this. On Phoebe, you can edit "raw" pages. That
-is, at the bottom of a page you'll see a link to the "raw" page. If you follow
-it, you'll see the page content as plain text. You can submit a changed version
-of this text to the same URL using Titan. There is more information for
-developers available on Community Wiki. [https://communitywiki.org/wiki/Titan](https://communitywiki.org/wiki/Titan)
+[Titan](https://transjovian.org:1965/titan) is a companion protocol to Gemini:
+it allows clients to upload files to Gemini sites, if servers allow this. On
+Phoebe, you can edit "raw" pages. That is, at the bottom of a page you'll see a
+link to the "raw" page. If you follow it, you'll see the page content as plain
+text. You can submit a changed version of this text to the same URL using Titan.
 
 Known clients:
 
-This repository comes with a Perl script called `titan` to upload files.
-[https://alexschroeder.ch/cgit/phoebe/plain/script/titan](https://alexschroeder.ch/cgit/phoebe/plain/script/titan)
+This repository comes with a Perl script called [titan](https://metacpan.org/pod/titan) to upload files.
 
-_Gemini Write_ is an extension for the Emacs Gopher and Gemini client
-_Elpher_. [https://alexschroeder.ch/cgit/gemini-write/](https://alexschroeder.ch/cgit/gemini-write/)
-[https://thelambdalab.xyz/elpher/](https://thelambdalab.xyz/elpher/)
+[Gemini Write](https://alexschroeder.ch/cgit/gemini-write/) is an extension for
+the Emacs Gopher and Gemini client [Elpher](https://thelambdalab.xyz/elpher/).
 
-Gemini & Titan for Bash are two shell functions that allow you to download and
-upload files. [https://alexschroeder.ch/cgit/gemini-titan/about/](https://alexschroeder.ch/cgit/gemini-titan/about/)
+[Gemini & Titan for Bash](https://alexschroeder.ch/cgit/gemini-titan/about/) are
+two shell functions that allow you to download and upload files.
 
 ## Editing via the web
 

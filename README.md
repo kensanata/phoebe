@@ -3,9 +3,9 @@
 **Table of Contents**
 
 - [phoebe](#phoebe)
+- [Reading the wiki](#reading-the-wiki)
 - [Gemtext](#gemtext)
 - [Editing the wiki](#editing-the-wiki)
-- [Editing via the web](#editing-via-the-web)
 - [Installation](#installation)
 - [Dependencies](#dependencies)
 - [Quickstart](#quickstart)
@@ -95,6 +95,18 @@ To take a look for yourself, check out the test wiki via the web or via the web.
 - [Test site, via the web](https://transjovian.org:1965/test)
 - [Test site, via Gemini](gemini://transjovian.org/test)
 
+# Reading the wiki
+
+This repository comes with a Perl script called [gemini](https://metacpan.org/pod/gemini) to download Gemini URLs.
+
+Other clients can be found here:
+
+- [Gemini software](https://gemini.circumlunar.space/software/)
+- [Gemini clients](https://transjovian.org:1965/gemini/page/Clients)
+- [Gemini link collection](https://git.sr.ht/~kr1sp1n/awesome-gemini)
+
+See [App::Phoebe::Web](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWeb) to enable reading via the web.
+
 # Gemtext
 
 Pages are written in gemtext, a lightweight hypertext format. You can use your
@@ -113,9 +125,11 @@ and some text; the URL can be absolute or relative.
 
 A line starting with "\`\`\`" toggles preformatting on and off.
 
-    Example:
+    Here is an example:
     ```
-    ./phoebe
+    The tapping calms me:
+    Constant mindless murmuring
+    Rain drops against glass
     ```
 
 A line starting with "#", "##", or "###", followed by a space and some text is a
@@ -132,7 +146,7 @@ A line starting with "\*", followed by a space and some text is a list item.
 A line starting with ">", followed by a space and some text is a quote.
 
     The monologue at the end is fantastic, with the city lights and the rain.
-    > I've seen things you people wouldn't believe.
+    > I have seen things you people would not believe.
 
 # Editing the wiki
 
@@ -154,13 +168,7 @@ the Emacs Gopher and Gemini client [Elpher](https://thelambdalab.xyz/elpher/).
 [Gemini & Titan for Bash](https://alexschroeder.ch/cgit/gemini-titan/about/) are
 two shell functions that allow you to download and upload files.
 
-## Editing via the web
-
-The Configuration section of the Phoebe space on _The Transjovian Council_ has
-an example config on how to enable editing via the web.
-
-- [https://transjovian.org:1965/phoebe/page/Configuration](https://transjovian.org:1965/phoebe/page/Configuration)
-- [gemini://transjovian.org/phoebe/page/Configuration](gemini://transjovian.org/phoebe/page/Configuration)
+See [App::Phoebe::WebEdit](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWebEdit) to enable editing via the web.
 
 # Installation
 

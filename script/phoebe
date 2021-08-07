@@ -61,6 +61,24 @@ To take a look for yourself, check out the test wiki via the web or via the web.
 
 =back
 
+=head1 READING THE WIKI
+
+This repository comes with a Perl script called L<gemini> to download Gemini URLs.
+
+Other clients can be found here:
+
+=over
+
+=item * L<Gemini software|https://gemini.circumlunar.space/software/>
+
+=item * L<Gemini clients|https://transjovian.org:1965/gemini/page/Clients>
+
+=item * L<Gemini link collection|https://git.sr.ht/~kr1sp1n/awesome-gemini>
+
+=back
+
+See L<App::Phoebe::Web> to enable reading via the web.
+
 =head1 GEMTEXT
 
 Pages are written in gemtext, a lightweight hypertext format. You can use your
@@ -79,9 +97,11 @@ and some text; the URL can be absolute or relative.
 
 A line starting with "```" toggles preformatting on and off.
 
-    Example:
+    Here is an example:
     ```
-    ./phoebe
+    The tapping calms me:
+    Constant mindless murmuring
+    Rain drops against glass
     ```
 
 A line starting with "#", "##", or "###", followed by a space and some text is a
@@ -98,7 +118,7 @@ A line starting with "*", followed by a space and some text is a list item.
 A line starting with ">", followed by a space and some text is a quote.
 
     The monologue at the end is fantastic, with the city lights and the rain.
-    > I've seen things you people wouldn't believe.
+    > I have seen things you people would not believe.
 
 =head1 EDITING THE WIKI
 
@@ -120,18 +140,7 @@ the Emacs Gopher and Gemini client L<Elpher|https://thelambdalab.xyz/elpher/>.
 L<Gemini & Titan for Bash|https://alexschroeder.ch/cgit/gemini-titan/about/> are
 two shell functions that allow you to download and upload files.
 
-=head2 Editing via the web
-
-The Configuration section of the Phoebe space on I<The Transjovian Council> has
-an example config on how to enable editing via the web.
-
-=over
-
-=item * L<https://transjovian.org:1965/phoebe/page/Configuration>
-
-=item * L<gemini://transjovian.org/phoebe/page/Configuration>
-
-=back
+See L<App::Phoebe::WebEdit> to enable editing via the web.
 
 =head1 INSTALLATION
 

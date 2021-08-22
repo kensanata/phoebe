@@ -15,6 +15,9 @@
 
 use Modern::Perl;
 use Test::More;
+use List::Util qw(any);
+use File::Slurper qw(read_binary);
+use Mojo::JSON qw(decode_json);
 use utf8; # tests contain UTF-8
 
 my $msg;
@@ -122,5 +125,28 @@ like($page, qr(^30)m, "Redirect after describe");
 
 $page = query_gemini("$base/play/ijirait/examine?tablet");
 like($page, qr(^The cuneiform script is undecipherable\.)m, "Described");
+
+$page = query_gemini("$base/play/ijirait/id?tablet");
+my ($thing) = $page =~ /^(\d+)$/m;
+ok($thing, "Id thing");
+
+# do it again, so we can check the seen array for duplicates later
+query_gemini("$base/play/ijirait/examine?tablet");
+
+$page = query_gemini("$base/play/ijirait/id?room");
+my ($room) = $page =~ /^(\d+)$/m;
+ok($room, "Id room");
+
+$page = query_gemini("$base/play/ijirait/save");
+like($page, qr(^Data was saved)m, "Save");
+
+my $bytes = read_binary("$dir/ijirait.json");
+my $data = decode_json $bytes;
+is(scalar(@{$data->{people}}), 2, "Number of people");
+my $found = any { $_ eq $room } @{$data->{people}->[1]->{seen}};
+ok($found, "Seen room $room");
+
+my @found = grep { $_ eq $thing } @{$data->{people}->[1]->{seen}};
+is(scalar(@found), 1, "Seen tablet $thing once");
 
 done_testing();

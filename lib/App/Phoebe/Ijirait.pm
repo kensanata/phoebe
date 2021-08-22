@@ -104,6 +104,7 @@ our $commands = {
   secrets  => \&secrets,
   home     => \&home,
   find     => \&find,
+  id       => \&id,
 };
 
 our $ijrait_commands_without_cert = {
@@ -130,6 +131,7 @@ sub init {
 	description => "A shape-shifter with red eyes.",
 	fingerprint => "",
 	location => $next, # 2
+	seen => [],
 	ts => time,
       } ],
     rooms => [
@@ -295,6 +297,7 @@ sub new_person {
     description => "A shape-shifter with red eyes.",
     fingerprint => $fingerprint,
     location => 2, # The Tent
+    seen => [],
     ts => time,
   };
   push(@{$data->{people}}, $p);
@@ -452,6 +455,7 @@ sub go {
     notify($p, "$p->{name} leaves ($direction).");
     $exit->{ts} = time;
     $p->{location} = $exit->{destination};
+    push(@{$p->{seen}}, $p->{location}) if none { $_ == $p->{location} } @{$p->{seen}};
     notify($p, "$p->{name} arrives.");
     result($stream, "30", "/play/ijirait/look");
   } else {
@@ -481,6 +485,7 @@ sub examine {
     $log->debug("Looking at $name");
     notify($p, "$p->{name} examines $thing->{name}.");
     $thing->{ts} = time;
+    push(@{$p->{seen}}, $thing->{id}) if none { $_ == $thing->{id} } @{$p->{seen}};
     $stream->write(encode_utf8 "# $thing->{name}\n");
     $stream->write(encode_utf8 "$thing->{description}\n");
     $stream->write("=> /play/ijirait Back\n");
@@ -665,7 +670,7 @@ sub create {
   } elsif ($obj eq "thing") {
     $log->debug("Create thing");
     my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
-    new_thing($room, $p->{id});
+    new_thing($room, $p);
     notify($p, "$p->{name} creates a new thing.");
     result($stream, "30", "/play/ijirait");
   } else {
@@ -699,7 +704,7 @@ sub new_exit {
     name => "A tunnel",
     direction => "tunnel",
     destination => $to->{id},
-    owner => $owner,
+    owner => $owner->{id},
     ts => time,
   };
   push(@{$from->{exits}}, $e);
@@ -713,7 +718,7 @@ sub new_thing {
     short => "stone",
     name => "A small stone",
     description => "It’s round.",
-    owner => $owner,
+    owner => $owner->{id},
     ts => time,
   };
   push(@{$room->{things}}, $t);
@@ -998,6 +1003,29 @@ sub find_route {
     }
   }
   return [];
+}
+
+sub id {
+  my ($stream, $p, $obj) = @_;
+  success($stream);
+  if ($obj) {
+    my $room = first { $_->{id} == $p->{location} } @{$data->{rooms}};
+    if ($obj eq "room") {
+      $log->debug("Id $obj");
+      $stream->write($room->{id} . "\n");
+      return;
+    }
+    my $thing = first { $_->{short} eq $obj } @{$room->{things}};
+    if ($thing) {
+      $log->debug("Id '$obj'");
+      $stream->write($thing->{id} . "\n");
+      return;
+    }
+  }
+  $log->debug("Id unknown thing");
+  $stream->write(encode_utf8 "# I don’t know what to id\n");
+  $stream->write(encode_utf8 "The command needs to use the shortcut of a thing, e.g. “id bird”, or just “id room”.\n");
+  $stream->write("=> /play/ijirait Back\n");
 }
 
 1;

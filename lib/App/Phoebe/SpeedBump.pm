@@ -363,6 +363,7 @@ sub speed_bump_cidr {
   $ip = new Net::IP ($ip) or return;
   my $reverse = $ip->reverse_ip();
   $reverse =~ s/in-addr\.arpa\.$/asn.routeviews.org/;
+  # Sadly, routeviews does not support IPv6 at the moment!
   $log->info("DNS TXT query for $reverse");
   for my $rr (rr($reverse, "TXT")) {
     next unless $rr->type eq "TXT";

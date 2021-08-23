@@ -507,10 +507,12 @@ sub examine {
 
 sub speak {
   my ($stream, $p, $text) = @_;
-  $text =~ s/^["“„«]//;
-  $text =~ s/["”“»]$//;
-  $text =~ s/^\s+//;
-  $text =~ s/\s+$//;
+  if ($text) {
+    $text =~ s/^["“„«]//;
+    $text =~ s/["”“»]$//;
+    $text =~ s/^\s+//;
+    $text =~ s/\s+$//;
+  }
   if (not $text) {
     result($stream, "10", "You say");
     return;

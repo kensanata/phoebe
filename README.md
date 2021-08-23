@@ -103,7 +103,6 @@ Other clients can be found here:
 
 - [Gemini software](https://gemini.circumlunar.space/software/)
 - [Gemini clients](https://transjovian.org:1965/gemini/page/Clients)
-- [Gemini link collection](https://git.sr.ht/~kr1sp1n/awesome-gemini)
 
 See [App::Phoebe::Web](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWeb) to enable reading via the web.
 

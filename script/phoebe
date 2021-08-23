@@ -73,8 +73,6 @@ Other clients can be found here:
 
 =item * L<Gemini clients|https://transjovian.org:1965/gemini/page/Clients>
 
-=item * L<Gemini link collection|https://git.sr.ht/~kr1sp1n/awesome-gemini>
-
 =back
 
 See L<App::Phoebe::Web> to enable reading via the web.

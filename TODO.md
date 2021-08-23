@@ -9,6 +9,3 @@
   gemini-diagnostics)
   https://www.openssl.org/docs/manmaster/man3/SSL_shutdown.html
   (Is this related to the memory leak when using SSL and no limits?)
-
-Sometimes I still see multiple DNS TXT queries for the same number
-within seconds of each other. Why isn’t this cached somewhere?

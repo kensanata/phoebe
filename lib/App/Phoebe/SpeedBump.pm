@@ -152,7 +152,7 @@ sub speed_bump {
   unshift(@{$speed_data->{$ip}->{visits}}, $now);
   # add a warning to the front for the current $ip if the current URL could be a bot
   unshift(@{$speed_data->{$ip}->{warnings}},
-	  scalar $url =~ m!/(raw|html|diff|history|do/(?:comment|do/(?:all/(?:latest/)?)?changes/|rss|(?:all)?atom|new|more|match|search|index|tag))/!);
+	  scalar $url =~ m!/(raw|html|diff|history|do/(?:comment|do/(?:all/(?:latest/)?)?changes/|rss|(?:all)?atom|new|more|match|search|index|tag)|menu$|text$|html$|history$)/!);
   # if there are enough timestamps, pop the last one and see if it falls within
   # the time window; if so, all the requests happened within the time window
   # we're watching

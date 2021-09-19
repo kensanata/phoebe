@@ -794,6 +794,8 @@ GNU Affero General Public License
 
 =cut
 
+use FindBin;
+use lib "$FindBin::Bin/../lib";
 use App::Phoebe qw($log $server host_regex handle_request get_ip_numbers);
 use Modern::Perl '2018';
 use File::Slurper qw(read_dir);

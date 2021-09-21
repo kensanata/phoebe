@@ -995,7 +995,10 @@ sub serve_changes {
     sub {
       return unless $_ = decode_utf8($fh->readline);
       chomp;
-      split(/\x1f/), $host, $space, 0 });
+      split(/\x1f/), $host, $space, 0 },
+    undef, #$kept
+    undef, #$filter
+    $style);
   $stream->write("\n");
   print_link($stream, $host, $space, "More...", "do/changes/" . 10 * $n . ($style ? "/$style" : ""));
 }
@@ -1033,8 +1036,9 @@ sub serve_all_changes {
     sub { print_link($stream, @_) },
     sub { $stream->write(encode_utf8 join("\n", @_, "")) },
     sub { @{shift(@$log) }, 1 if @$log },
-    undef,
-    $filter);
+    undef, # $kept
+    $filter,
+    $style);
   $stream->write("\n");
   print_link($stream, $host, undef, "More...", "do/all/changes/" . 10 * $n . ($style ? "/$style" : ""));
 }
@@ -1101,7 +1105,8 @@ sub read_log {
 # implementation checks for the existence of the keep file. $filter describes
 # how changes are to be filtered: 'latest' means that only the latest change
 # will be shown, i.e. a link to current revision. The default is to show all
-# changes.
+# changes. $style is "coloured" or "fancy" or undefined to indicate what sort of
+# changes we are looking at.
 sub changes {
   my $stream = shift;
   my $n = shift;
@@ -1115,6 +1120,7 @@ sub changes {
     -e wiki_dir($host, $space) . "/keep/$id/$revision.gmi";
   };
   my $filter = shift||'';
+  my $style = shift;
   my $last_day = '';
   my %seen;
   for (1 .. $n) {
@@ -1131,7 +1137,7 @@ sub changes {
     if ($revision eq "🖹") {
       # a deleted page
       $link->($host, $space, "$name (deleted)", "page/$id");
-      $link->($host, $space, "History", "history/$id");
+      $link->($host, $space, "History", "history/$id" . ($style ? "/10/$style" : ""));
       $seen{$name} = 1;
     } elsif ($revision eq "🖻") {
       # a deleted file
@@ -1140,15 +1146,17 @@ sub changes {
     } elsif ($revision > 0) {
       # a page
       if ($seen{$name}) {
-	$link->($host, $space, "$name ($revision)", "page/$id/$revision");;
-	$link->($host, $space, "Differences", "diff/$id/$revision") if $kept->($host, $space, $id, $revision);
+	$link->($host, $space, "$name ($revision)", "page/$id/$revision");
+	# there is no fancy diff, just colour diff
+	$link->($host, $space, "Differences", "diff/$id/$revision" . ($style ? "/colour" : ""))
+	    if $kept->($host, $space, $id, $revision);
       } elsif ($filter eq "latest") {
 	$link->($host, $space, "$name", "page/$id");
 	$link->($host, $space, "History", "history/$id");
 	$seen{$name} = 1;
       } else {
 	$link->($host, $space, "$name (current)", "page/$id");
-	$link->($host, $space, "History", "history/$id");
+	$link->($host, $space, "History", "history/$id" . ($style ? "/10/$style" : ""));
 	$seen{$name} = 1;
       }
     } else {
@@ -1716,7 +1724,10 @@ sub serve_history {
       chomp;
       my ($ts, $id_log, $revision, $code) = split(/\x1f/);
       goto READ if $id_log ne $id;
-      $ts, $id_log, $revision, $code, $host, $space, 0 });
+      $ts, $id_log, $revision, $code, $host, $space, 0 },
+    undef, #$kept
+    undef, #$filter
+    $style);
   $stream->write("\n");
   print_link($stream, $host, $space, "More...", "history/" . uri_escape_utf8($id) . "/" . 10 * $n . ($style ? "/$style" : ""));
 }

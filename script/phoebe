@@ -23,7 +23,7 @@ phoebe - a Gemini-first wiki server
 =head1 SYNOPSIS
 
 B<phoebe> [B<--host=>I<hostname> ...] [B<--port=>I<port>]
-[B<--cert_file=>I<filename>] [B<--key_file=>I<filename>]
+[B<--cert_file=>I<filename>] [B<--key_file=>I<filename>] [B<--no_cert>]
 [B<--log_level=error>|B<warn>|B<info>|B<debug>] [B<--log_file=>I<filename>]
 [B<--wiki_dir=>I<directory>] [B<--wiki_token=>I<token> ...]
 [B<--wiki_page=>I<pagename> ...] [B<--wiki_main_page=>I<pagename>]
@@ -483,6 +483,10 @@ own F<config> file.
 =item * C<--key_file> is the private key PEM file to use; the default is
       F<key.pem>
 
+=item * C<--no_cert> indicates that the server should not be using TLS; use this
+      if you have a reverse proxy handling requests (so that front end and back
+      end don't need to use TLS to communicate with each other)
+
 =item * C<--log_level> is the log level to use (C<fatal>, C<error>, C<warn>,
       C<info>, C<debug>); the default is C<warn>
 
@@ -813,6 +817,7 @@ GetOptions(
   'help' => \&help,
   'log_level=s' => sub { $log->level($_[1]), },
   'log_file=s' => sub { $log->path($_[1]) },
+  'no_cert' => \&host_setup,
   'cert_file=s' => \&host_setup,
   'key_file=s' => \&host_setup,
   'host=s' => \&host_setup,
@@ -838,7 +843,17 @@ sub utf8_item { my ($key, $value) = @_; $server->{$key} = decode(locale => $valu
     if ($opt eq 'host') {
       push @host, decode(locale => $val);
       return;
-    };
+    } elsif ($opt eq 'no_cert') {
+      if (not @host and not $server->{host}->{'localhost'}) {
+	$server->{host}->{'localhost'} = 1;
+      }
+      for (@host) {
+	$server->{host}->{$_} = 1;
+	# no $server->{cert_file} and $server->{key_file}
+      }
+      @host = ();
+      return;
+    }
     die "$val does not exist\n" unless -f $val;
     if ($opt eq 'cert_file') { $cert_file = $val }
     elsif ($opt eq 'key_file') { $key_file = $val }
@@ -987,14 +1002,14 @@ sub start_servers {
       for my $address (get_ip_numbers($host)) {
 	$server->{address}->{$address} = $host;
 	for my $port (@{$server->{port}}) {
-	  $log->info("$host: listening on $address:$port (Gemini)");
-	  Mojo::IOLoop->server({
-	    address => $address,
-	    port => $port,
-	    tls => 1,
-	    tls_cert => $server->{cert_file},
-	    tls_key  => $server->{key_file},
-	    tls_options => {
+	  my %args = (address => $address, port => $port);
+	  if ($server->{cert_file}->{$host}) {
+	    $log->info("$host: listening on $address:$port (Gemini)");
+	    # only add TLS if we have a cert file!
+	    $args{tls} = 1;
+	    $args{tls_cert} = $server->{cert_file};
+	    $args{tls_key} = $server->{key_file};
+	    $args{tls_options} = {
 	      # request client certificates and accept them
 	      SSL_verify_mode => SSL_VERIFY_PEER,
 	      SSL_verify_callback => \&verify_fingerprint,
@@ -1002,8 +1017,11 @@ sub start_servers {
 		my $ctx = shift;
 		Net::SSLeay::CTX_sess_set_cache_size($ctx, 64);
 	      }
-	    }
-	  } => sub {
+	    };
+	  } else {
+	    $log->info("$host: listening on $address:$port (Gemini without TLS)");
+	  }
+	  Mojo::IOLoop->server(\%args => sub {
 	    my ($loop, $stream) = @_;
 	    my $data = { buffer => '', handler => \&handle_request };
 	    $stream->on(read => sub {

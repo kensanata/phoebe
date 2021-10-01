@@ -783,10 +783,9 @@ For example:
 
 =head1 SEE ALSO
 
-As you might have guessed, the system is easy to tinker with, if you know some
-Perl. The Transjovian Council has a wiki space dedicated to Phoebe, and it
-includes a section with more configuration examples.
-See L<gemini://transjovian.org/> or L<https://transjovian.org:1965/>.
+The Transjovian Council has a wiki space dedicated to Phoebe, and it includes a
+section with more configuration examples. See L<gemini://transjovian.org/phoebe>
+or L<https://transjovian.org:1965/phoebe>.
 
 =head1 LICENSE
 

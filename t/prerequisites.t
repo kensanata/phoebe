@@ -17,11 +17,11 @@ prereq_ok("Testing prerequisites",
 	   # according to corelist and they were added before 5.26, or they are
 	   # part of distributions like many of the Mojo modules that belong to
 	   # Mojolicious.
-	   qw(B Encode File::Basename File::Path File::Temp Getopt::Long
+	   qw(lib B Encode File::Basename File::Path File::Temp Getopt::Long
 	      IO::Socket::IP List::Util Mojo::IOLoop Mojo::IOLoop::Server
 	      Mojo::Log Mojo::JSON Mojo::UserAgent Pod::Text Socket Term::ReadLine
 	      Test::More utf8 warnings Exporter Data::Dumper MIME::Base64
-	      Pod::Checker Term::ANSIColor Mojo::Util),
+	      Pod::Checker Term::ANSIColor Mojo::Util FindBin),
 	   # Skip modules used for some of the plugins. This is a judgement call.
 	   # Do we need them or not? Most people won't be installing these, I'm
 	   # sure.

@@ -213,13 +213,14 @@ for you. If in doubt, answer C<localhost>. The certificate and a private key are
 stored in the F<cert.pem> and F<key.pem> files, using elliptic curves, valid for
 five years, without password protection.
 
-    perl5/bin/phoebe
+Time to start phoebe, in the foreground:
 
-This starts the server in the foreground. If it aborts, see the
-L</Troubleshooting> section below. If it runs, open a second terminal and test
-it:
+    phoebe
 
-    perl5/bin/gemini gemini://localhost/
+If it aborts, see the L</Troubleshooting> section below. If it runs, open a
+second terminal and test it:
+
+    gemini gemini://localhost/
 
 You should see a Gemini page starting with the following:
 
@@ -232,7 +233,7 @@ Let's create a new page using the Titan protocol, from the command line:
 
     echo "Welcome to the wiki!" > test.txt
     echo "Please be kind." >> test.txt
-    perl5/bin/titan --url=titan://localhost/raw/Welcome --token=hello test.txt
+    titan --url=titan://localhost/raw/Welcome --token=hello test.txt
 
 You should get a nice redirect message, with an appropriate date.
 
@@ -240,7 +241,7 @@ You should get a nice redirect message, with an appropriate date.
 
 You can check the page, now (replacing the appropriate date):
 
-    perl5/bin/gemini gemini://localhost:1965/page/Welcome
+    gemini gemini://localhost:1965/page/Welcome
 
 You should get back a page that starts as follows:
 
@@ -276,11 +277,11 @@ with a list of common MIME types.
 Let's continue using the setup we used for the L</Quickstart> section. Restart
 the server and allow photos:
 
-    perl5/bin/phoebe --wiki_mime_type=image/jpeg
+    phoebe --wiki_mime_type=image/jpeg
 
 Upload the image using the C<titan> script:
 
-    perl5/bin/titan --url=titan://localhost:1965/jupiter.jpg \
+    titan --url=titan://localhost:1965/jupiter.jpg \
       --token=hello Pictures/Planets/Juno.jpg
 
 You should get back a redirect to the uploaded image:

@@ -376,6 +376,14 @@ Check the log output:
 
 =head2 Troubleshooting
 
+🔥 Unknown command phoebe 🔥 If you installed Phoebe using cpan or cpanm and you
+still get this error, then something about your Perl installation isn't working.
+Phoebe probably got installed in some directory, you just need to make sure it's
+in your PATH. If you use zsh and Perlbrew, for example, you need to add the
+following line to your F<~/.zshenv> file:
+
+    source ${HOME}/perl5/perlbrew/etc/bashrc
+
 🔥 B<1408A0C1:SSL routines:ssl3_get_client_hello:no shared cipher> 🔥 If you
 created a new certificate and key using elliptic curves using an older OpenSSL,
 you might run into this. Try to create a RSA key instead. It is larger, but at

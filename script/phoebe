@@ -374,6 +374,13 @@ Check the log output:
 
     sudo journalctl --unit phoebe
 
+=head2 Installing Perl
+
+If you are on GNU/Linx or macOS, I recommend installing from
+L<Perlbrew|https://perlbrew.pl/>. Each Perl installation comes with its own
+library directories, so if you switch Perl version, you need to reinstall Phoebe
+for that Perl version.
+
 =head2 Troubleshooting
 
 🔥 Unknown command phoebe 🔥 If you installed Phoebe using cpan or cpanm and you

@@ -25,11 +25,16 @@ App::Phoebe::WebDAV - add WebDAV to Phoebe wiki
 This allows users to mount the wiki as a remote server using WebDAV. If you
 start it locally, for example, you should be able to mount
 L<davs://localhost:1965/> as a remote server using your file manager (i.e.
-Files, Finder, Windows Explorer, whatever it is called).
+Files, Finder, Windows Explorer, whatever it is called). Alternatively, you can
+use a dedicated WebDAV client such as C<cadaver>.
 
 =head1 LIMITATIONS
 
-Phoebe does not support the locking of pages.
+If you want to have write access, you need to provide a username and password if
+Phoebe requires a token. This is done using Basic Authentication. If you use a
+client such as C<cadaver>, it'll ask you for a username and password. If you use
+the Gnome Text Editor to edit the file, you cannot save it because it doesn't
+know how to do that.
 
 =head1 SEE ALSO
 
@@ -39,7 +44,8 @@ including the PROPFIND method.
 L<RFC 2616|https://datatracker.ietf.org/doc/html/rfc2616> defines HTTP/1.1
 including the OPTION and PUT methods.
 
-L<RFC 2617|https://datatracker.ietf.org/doc/html/rfc2617> defines Basic Auth.
+L<RFC 2617|https://datatracker.ietf.org/doc/html/rfc2617> defines Basic
+Authentication.
 
 =cut
 

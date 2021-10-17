@@ -51,6 +51,10 @@ WriteMakefile(
 sub MY::postamble {
   return <<'PHOEBE_TARGETS';
 
+# Check for syntax and documentation formatting errors
+check:
+	find lib -name '*.pm' -exec perl -Ilib -c '{}' ';' -exec podchecker '{}' ';'
+
 # Start the wiki with the default options (using 'wiki' in the current
 # directory as the data directory). This also uses unsafe certificates
 # from the test directory. Don't use them in production. See the cert

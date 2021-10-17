@@ -27,144 +27,48 @@ start it locally, for example, you should be able to mount
 L<davs://localhost:1965/> as a remote server using your file manager (i.e.
 Files, Finder, Windows Explorer, whatever it is called).
 
-=head1 BUGS
-
-=head2 Cadaver
-
-This example uses the command-line tool C<cadaver> as the client connecting to
-L<davs://localhost:1965/>.
-
-The first request is for C<OPTIONS / HTTP/1.1> and Phoebe sends back that it
-only knows about C<OPTIONS> and C<PROPFIND>.
-
-The second request is for C<PROPFIND / HTTP/1.1> with depth 0, trying to learn
-more about the server's root: is a directory, and if not, how big is it? Plus it
-wants to know the last modified date, whether it is an executable, and if it is
-checked in or out.
-
-    <?xml version="1.0" encoding="utf-8"?>
-    <propfind xmlns="DAV:"><prop>
-    <getcontentlength xmlns="DAV:"/>
-    <getlastmodified xmlns="DAV:"/>
-    <executable xmlns="http://apache.org/dav/props/"/>
-    <resourcetype xmlns="DAV:"/>
-    <checked-in xmlns="DAV:"/>
-    <checked-out xmlns="DAV:"/>
-    </prop></propfind>
-
-Phoebe replies that it doesn't know about the executable, checked in and checked
-out states, but offers answers to everything else:
-
-    <?xml version="1.0" encoding="utf-8"?>
-    <D:multistatus xmlns:D="DAV:">
-      <D:response xmlns:i0="http://apache.org/dav/props/">
-	<D:href>/</D:href>
-	<D:propstat>
-	  <D:prop>
-	    <D:getcontentlength>4096</D:getcontentlength>
-	    <D:getlastmodified>Sun, 17 Oct 2021 11:18:54 GMT</D:getlastmodified>
-	    <D:resourcetype>
-	      <D:collection/>
-	    </D:resourcetype>
-	  </D:prop>
-	  <D:status>HTTP/1.1 200 OK</D:status>
-	</D:propstat>
-	<D:propstat>
-	  <D:prop>
-	    <i0:executable/>
-	    <D:checked-in/>
-	    <D:checked-out/>
-	  </D:prop>
-	  <D:status>HTTP/1.1 404 Not Found</D:status>
-	</D:propstat>
-      </D:response>
-    </D:multistatus>
-
-=head2 Files (Gnome)
-
-This example uses the Gnome Files application as the client connecting to
-L<davs://localhost:1965/>.
-
-The first request is for C<OPTIONS / HTTP/1.1> and Phoebe sends back that it
-only knows about C<OPTIONS> and C<PROPFIND>.
-
-The second request is for C<PROPFIND / HTTP/1.1> with depth 0, trying to learn
-more about the server's root: is a directory, and if not, how big is it?
-
-    <?xml version="1.0" encoding="utf-8" ?>
-     <D:propfind xmlns:D="DAV:">
-      <D:prop>
-        <D:resourcetype/>
-        <D:getcontentlength/>
-      </D:prop>
-     </D:propfind>
-
-The wiki root is a directory so Phoebe sends back that the root is a collection
-(a directory).
-
-    <?xml version="1.0" encoding="utf-8"?>
-    <D:multistatus xmlns:D="DAV:">
-      <D:response>
-	<D:href>/</D:href>
-	<D:propstat>
-	  <D:prop>
-	    <D:resourcetype>
-	      <D:collection/>
-	    </D:resourcetype>
-	    <D:getcontentlength>4096</D:getcontentlength>
-	  </D:prop>
-	  <D:status>HTTP/1.1 200 OK</D:status>
-	</D:propstat>
-      </D:response>
-    </D:multistatus>
-
-At this point, Files reports an error.
-
-
-
 =head1 LIMITATIONS
 
 Phoebe does not support the locking of pages.
 
 =head1 SEE ALSO
 
-L<RFC 4918|https://datatracker.ietf.org/doc/html/rfc4918> defines WebDAV.
+L<RFC 4918|https://datatracker.ietf.org/doc/html/rfc4918> defines WebDAV
+including the PROPFIND method.
 
-L<RFC 5689|https://datatracker.ietf.org/doc/html/rfc5689> defines an extension
-to MKCOL.
+L<RFC 2616|https://datatracker.ietf.org/doc/html/rfc2616> defines HTTP/1.1
+including the OPTION and PUT methods.
+
+L<RFC 2617|https://datatracker.ietf.org/doc/html/rfc2617> defines Basic Auth.
 
 =cut
 
 package App::Phoebe::WebDAV;
-use App::Phoebe::Web qw(handle_http_header http_error);
-use App::Phoebe qw(@request_handlers @extensions run_extensions
-		   $log host_regex space_regex port wiki_dir pages files);
+use App::Phoebe::Web qw(handle_http_header);
+use App::Phoebe qw(@request_handlers @extensions run_extensions $server
+		   $log host_regex space_regex port wiki_dir pages files
+		   with_lock bogus_hash);
 use File::Slurper qw(read_text write_text read_dir);
 use HTTP::Date qw(time2str time2isoz);
 use Digest::MD5 qw(md5_base64);
 use Encode qw(encode_utf8 decode_utf8);
-use Fcntl qw(:mode); # for S_ISDIR
+use Mojo::Util qw(b64_decode);
 use File::stat;
 use Modern::Perl;
 use URI::Escape;
 use XML::LibXML;
 use utf8;
 
-unshift(@request_handlers, '^(OPTIONS|PROPFIND) .* HTTP/1\.1$' => \&handle_http_header);
+unshift(@request_handlers, '^(OPTIONS|PROPFIND|PUT) .* HTTP/1\.1$' => \&handle_http_header);
 
 # note that the requests handled here must be protected in
 # App::Phoebe::RegisteredEditorsOnly!
 push(@extensions, \&process_webdav);
 
 my %implemented = (
-  # get      => 0,
-  # head     => 0,
   options  => 1,
   propfind => 1,
-  # put      => 0,
-  # trace    => 0,
-  # lock     => 0,
-  # unlock   => 0,
+  put      => 1,
 );
 
 sub process_webdav {
@@ -173,12 +77,15 @@ sub process_webdav {
   my $port = port($stream);
   my $spaces = space_regex();
   my ($host, $space, $path, $id);
-  if (($space, $path, $id) = $request =~ m!^OPTIONS (?:/($spaces))?(/(?:(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.[01]$!
+  if (($space, $path, $id) = $request =~ m!^OPTIONS (?:/($spaces))?(/(?:(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.1$!
       and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
     options($stream);
-  } elsif (($space, $path, $id) = $request =~ m!^PROPFIND (?:/($spaces))?(/(?:(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.[01]$!
+  } elsif (($space, $path, $id) = $request =~ m!^PROPFIND (?:/($spaces))?(/(?:(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
     propfind($stream, $host, $space, $path, $id, $headers, $buffer);
+  } elsif (($space, $path, $id) = $request =~ m!^PUT (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
+	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
+    put($stream, $host, $space, $path, $id, $headers, $buffer);
   } else {
     return 0;
   }
@@ -264,7 +171,9 @@ sub propfind {
       or $path eq "/raw" and $depth ne "0"
       or $path eq "/raw/" and $depth ne "0";
   push(@resources, map { "/page/$_" } pages($stream, $host, $space, $re))
-      if $id;
+      if $id and $path =~ m!^/page/!;
+  push(@resources, map { "/raw/$_" } pages($stream, $host, $space, $re))
+      if $id and $path =~ m!^/raw/!;
   push(@resources, "/file")
       if $path eq "/" and $depth ne "0" or $path eq "/file" or $path eq "/file/" and $depth eq "0";
   push(@resources, map { "/file/$_" } files($stream, $host, $space))
@@ -283,50 +192,53 @@ sub propfind {
   my $dir = wiki_dir($host, $space);
 
   for my $resource (@resources) {
-    next if $resource =~ m!/\.\.(/|$)!; # no reference back up
+    # skip "hidden" files in the Unix world
+    # and prevent path traversal using ..
+    next if $resource =~ m!/\.!;
 
     # Names
     my $mime;
+    my $is_dir;
     my ($filename, $displayname);
     if ($resource =~ m!/page/([^/]*)$!) {
       $displayname = "$1.html";
       $filename = $dir . "/page/$1.gmi";
+      $is_dir = 0;
       $mime = "text/html";
     } elsif ($resource =~ m!/raw/([^/]*)$!) {
       $displayname = "$1.gmi";
+      # the raw directory is a "fake" and is actually the page directory
       $filename = $dir . "/page/$1.gmi";
+      $is_dir = 0;
       $mime = "text/plain";
-    } elsif ($resource eq "/raw") {
-      $displayname = "raw";
-      $filename = $dir . "/page";
-    } elsif ($resource =~ m!/([^/]*)$!) {
+    } elsif ($resource =~ m!/file/([^/]*)$!) {
       $displayname = $1;
       $filename = $dir . $resource;
+      $is_dir = 0;
+      if (-f "$dir/meta/$displayname") {
+	# MIME-type for files requires opening the meta files! 😭
+	my %meta = (map { split(/: /, $_, 2) } read_lines("$dir/meta/$displayname"));
+	if ($meta{'content-type'}) {
+	  $mime = $meta{'content-type'};
+	}
+      }
+      $mime //= "application/octet-stream"; # fallback for binary files
+    } elsif ($resource =~ m!/([^/]*)$!) {
+      $displayname = $1;
+      # the raw directory is a "fake" and is actually the page directory
+      $filename = $dir . ($1 eq "raw" ? "/page" : $resource);
+      $is_dir = 1;
+      $mime = "inode/directory";
     }
 
     $log->debug("Processing $dir$resource");
 
     # A stat call for every file and every page! 😭
     my $sb = stat($filename);
-
     if (not $sb) {
       $log->warn("$filename does not exist");
       next;
     }
-
-    # Directories
-    my $is_dir = S_ISDIR($sb->mode);
-    if ($is_dir) {
-      $mime = "inode/directory";
-    } elsif (-f "$dir/meta/$displayname") {
-      # MIME-type for files requires opening the meta files! 😭
-      my %meta = (map { split(/: /, $_, 2) } read_lines("$dir/meta/$displayname"));
-      if ($meta{'content-type'}) {
-	$mime = $meta{'content-type'};
-      }
-    }
-
-    # $log->debug("Processing $filename is a directory") if $is_dir;
 
     # Force empty strings if undefined
     my $size = $sb->size // '';
@@ -448,102 +360,121 @@ sub propfind {
   $stream->write(encode_utf8 $doc->toString(1) . "\n");
 }
 
-# sub run {
-#   my ($self, $q) = @_;
+sub put {
+  my ($stream, $host, $space, $path, $id, $headers, $buffer) = @_;
+  my @tokens = @{$server->{wiki_token}};
+  push(@tokens, @{$server->{wiki_space_token}->{$space}})
+      if $space and $server->{wiki_space_token}->{$space};
+  if (@tokens) {
+    my $auth = $headers->{"authorization"};
+    if (not $auth or $auth !~ /^Basic (\S+)/) {
+      $log->info("Missing authorization header");
+      $stream->write("HTTP/1.1 401 Unauthorized\r\n");
+      $stream->write("WWW-Authenticate: Basic realm=\"Phoebe\"\r\n");
+      $stream->write("\r\n");
+      return;
+    }
+    my $bytes = b64_decode $1;
+    my ($userid, $token) = split(/:/, $bytes, 2);
+    if (not $token) {
+      $log->info("Token required (one of @tokens)");
+      $stream->write("HTTP/1.1 401 Unauthorized\r\n");
+      $stream->write("WWW-Authenticate: Basic realm=\"Phoebe\"\r\n");
+      $stream->write("\r\n");
+      return;
+    }
+    if (not grep(/^$token$/, @tokens)) {
+      $log->info("Wrong token ($token)");
+      $stream->write("HTTP/1.1 401 Unauthorized\r\n");
+      $stream->write("WWW-Authenticate: Basic realm=\"Phoebe\"\r\n");
+      $stream->write("\r\n");
+      return;
+    }
+  }
+  $log->info("Save edit for $id via WebDAV");
+  my $mime = $headers->{"content-type"} // "text/plain";
+  return http_error($stream, "Content type not known") unless $mime;
+  return http_error($stream, "Page name is missing") unless $id;
+  return http_error($stream, "Page names must not control characters") if $id =~ /[[:cntrl:]]/;
+  my $text = $buffer // "";
+  $text =~ s/\r\n/\n/g; # fix DOS EOL convention
+  with_lock($stream, $host, $space, sub { write_page_for_webdav($stream, $host, $space, $id, $text) } );
+}
 
-#   my $path   = $q->path_info;
-#   return 0 if $path !~ m|/dav|;
+sub write_page_for_webdav {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  my $id = shift;
+  my $text = shift;
+  $log->info("Writing page $id");
+  my $dir = wiki_dir($host, $space);
+  my $file = "$dir/page/$id.gmi";
+  my $revision = 0;
+  my $new = 0;
+  if (-e $file) {
+    my $old = read_text($file);
+    if ($old eq $text) {
+      $log->info("$id is unchanged");
+      $stream->write("HTTP/1.1 200 OK\r\n");
+      $stream->write("\r\n");
+      return;
+    }
+    mkdir "$dir/keep" unless -d "$dir/keep";
+    if (-d "$dir/keep/$id") {
+      foreach (read_dir("$dir/keep/$id")) {
+	$revision = $1 if m/^(\d+)\.gmi$/ and $1 > $revision;
+      }
+      $revision++;
+    } else {
+      mkdir "$dir/keep/$id";
+      $revision = 1;
+    }
+    rename $file, "$dir/keep/$id/$revision.gmi";
+  } else {
+    my $index = "$dir/index";
+    if (not open(my $fh, ">>:encoding(UTF-8)", $index)) {
+      $log->error("Cannot write index $index: $!");
+      return http_error($stream, "Unable to write index");
+    } else {
+      say $fh $id;
+      close($fh);
+    }
+    $new = 1;
+  }
+  my $changes = "$dir/changes.log";
+  if (not open(my $fh, ">>:encoding(UTF-8)", $changes)) {
+    $log->error("Cannot write log $changes: $!");
+    return http_error($stream, "Unable to write log");
+  } else {
+    my $peerhost = $stream->handle->peerhost;
+    say $fh join("\x1f", scalar(time), $id, $revision + 1, bogus_hash($peerhost));
+    close($fh);
+  }
+  mkdir "$dir/page" unless -d "$dir/page";
+  eval { write_text($file, $text) };
+  if ($@) {
+    $log->error("Unable to save $id: $@");
+    return http_error($stream, "Unable to save $id");
+  } else {
+    $log->info("Wrote $id");
+    if ($new) {
+      $stream->write("HTTP/1.1 201 Created\r\n");
+    } else {
+      $stream->write("HTTP/1.1 200 OK\r\n");
+    }
+    $stream->write("\r\n");
+  }
+}
 
-#   my $method = $q->request_method;
-#   $method = lc $method;
-#   warn uc $method, " ", $path, "\n" if $verbose;
-#   if (not $implemented{$method}) {
-#     print $q->header( -status     => '501 Not Implemented', );
-#     return 1;
-#   }
-
-#   $self->$method($q);
-#   return 1;
-# }
-
-
-# sub lock {
-#   my ($self, $q) = @_;
-#   print $q->header( -status         => "412 Precondition Failed", ); # fake it
-# }
-
-# sub unlock {
-#   my ($self, $q) = @_;
-#   print $q->header( -status         => "204 No Content", ); # fake it
-# }
-
-# sub head {
-#   get(@_, 1);
-# }
-
-# sub get {
-#   my ($self, $q, $head) = @_;
-#   my $id = OddMuse::GetId();
-#   OddMuse::AllPagesList();
-#   if ($OddMuse::IndexHash{$id}) {
-#     OddMuse::OpenPage($id);
-#     if (OddMuse::FileFresh()) {
-#       print $q->header( -status         => '304 Not Modified', );
-#     } else {
-#       print $q->header( -cache_control  => 'max-age=10',
-# 			-etag           => $OddMuse::Page{ts},
-# 			-type           => "text/plain; charset=UTF-8",
-# 			-status         => "200 OK",);
-#       print $OddMuse::Page{text} unless $head;
-#     }
-#   } else {
-#     print $q->header( -status         => "404 Not Found", );
-#     print OddMuse::NewText($id) unless $head;
-#   }
-# }
-
-# sub put {
-#   my ($self, $q) = @_;
-#   my $id = OddMuse::GetId();
-#   my $type = $ENV{'CONTENT_TYPE'};
-#   my $text = $q->param('PUTDATA'); # CGI.pm does that!
-#   # warn "text: $text\n";
-#   # hard coded magic based on the specs
-#   if (not $type) {
-#     if (substr($text,0,4) eq "\377\330\377\340"
-# 	or substr($text,0,4) eq "\377\330\377\341") {
-#       # http://www.itworld.com/nl/unix_insider/07072005/
-#       $type = "image/jpeg";
-#     } elsif (substr($text,0,8) eq "\211\120\116\107\15\12\32\12") {
-#       # http://www.libpng.org/pub/png/spec/1.2/PNG-Structure.html
-#       $type = "image/png";
-#     }
-#   }
-#   # warn $type;
-#   if ($type and substr($type,0,5) ne 'text/') {
-#     require MIME::Base64;
-#     $text = '#FILE ' . $type .  "\n" . MIME::Base64::encode($text);
-#     OddMuse::SetParam('summary', OddMuse::Ts('Upload of %s file', $type));
-#   }
-#   OddMuse::SetParam('text', $text);
-#   local *OddMuse::ReBrowsePage;
-#   OddMuse::AllPagesList();
-#   if ($OddMuse::IndexHash{$id}) {
-#     *OddMuse::ReBrowsePage = \&no_content; # modified existing page
-#   } else {
-#     *OddMuse::ReBrowsePage = \&created; # created new page
-#   }
-#   OddMuse::DoPost($id); # do the real posting
-# }
-
-# sub no_content {
-#   warn "RESPONSE: 204\n\n" if $verbose;
-#   print CGI::header( -status         => "204 No Content", );
-# }
-
-# sub created {
-#   warn "RESPONSE: 201\n\n" if $verbose;
-#   print CGI::header( -status         => "201 Created", );
-# }
+sub webdav_error {
+  my $stream = shift;
+  my $message = shift || "Bad Request";
+  $stream->write("HTTP/1.1 400 $message\r\n");
+  $stream->write("Content-Type: text/plain\r\n");
+  $stream->write("\r\n");
+  $stream->close_gracefully();
+  return 0;
+}
 
 1;

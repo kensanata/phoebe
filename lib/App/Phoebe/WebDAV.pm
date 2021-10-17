@@ -1,0 +1,549 @@
+# -*- mode: perl -*-
+# Copyright (C) 2005–2021  Alex Schroeder <alex@gnu.org>
+
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>.
+
+=encoding utf8
+
+=head1 NAME
+
+App::Phoebe::WebDAV - add WebDAV to Phoebe wiki
+
+=head1 DESCRIPTION
+
+This allows users to mount the wiki as a remote server using WebDAV. If you
+start it locally, for example, you should be able to mount
+L<davs://localhost:1965/> as a remote server using your file manager (i.e.
+Files, Finder, Windows Explorer, whatever it is called).
+
+=head1 BUGS
+
+=head2 Cadaver
+
+This example uses the command-line tool C<cadaver> as the client connecting to
+L<davs://localhost:1965/>.
+
+The first request is for C<OPTIONS / HTTP/1.1> and Phoebe sends back that it
+only knows about C<OPTIONS> and C<PROPFIND>.
+
+The second request is for C<PROPFIND / HTTP/1.1> with depth 0, trying to learn
+more about the server's root: is a directory, and if not, how big is it? Plus it
+wants to know the last modified date, whether it is an executable, and if it is
+checked in or out.
+
+    <?xml version="1.0" encoding="utf-8"?>
+    <propfind xmlns="DAV:"><prop>
+    <getcontentlength xmlns="DAV:"/>
+    <getlastmodified xmlns="DAV:"/>
+    <executable xmlns="http://apache.org/dav/props/"/>
+    <resourcetype xmlns="DAV:"/>
+    <checked-in xmlns="DAV:"/>
+    <checked-out xmlns="DAV:"/>
+    </prop></propfind>
+
+Phoebe replies that it doesn't know about the executable, checked in and checked
+out states, but offers answers to everything else:
+
+    <?xml version="1.0" encoding="utf-8"?>
+    <D:multistatus xmlns:D="DAV:">
+      <D:response xmlns:i0="http://apache.org/dav/props/">
+	<D:href>/</D:href>
+	<D:propstat>
+	  <D:prop>
+	    <D:getcontentlength>4096</D:getcontentlength>
+	    <D:getlastmodified>Sun, 17 Oct 2021 11:18:54 GMT</D:getlastmodified>
+	    <D:resourcetype>
+	      <D:collection/>
+	    </D:resourcetype>
+	  </D:prop>
+	  <D:status>HTTP/1.1 200 OK</D:status>
+	</D:propstat>
+	<D:propstat>
+	  <D:prop>
+	    <i0:executable/>
+	    <D:checked-in/>
+	    <D:checked-out/>
+	  </D:prop>
+	  <D:status>HTTP/1.1 404 Not Found</D:status>
+	</D:propstat>
+      </D:response>
+    </D:multistatus>
+
+=head2 Files (Gnome)
+
+This example uses the Gnome Files application as the client connecting to
+L<davs://localhost:1965/>.
+
+The first request is for C<OPTIONS / HTTP/1.1> and Phoebe sends back that it
+only knows about C<OPTIONS> and C<PROPFIND>.
+
+The second request is for C<PROPFIND / HTTP/1.1> with depth 0, trying to learn
+more about the server's root: is a directory, and if not, how big is it?
+
+    <?xml version="1.0" encoding="utf-8" ?>
+     <D:propfind xmlns:D="DAV:">
+      <D:prop>
+        <D:resourcetype/>
+        <D:getcontentlength/>
+      </D:prop>
+     </D:propfind>
+
+The wiki root is a directory so Phoebe sends back that the root is a collection
+(a directory).
+
+    <?xml version="1.0" encoding="utf-8"?>
+    <D:multistatus xmlns:D="DAV:">
+      <D:response>
+	<D:href>/</D:href>
+	<D:propstat>
+	  <D:prop>
+	    <D:resourcetype>
+	      <D:collection/>
+	    </D:resourcetype>
+	    <D:getcontentlength>4096</D:getcontentlength>
+	  </D:prop>
+	  <D:status>HTTP/1.1 200 OK</D:status>
+	</D:propstat>
+      </D:response>
+    </D:multistatus>
+
+At this point, Files reports an error.
+
+
+
+=head1 LIMITATIONS
+
+Phoebe does not support the locking of pages.
+
+=head1 SEE ALSO
+
+L<RFC 4918|https://datatracker.ietf.org/doc/html/rfc4918> defines WebDAV.
+
+L<RFC 5689|https://datatracker.ietf.org/doc/html/rfc5689> defines an extension
+to MKCOL.
+
+=cut
+
+package App::Phoebe::WebDAV;
+use App::Phoebe::Web qw(handle_http_header http_error);
+use App::Phoebe qw(@request_handlers @extensions run_extensions
+		   $log host_regex space_regex port wiki_dir pages files);
+use File::Slurper qw(read_text write_text read_dir);
+use HTTP::Date qw(time2str time2isoz);
+use Digest::MD5 qw(md5_base64);
+use Encode qw(encode_utf8 decode_utf8);
+use Fcntl qw(:mode); # for S_ISDIR
+use File::stat;
+use Modern::Perl;
+use URI::Escape;
+use XML::LibXML;
+use utf8;
+
+unshift(@request_handlers, '^(OPTIONS|PROPFIND) .* HTTP/1\.1$' => \&handle_http_header);
+
+# note that the requests handled here must be protected in
+# App::Phoebe::RegisteredEditorsOnly!
+push(@extensions, \&process_webdav);
+
+my %implemented = (
+  # get      => 0,
+  # head     => 0,
+  options  => 1,
+  propfind => 1,
+  # put      => 0,
+  # trace    => 0,
+  # lock     => 0,
+  # unlock   => 0,
+);
+
+sub process_webdav {
+  my ($stream, $request, $headers, $buffer) = @_;
+  my $hosts = host_regex();
+  my $port = port($stream);
+  my $spaces = space_regex();
+  my ($host, $space, $path, $id);
+  if (($space, $path, $id) = $request =~ m!^OPTIONS (?:/($spaces))?(/(?:(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.[01]$!
+      and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
+    options($stream);
+  } elsif (($space, $path, $id) = $request =~ m!^PROPFIND (?:/($spaces))?(/(?:(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.[01]$!
+	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
+    propfind($stream, $host, $space, $path, $id, $headers, $buffer);
+  } else {
+    return 0;
+  }
+  return 1;
+}
+
+sub options {
+  my ($stream) = @_;
+  my $allow = join(',', map { uc } keys %implemented);
+  $log->debug("OPTIONS: $allow");
+  $stream->write("HTTP/1.1 200 OK\r\n");
+  $stream->write("DAV: 1\r\n");
+  $stream->write("Allow: $allow\r\n");
+  $stream->write("\r\n");
+}
+
+sub propfind {
+  my ($stream, $host, $space, $path, $id, $headers, $buffer) = @_;
+  my $depth = $headers->{depth} // "infinity";
+  $log->debug("PROPFIND depth: $depth");
+  $log->debug("PROPFIND content: $buffer");
+
+  my $parser = XML::LibXML->new;
+  my $req;
+  eval { $req = $parser->parse_string($buffer); };
+  if ($@) {
+    http_error($stream, "Cannot parse the PROPFIND body");
+    $log->warn("PROPFIND parse: $@");
+    return;
+  }
+
+  # what properties do we need?
+  my $reqinfo;
+  my @reqprops;
+  $reqinfo = $req->find('/*/*')->shift->localname;
+  if ($reqinfo eq 'prop') {
+    for my $node ($req->find('/*/*/*')->get_nodelist) {
+      push @reqprops, [ $node->namespaceURI, $node->localname ];
+    }
+  }
+  $log->debug("PROPFIND requested properties: " . join(", ", map {join "", @$_} @reqprops));
+
+  # here is what we can request:
+  # / depth 0 => /
+  # / depth 1 => /, /page, /file
+  # / depth ∞ => /, /page, /page/*, /file, /file/*
+  # /page depth 0 => /page
+  # /page depth 1 => /page, /page/*
+  # /page/ => /page, /page/*
+  # /page depth ∞ => /page, /page/*
+  # /page/$id depth 0 => /page/$id
+  # /page/$id depth 1 => /page/$id
+  # /page/$id depth ∞ => /page/$id
+  # /raw depth 0 => /raw
+  # /raw depth 1 => /raw, /raw/*
+  # /raw/ => /raw, /raw/*
+  # /raw depth ∞ => /raw, /raw/*
+  # /raw/$id depth 0 => /raw/$id
+  # /raw/$id depth 1 => /raw/$id
+  # /raw/$id depth ∞ => /raw/$id
+  # /file depth 0 => /file
+  # /file depth 1 => /file, /file/*
+  # /file/ => /file, /file/*
+  # /file depth ∞ => /file, /file/*
+  # /file/$id depth 0 => /file/$id
+  # /file/$id depth 1 => /file/$id
+  # /file/$id depth ∞ => /file/$id
+
+  my @resources;
+  my $re = '^' . quotemeta($id) . '$' if $id;
+  push(@resources, "/")
+      if $path eq "/";
+  push(@resources, "/page")
+      if $path eq "/" and $depth ne "0" or $path eq "/page" or $path eq "/page/" and $depth eq "0";
+  push(@resources, "/raw")
+      if $path eq "/" and $depth ne "0" or $path eq "/raw" or $path eq "/raw/" and $depth eq "0";
+  push(@resources, map { "/page/$_" } pages($stream, $host, $space))
+      if $path eq "/" and $depth eq "infinity"
+      or $path eq "/page" and $depth ne "0"
+      or $path eq "/page/" and $depth ne "0";
+  push(@resources, map { "/raw/$_" } pages($stream, $host, $space))
+      if $path eq "/" and $depth eq "infinity"
+      or $path eq "/raw" and $depth ne "0"
+      or $path eq "/raw/" and $depth ne "0";
+  push(@resources, map { "/page/$_" } pages($stream, $host, $space, $re))
+      if $id;
+  push(@resources, "/file")
+      if $path eq "/" and $depth ne "0" or $path eq "/file" or $path eq "/file/" and $depth eq "0";
+  push(@resources, map { "/file/$_" } files($stream, $host, $space))
+      if $path eq "/" and $depth eq "infinity" or $path eq "/file" and $depth ne "0" or $path eq "/file/" and $depth ne "0";
+  push(@resources, map { "/file/$_" } files($stream, $host, $space, $re))
+      if $id;
+
+  $stream->write("HTTP/1.1 207 Multi-Status\r\n");
+  $stream->write("\r\n");
+
+  my $doc = XML::LibXML::Document->new('1.0', 'utf-8');
+  my $multistat = $doc->createElement('D:multistatus');
+  $multistat->setAttribute('xmlns:D', 'DAV:');
+  $doc->setDocumentElement($multistat);
+
+  my $dir = wiki_dir($host, $space);
+
+  for my $resource (@resources) {
+    next if $resource =~ m!/\.\.(/|$)!; # no reference back up
+
+    # Names
+    my $mime;
+    my ($filename, $displayname);
+    if ($resource =~ m!/page/([^/]*)$!) {
+      $displayname = "$1.html";
+      $filename = $dir . "/page/$1.gmi";
+      $mime = "text/html";
+    } elsif ($resource =~ m!/raw/([^/]*)$!) {
+      $displayname = "$1.gmi";
+      $filename = $dir . "/page/$1.gmi";
+      $mime = "text/plain";
+    } elsif ($resource eq "/raw") {
+      $displayname = "raw";
+      $filename = $dir . "/page";
+    } elsif ($resource =~ m!/([^/]*)$!) {
+      $displayname = $1;
+      $filename = $dir . $resource;
+    }
+
+    $log->debug("Processing $dir$resource");
+
+    # A stat call for every file and every page! 😭
+    my $sb = stat($filename);
+
+    if (not $sb) {
+      $log->warn("$filename does not exist");
+      next;
+    }
+
+    # Directories
+    my $is_dir = S_ISDIR($sb->mode);
+    if ($is_dir) {
+      $mime = "inode/directory";
+    } elsif (-f "$dir/meta/$displayname") {
+      # MIME-type for files requires opening the meta files! 😭
+      my %meta = (map { split(/: /, $_, 2) } read_lines("$dir/meta/$displayname"));
+      if ($meta{'content-type'}) {
+	$mime = $meta{'content-type'};
+      }
+    }
+
+    # $log->debug("Processing $filename is a directory") if $is_dir;
+
+    # Force empty strings if undefined
+    my $size = $sb->size // '';
+    # Modified time is stringified human readable HTTP::Date style
+    my $mtime = time2str($sb->mtime);
+    # Created time is ISO format: We need to tidy up the date format - isoz
+    # isn't exactly what we want
+    my $ctime = time2isoz($sb->ctime);
+    $ctime =~ s/ /T/;
+    $ctime =~ s/Z//;
+
+    my $resp = $doc->createElement('D:response');
+    $multistat->addChild($resp);
+    my $href = $doc->createElement('D:href');
+    $href->appendText($resource);
+    $resp->addChild($href);
+    my $okprops = $doc->createElement('D:prop');
+    my $nfprops = $doc->createElement('D:prop');
+    my $prop;
+    if ($reqinfo eq 'prop') {
+      my %prefixes = ('DAV:' => 'D');
+      my $i        = 0;
+      for my $reqprop (@reqprops) {
+        my ($ns, $name) = @$reqprop;
+        if ($ns eq 'DAV:' && $name eq 'creationdate') {
+          $prop = $doc->createElement('D:creationdate');
+          $prop->appendText($ctime);
+          $okprops->addChild($prop);
+        } elsif ($ns eq 'DAV:' && $name eq 'getcontentlength') {
+          $prop = $doc->createElement('D:getcontentlength');
+          $prop->appendText($size);
+          $okprops->addChild($prop);
+        } elsif ($ns eq 'DAV:' && $name eq 'getcontenttype') {
+          $prop = $doc->createElement('D:getcontenttype');
+	  $prop->appendText($mime);
+          $okprops->addChild($prop);
+        } elsif ($ns eq 'DAV:' && $name eq 'getlastmodified') {
+          $prop = $doc->createElement('D:getlastmodified');
+          $prop->appendText($mtime);
+          $okprops->addChild($prop);
+        } elsif ($ns eq 'DAV:' && $name eq 'resourcetype') {
+          $prop = $doc->createElement('D:resourcetype');
+          if ($is_dir) {
+            my $col = $doc->createElement('D:collection');
+            $prop->addChild($col);
+          }
+          $okprops->addChild($prop);
+        } elsif ($ns eq 'DAV:' && $name eq 'displayname') {
+	  $prop = $doc->createElement('D:displayname');
+	  $prop->appendText($displayname);
+	  $okprops->addChild($prop);
+        } else {
+          my $prefix = $prefixes{$ns};
+          if (!defined $prefix) {
+            $prefix = 'i' . $i++;
+	    # mod_dav sets <response> 'xmlns' attribute - whatever
+            #$nfprops->setAttribute("xmlns:$prefix", $ns);
+            $resp->setAttribute("xmlns:$prefix", $ns);
+            $prefixes{$ns} = $prefix;
+          }
+          $prop = $doc->createElement("$prefix:$name");
+          $nfprops->addChild($prop);
+        }
+      }
+    } elsif ($reqinfo eq 'propname') {
+      $prop = $doc->createElement('D:creationdate');
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:getcontentlength');
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:getcontenttype');
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:getlastmodified');
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:resourcetype');
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:displayname');
+      $okprops->addChild($prop);
+    } else {
+      $prop = $doc->createElement('D:creationdate');
+      $prop->appendText($ctime);
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:getcontentlength');
+      $prop->appendText($size);
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:getcontenttype');
+      $prop->appendText($mime);
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:getlastmodified');
+      $prop->appendText($mtime);
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:resourcetype');
+      if ($is_dir) {
+	my $col = $doc->createElement('D:collection');
+	$prop->addChild($col);
+      }
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:displayname');
+      $prop->appendText($displayname);
+      $okprops->addChild($prop);
+    }
+    if ($okprops->hasChildNodes) {
+      my $propstat = $doc->createElement('D:propstat');
+      $propstat->addChild($okprops);
+      my $stat = $doc->createElement('D:status');
+      $stat->appendText('HTTP/1.1 200 OK');
+      $propstat->addChild($stat);
+      $resp->addChild($propstat);
+    }
+    if ($nfprops->hasChildNodes) {
+      my $propstat = $doc->createElement('D:propstat');
+      $propstat->addChild($nfprops);
+      my $stat = $doc->createElement('D:status');
+      $stat->appendText('HTTP/1.1 404 Not Found');
+      $propstat->addChild($stat);
+      $resp->addChild($propstat);
+    }
+  }
+  $log->debug("RESPONSE: 207\n" . $doc->toString(1));
+  $stream->write(encode_utf8 $doc->toString(1) . "\n");
+}
+
+# sub run {
+#   my ($self, $q) = @_;
+
+#   my $path   = $q->path_info;
+#   return 0 if $path !~ m|/dav|;
+
+#   my $method = $q->request_method;
+#   $method = lc $method;
+#   warn uc $method, " ", $path, "\n" if $verbose;
+#   if (not $implemented{$method}) {
+#     print $q->header( -status     => '501 Not Implemented', );
+#     return 1;
+#   }
+
+#   $self->$method($q);
+#   return 1;
+# }
+
+
+# sub lock {
+#   my ($self, $q) = @_;
+#   print $q->header( -status         => "412 Precondition Failed", ); # fake it
+# }
+
+# sub unlock {
+#   my ($self, $q) = @_;
+#   print $q->header( -status         => "204 No Content", ); # fake it
+# }
+
+# sub head {
+#   get(@_, 1);
+# }
+
+# sub get {
+#   my ($self, $q, $head) = @_;
+#   my $id = OddMuse::GetId();
+#   OddMuse::AllPagesList();
+#   if ($OddMuse::IndexHash{$id}) {
+#     OddMuse::OpenPage($id);
+#     if (OddMuse::FileFresh()) {
+#       print $q->header( -status         => '304 Not Modified', );
+#     } else {
+#       print $q->header( -cache_control  => 'max-age=10',
+# 			-etag           => $OddMuse::Page{ts},
+# 			-type           => "text/plain; charset=UTF-8",
+# 			-status         => "200 OK",);
+#       print $OddMuse::Page{text} unless $head;
+#     }
+#   } else {
+#     print $q->header( -status         => "404 Not Found", );
+#     print OddMuse::NewText($id) unless $head;
+#   }
+# }
+
+# sub put {
+#   my ($self, $q) = @_;
+#   my $id = OddMuse::GetId();
+#   my $type = $ENV{'CONTENT_TYPE'};
+#   my $text = $q->param('PUTDATA'); # CGI.pm does that!
+#   # warn "text: $text\n";
+#   # hard coded magic based on the specs
+#   if (not $type) {
+#     if (substr($text,0,4) eq "\377\330\377\340"
+# 	or substr($text,0,4) eq "\377\330\377\341") {
+#       # http://www.itworld.com/nl/unix_insider/07072005/
+#       $type = "image/jpeg";
+#     } elsif (substr($text,0,8) eq "\211\120\116\107\15\12\32\12") {
+#       # http://www.libpng.org/pub/png/spec/1.2/PNG-Structure.html
+#       $type = "image/png";
+#     }
+#   }
+#   # warn $type;
+#   if ($type and substr($type,0,5) ne 'text/') {
+#     require MIME::Base64;
+#     $text = '#FILE ' . $type .  "\n" . MIME::Base64::encode($text);
+#     OddMuse::SetParam('summary', OddMuse::Ts('Upload of %s file', $type));
+#   }
+#   OddMuse::SetParam('text', $text);
+#   local *OddMuse::ReBrowsePage;
+#   OddMuse::AllPagesList();
+#   if ($OddMuse::IndexHash{$id}) {
+#     *OddMuse::ReBrowsePage = \&no_content; # modified existing page
+#   } else {
+#     *OddMuse::ReBrowsePage = \&created; # created new page
+#   }
+#   OddMuse::DoPost($id); # do the real posting
+# }
+
+# sub no_content {
+#   warn "RESPONSE: 204\n\n" if $verbose;
+#   print CGI::header( -status         => "204 No Content", );
+# }
+
+# sub created {
+#   warn "RESPONSE: 201\n\n" if $verbose;
+#   print CGI::header( -status         => "201 Created", );
+# }
+
+1;

@@ -28,13 +28,16 @@ L<davs://localhost:1965/> as a remote server using your file manager (i.e.
 Files, Finder, Windows Explorer, whatever it is called). Alternatively, you can
 use a dedicated WebDAV client such as C<cadaver>.
 
-=head1 LIMITATIONS
-
 If you want to have write access, you need to provide a username and password if
-Phoebe requires a token. This is done using Basic Authentication. If you use a
-client such as C<cadaver>, it'll ask you for a username and password. If you use
-the Gnome Text Editor to edit the file, you cannot save it because it doesn't
-know how to do that.
+Phoebe requires a token. By default, the token required by Phoebe is "hello".
+The username you provide is ignored. The password must match one of the tokens.
+
+If you use a client such as C<cadaver>, it'll ask you for a username and
+password when you use the "put" command for the first time. If you use the Gnome
+Text Editor to edit the file, this fails. The fix is to mount
+L<davs://localhost:1965/> instead. This forces Gnome Files to ask you for a
+username and password, and once you provide it, Gnome Text Editor can save
+files.
 
 =head1 SEE ALSO
 
@@ -53,7 +56,7 @@ package App::Phoebe::WebDAV;
 use App::Phoebe::Web qw(handle_http_header);
 use App::Phoebe qw(@request_handlers @extensions run_extensions $server
 		   $log host_regex space_regex port wiki_dir pages files
-		   with_lock bogus_hash);
+		   with_lock bogus_hash to_url);
 use File::Slurper qw(read_text write_text read_dir);
 use HTTP::Date qw(time2str time2isoz);
 use Digest::MD5 qw(md5_base64);
@@ -82,14 +85,18 @@ sub process_webdav {
   my $hosts = host_regex();
   my $port = port($stream);
   my $spaces = space_regex();
-  my ($host, $space, $path, $id);
-  if (($space, $path, $id) = $request =~ m!^OPTIONS (?:/($spaces))?(/(?:(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.1$!
+  my ($method, $host, $space, $path, $id);
+  if (($space, $path, $id)
+      = $request =~ m!^OPTIONS (?:/($spaces))?(/(?:login|(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.1$!
       and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    options($stream);
-  } elsif (($space, $path, $id) = $request =~ m!^PROPFIND (?:/($spaces))?(/(?:(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.1$!
+    return if $path eq "/login" and not authorize($stream, $host, $space, $headers);
+    options($stream, $path);
+  } elsif (($space, $path, $id)
+	   = $request =~ m!^PROPFIND (?:/($spaces))?(/(?:login/?|(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
     propfind($stream, $host, $space, $path, $id, $headers, $buffer);
-  } elsif (($space, $path, $id) = $request =~ m!^PUT (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
+  } elsif (($space, $path, $id)
+	   = $request =~ m!^PUT (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
     put($stream, $host, $space, $path, $id, $headers, $buffer);
   } else {
@@ -159,11 +166,17 @@ sub propfind {
   # /file/$id depth 0 => /file/$id
   # /file/$id depth 1 => /file/$id
   # /file/$id depth ∞ => /file/$id
+  # /login => /, /login
+  # /login/ => /login
 
   my @resources;
   my $re = '^' . quotemeta($id) . '$' if $id;
   push(@resources, "/")
       if $path eq "/";
+  push(@resources, "/", "/login")
+      if $path eq "/login";
+  push(@resources, "/login")
+      if $path =~ "/login/";
   push(@resources, "/page")
       if $path eq "/" and $depth ne "0" or $path eq "/page" or $path eq "/page/" and $depth eq "0";
   push(@resources, "/raw")
@@ -240,19 +253,27 @@ sub propfind {
     $log->debug("Processing $dir$resource");
 
     # A stat call for every file and every page! 😭
-    my $sb = stat($filename);
-    if (not $sb) {
-      $log->warn("$filename does not exist");
-      next;
+    my ($sb, $size, $mtime, $ctime);
+    if ($displayname eq "login") {
+      $size = "";
+      $mtime = $ctime = time;
+    } else {
+      $sb = stat($filename);
+      if (not $sb) {
+	$log->warn("$filename does not exist");
+	next;
+      }
+      $size = $sb->size;
+      $mtime = $sb->mtime;
+      $ctime = $sb->ctime;
     }
 
-    # Force empty strings if undefined
-    my $size = $sb->size // '';
     # Modified time is stringified human readable HTTP::Date style
-    my $mtime = time2str($sb->mtime);
+    $mtime = time2str($mtime);
+
     # Created time is ISO format: We need to tidy up the date format - isoz
     # isn't exactly what we want
-    my $ctime = time2isoz($sb->ctime);
+    $ctime = time2isoz($ctime);
     $ctime =~ s/ /T/;
     $ctime =~ s/Z//;
 
@@ -368,41 +389,13 @@ sub propfind {
 
 sub put {
   my ($stream, $host, $space, $path, $id, $headers, $buffer) = @_;
-  my @tokens = @{$server->{wiki_token}};
-  push(@tokens, @{$server->{wiki_space_token}->{$space}})
-      if $space and $server->{wiki_space_token}->{$space};
-  if (@tokens) {
-    my $auth = $headers->{"authorization"};
-    if (not $auth or $auth !~ /^Basic (\S+)/) {
-      $log->info("Missing authorization header");
-      $stream->write("HTTP/1.1 401 Unauthorized\r\n");
-      $stream->write("WWW-Authenticate: Basic realm=\"Phoebe\"\r\n");
-      $stream->write("\r\n");
-      return;
-    }
-    my $bytes = b64_decode $1;
-    my ($userid, $token) = split(/:/, $bytes, 2);
-    if (not $token) {
-      $log->info("Token required (one of @tokens)");
-      $stream->write("HTTP/1.1 401 Unauthorized\r\n");
-      $stream->write("WWW-Authenticate: Basic realm=\"Phoebe\"\r\n");
-      $stream->write("\r\n");
-      return;
-    }
-    if (not grep(/^$token$/, @tokens)) {
-      $log->info("Wrong token ($token)");
-      $stream->write("HTTP/1.1 401 Unauthorized\r\n");
-      $stream->write("WWW-Authenticate: Basic realm=\"Phoebe\"\r\n");
-      $stream->write("\r\n");
-      return;
-    }
-  }
+  return unless authorize($stream, $host, $space, $headers);
   $log->info("Save edit for $id via WebDAV");
   my $mime = $headers->{"content-type"} // "text/plain";
   return http_error($stream, "Content type not known") unless $mime;
   return http_error($stream, "Page name is missing") unless $id;
   return http_error($stream, "Page names must not control characters") if $id =~ /[[:cntrl:]]/;
-  my $text = $buffer // "";
+  my $text = decode_utf8 $buffer // "";
   $text =~ s/\r\n/\n/g; # fix DOS EOL convention
   with_lock($stream, $host, $space, sub { write_page_for_webdav($stream, $host, $space, $id, $text) } );
 }
@@ -481,6 +474,39 @@ sub webdav_error {
   $stream->write("\r\n");
   $stream->close_gracefully();
   return 0;
+}
+
+sub authorize {
+  my ($stream, $host, $space, $headers) = @_;
+  my @tokens = @{$server->{wiki_token}};
+  push(@tokens, @{$server->{wiki_space_token}->{$space}})
+      if $space and $server->{wiki_space_token}->{$space};
+  return 1 unless  @tokens;
+  my $auth = $headers->{"authorization"};
+  if (not $auth or $auth !~ /^Basic (\S+)/) {
+    $log->info("Missing authorization header");
+    $stream->write("HTTP/1.1 401 Unauthorized\r\n");
+    $stream->write("WWW-Authenticate: Basic realm=\"Phoebe\"\r\n");
+    $stream->write("\r\n");
+    return;
+  }
+  my $bytes = b64_decode $1;
+  my ($userid, $token) = split(/:/, $bytes, 2);
+  if (not $token) {
+    $log->info("Token required (one of @tokens)");
+    $stream->write("HTTP/1.1 401 Unauthorized\r\n");
+    $stream->write("WWW-Authenticate: Basic realm=\"Phoebe\"\r\n");
+    $stream->write("\r\n");
+    return;
+  }
+  if (not grep(/^$token$/, @tokens)) {
+    $log->info("Wrong token ($token)");
+    $stream->write("HTTP/1.1 401 Unauthorized\r\n");
+    $stream->write("WWW-Authenticate: Basic realm=\"Phoebe\"\r\n");
+    $stream->write("\r\n");
+    return;
+  }
+  return 1;
 }
 
 1;

@@ -71,7 +71,6 @@ t/oddmuse-server.pl
 t/oddmuse-wiki.pl
 t/Oddmuse.t
 t/PageHeadings.t
-t/prerequisites.t
 t/RegisteredEditorsOnly.t
 t/spaces.t
 t/Spartan.t

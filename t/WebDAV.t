@@ -1,4 +1,4 @@
-# Copyright (C) 2021  Alex Schroeder <alex@gnu.org>
+# Copyright (C) 2017–2021  Alex Schroeder <alex@gnu.org>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,19 +14,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use Modern::Perl;
-use Test::More;
+use Test::More skip_all => "unfinished";
+use File::Slurper qw(write_text write_binary read_binary);
+use utf8; # tests contain UTF-8 characters and it matters
 
+our $host;
+our $port;
 our $base;
-our @use = qw(Favicon);
+our $dir;
+our @use = qw(WebDAV);
 
 require './t/test.pl';
 
-# variables set by test.pl
-our $dir;
-our $host;
-our $port;
-
-like(query_web("GET /favicon.ico HTTP/1.0\r\nhost: $host:$port"),
-     qr/^HTTP\/1.1 200 OK/, "Favicon is served via HTTP");
-
-done_testing;
+done_testing();

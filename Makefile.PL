@@ -32,6 +32,10 @@ WriteMakefile(
     'Net::SSLeay' => 1.90,
     'Net::IDN::Encode' => 0,
     'IRI' => 0,                  # for script/gemini
+    'File::MimeInfo' => 0,       # Iapetus.pm
+    'Text::Wrapper' => 0,        # Gopher.pm
+    'HTTP::Date' => 0,           # WebDAV.pm
+    'XML::LibXML' => 0,          # WebDAV.pm
   },
   META_MERGE => {
     'meta-spec' => { version => 2 },

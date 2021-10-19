@@ -20,12 +20,6 @@ use File::Slurper qw(read_binary);
 use Mojo::JSON qw(decode_json);
 use utf8; # tests contain UTF-8
 
-my $msg;
-if (not $ENV{TEST_AUTHOR}) {
-  $msg = 'Contributions are an author test. Set $ENV{TEST_AUTHOR} to a true value to run.';
-}
-plan skip_all => $msg if $msg;
-
 our @use = qw(Ijirait);
 our $base;
 our $port;

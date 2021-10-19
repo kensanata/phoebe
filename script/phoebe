@@ -1019,8 +1019,9 @@ sub start_servers {
 	$server->{address}->{$address} = $host;
 	for my $port (@{$server->{port}}) {
 	  my %args = (address => $address, port => $port);
+	  my $msg;
 	  if ($server->{cert_file}->{$host}) {
-	    $log->info("$host: listening on $address:$port (Gemini)");
+	    $msg = "$host: listening on $address:$port (Gemini)";
 	    # only add TLS if we have a cert file!
 	    $args{tls} = 1;
 	    $args{tls_cert} = $server->{cert_file};
@@ -1035,16 +1036,21 @@ sub start_servers {
 	      }
 	    };
 	  } else {
-	    $log->info("$host: listening on $address:$port (Gemini without TLS)");
+	    $msg = "$host: listening on $address:$port (Gemini without TLS)";
 	  }
-	  Mojo::IOLoop->server(\%args => sub {
-	    my ($loop, $stream) = @_;
-	    my $data = { buffer => '', handler => \&handle_request };
-	    $stream->on(read => sub {
-	      my ($stream, $bytes) = @_;
-	      $log->debug("Received " . length($bytes) . " bytes");
-	      $data->{buffer} .= $bytes;
-	      $data->{handler}->($stream, $data)})});
+	  eval {
+	    Mojo::IOLoop->server(\%args => sub {
+	      my ($loop, $stream) = @_;
+	      my $data = { buffer => '', handler => \&handle_request };
+	      $stream->on(read => sub {
+		my ($stream, $bytes) = @_;
+		$log->debug("Received " . length($bytes) . " bytes");
+		$data->{buffer} .= $bytes;
+		$data->{handler}->($stream, $data)})});
+	    # report success after the fact!
+	    $log->info($msg);
+	  };
+	  $log->error("$host: unable to listen on $address:$port: $@") if $@;
 	}
       }
     }

@@ -200,9 +200,6 @@ sub propfind {
   push(@resources, map { "/file/$_" } files($stream, $host, $space, $re))
       if $id;
 
-  $stream->write("HTTP/1.1 207 Multi-Status\r\n");
-  $stream->write("\r\n");
-
   my $doc = XML::LibXML::Document->new('1.0', 'utf-8');
   my $multistat = $doc->createElement('D:multistatus');
   $multistat->setAttribute('xmlns:D', 'DAV:');
@@ -383,8 +380,14 @@ sub propfind {
       $resp->addChild($propstat);
     }
   }
+  my $str = encode_utf8 $doc->toString(1);
+  my $len = length($str);
   $log->debug("RESPONSE: 207\n" . $doc->toString(1));
-  $stream->write(encode_utf8 $doc->toString(1) . "\n");
+  $stream->write("HTTP/1.1 207 Multi-Status\r\n");
+  $stream->write("Content-Type: application/xml; charset=\"utf-8\"\r\n");
+  $stream->write("Content-Length: $len\r\n");
+  $stream->write("\r\n");
+  $stream->write($str);
 }
 
 sub put {

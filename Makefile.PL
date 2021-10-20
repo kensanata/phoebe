@@ -27,15 +27,17 @@ WriteMakefile(
     'Algorithm::Diff' => 0,
     'File::ReadBackwards' => 0,
     'File::Slurper' => 0,
-    'Mojolicious' => 9.00,       # removed tls_verify from Mojo::IOLoop::TLS 9.0
-    'IO::Socket::SSL' => 2.069,  # optional for Mojo::IOLoop
+    'Mojolicious' => 9.00,        # removed tls_verify from Mojo::IOLoop::TLS 9.0
+    'IO::Socket::SSL' => 2.069,   # optional for Mojo::IOLoop
     'Net::SSLeay' => 1.90,
     'Net::IDN::Encode' => 0,
-    'IRI' => 0,                  # for script/gemini
-    'File::MimeInfo' => 0,       # Iapetus.pm
-    'Text::Wrapper' => 0,        # Gopher.pm
-    'HTTP::Date' => 0,           # WebDAV.pm
-    'XML::LibXML' => 0,          # WebDAV.pm
+    'IRI' => 0,                   # for script/gemini
+    'Text::Wrapper' => 0,         # Gopher.pm
+    'File::MimeInfo' => 0,        # Iapetus.pm
+    'File::MimeInfo::Magic' => 0, # WebDAV.pm
+    'IO::Scalar' => 0,            # WebDAV.pm
+    'HTTP::Date' => 0,            # WebDAV.pm
+    'XML::LibXML' => 0,           # WebDAV.pm
   },
   META_MERGE => {
     'meta-spec' => { version => 2 },

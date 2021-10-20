@@ -81,4 +81,11 @@ $str = undef;
 $dav->get(-url=>"/page/Moon", -to=>\$str);
 like($str, qr/<p>Ganymede/, "Moon retrieved");
 
+# Upload a file
+ok($dav->put(-local=>"t/alex.jpg", -url=>"https://$host:$port/file/Alex"),
+   "Post file with token");
+my $data;
+$dav->get(-url=>"/file/Alex", -to=>\$data);
+is($data, read_binary("t/alex.jpg"), "Alex retrieved");
+
 done_testing();

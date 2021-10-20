@@ -57,15 +57,17 @@ use App::Phoebe::Web qw(handle_http_header);
 use App::Phoebe qw(@request_handlers @extensions run_extensions $server
 		   $log host_regex space_regex port wiki_dir pages files
 		   with_lock bogus_hash to_url);
-use File::Slurper qw(read_text write_text read_dir);
+use File::Slurper qw(read_text write_text write_binary read_dir read_lines);
 use HTTP::Date qw(time2str time2isoz);
 use Digest::MD5 qw(md5_base64);
 use Encode qw(encode_utf8 decode_utf8);
 use Mojo::Util qw(b64_decode);
 use File::stat;
 use Modern::Perl;
+use File::MimeInfo::Magic;
 use URI::Escape;
 use XML::LibXML;
+use IO::Scalar;
 use utf8;
 
 unshift(@request_handlers, '^(OPTIONS|PROPFIND|PUT) .* HTTP/1\.1$' => \&handle_http_header);
@@ -125,7 +127,7 @@ sub propfind {
   my $req;
   eval { $req = $parser->parse_string($buffer); };
   if ($@) {
-    http_error($stream, "Cannot parse the PROPFIND body");
+    webdav_error($stream, "Cannot parse the PROPFIND body");
     $log->warn("PROPFIND parse: $@");
     return;
   }
@@ -255,11 +257,7 @@ sub propfind {
       $size = "";
       $mtime = $ctime = time;
     } else {
-      $sb = stat($filename);
-      if (not $sb) {
-	$log->warn("$filename does not exist");
-	next;
-      }
+      $sb = stat($filename) or next;
       $size = $sb->size;
       $mtime = $sb->mtime;
       $ctime = $sb->ctime;
@@ -394,13 +392,17 @@ sub put {
   my ($stream, $host, $space, $path, $id, $headers, $buffer) = @_;
   return unless authorize($stream, $host, $space, $headers);
   $log->info("Save edit for $id via WebDAV");
-  my $mime = $headers->{"content-type"} // "text/plain";
-  return http_error($stream, "Content type not known") unless $mime;
-  return http_error($stream, "Page name is missing") unless $id;
-  return http_error($stream, "Page names must not control characters") if $id =~ /[[:cntrl:]]/;
-  my $text = decode_utf8 $buffer // "";
-  $text =~ s/\r\n/\n/g; # fix DOS EOL convention
-  with_lock($stream, $host, $space, sub { write_page_for_webdav($stream, $host, $space, $id, $text) } );
+  my $mime = $headers->{"content-type"} // guess_mime_type(\$buffer);
+  return webdav_error($stream, "Content type not known") unless $mime;
+  return webdav_error($stream, "Page name is missing") unless $id;
+  return webdav_error($stream, "Page names must not control characters") if $id =~ /[[:cntrl:]]/;
+  if ($path eq "/file/$id") {
+    with_lock($stream, $host, $space, sub { write_file_for_webdav($stream, $host, $space, $id, $buffer, $mime) } );
+  } else {
+    my $text = decode_utf8 $buffer // "";
+    $text =~ s/\r\n/\n/g; # fix DOS EOL convention
+    with_lock($stream, $host, $space, sub { write_page_for_webdav($stream, $host, $space, $id, $text) } );
+  }
 }
 
 sub write_page_for_webdav {
@@ -437,7 +439,7 @@ sub write_page_for_webdav {
     my $index = "$dir/index";
     if (not open(my $fh, ">>:encoding(UTF-8)", $index)) {
       $log->error("Cannot write index $index: $!");
-      return http_error($stream, "Unable to write index");
+      return webdav_error($stream, "Unable to write index");
     } else {
       say $fh $id;
       close($fh);
@@ -447,7 +449,7 @@ sub write_page_for_webdav {
   my $changes = "$dir/changes.log";
   if (not open(my $fh, ">>:encoding(UTF-8)", $changes)) {
     $log->error("Cannot write log $changes: $!");
-    return http_error($stream, "Unable to write log");
+    return webdav_error($stream, "Unable to write log");
   } else {
     my $peerhost = $stream->handle->peerhost;
     say $fh join("\x1f", scalar(time), $id, $revision + 1, bogus_hash($peerhost));
@@ -457,7 +459,7 @@ sub write_page_for_webdav {
   eval { write_text($file, $text) };
   if ($@) {
     $log->error("Unable to save $id: $@");
-    return http_error($stream, "Unable to save $id");
+    return webdav_error($stream, "Unable to save $id");
   } else {
     $log->info("Wrote $id");
     if ($new) {
@@ -467,6 +469,58 @@ sub write_page_for_webdav {
     }
     $stream->write("\r\n");
   }
+}
+
+sub write_file_for_webdav {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  my $id = shift;
+  my $data = shift;
+  my $type = shift;
+  $log->info("Writing file $id");
+  my $dir = wiki_dir($host, $space);
+  my $file = "$dir/file/$id";
+  my $meta = "$dir/meta/$id";
+  my $new = 0;
+  if (-e $file) {
+    my $old = read_binary($file);
+    if ($old eq $data) {
+      $log->info("$id is unchanged");
+      $stream->write("HTTP/1.1 200 OK\r\n");
+      $stream->write("\r\n");
+      return;
+    }
+    $new = 1;
+  }
+  my $changes = "$dir/changes.log";
+  if (not open(my $fh, ">>:encoding(UTF-8)", $changes)) {
+    $log->error("Cannot write log $changes: $!");
+    return webdav_error($stream, "Unable to write log");
+  } else {
+    my $peerhost = $stream->handle->peerhost;
+    say $fh join("\x1f", scalar(time), $id, 0, bogus_hash($peerhost));
+    close($fh);
+  }
+  mkdir "$dir/file" unless -d "$dir/file";
+  eval { write_binary($file, $data) };
+  if ($@) {
+    $log->error("Unable to save $id: $@");
+    return webdav_error($stream, "Unable to save $id");
+  }
+  mkdir "$dir/meta" unless -d "$dir/meta";
+  eval { write_text($meta, "content-type: $type\n") };
+  if ($@) {
+    $log->error("Unable to save metadata for $id: $@");
+    return webdav_error($stream, "Unable to save metadata for $id");
+  }
+  $log->info("Wrote $id");
+  if ($new) {
+    $stream->write("HTTP/1.1 201 Created\r\n");
+  } else {
+    $stream->write("HTTP/1.1 200 OK\r\n");
+  }
+  $stream->write("\r\n");
 }
 
 sub webdav_error {
@@ -510,6 +564,11 @@ sub authorize {
     return;
   }
   return 1;
+}
+
+sub guess_mime_type {
+  my $SH = new IO::Scalar shift;
+  return mimetype($SH);
 }
 
 1;

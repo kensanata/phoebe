@@ -22,22 +22,22 @@ use List::Util qw(first);
 plan skip_all => 'This is an author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 plan skip_all => 'This test requires HTTP::DAV.' unless eval { require HTTP::DAV };
 
+our @use = qw(WebDAV);
+our @spaces = qw(test);
 our $host;
 our $port;
 our $dir;
-our @use = qw(WebDAV);
 
 require './t/test.pl';
 
 # Make sure the user agent doesn't check hostname and cert validity
-my $url = "https://$host:$port/";
 my $dav = HTTP::DAV->new();
 my $ua = $dav->get_user_agent();
 $ua->ssl_opts(SSL_verify_mode => 0x00);
 $ua->ssl_opts(verify_hostname => 0);
 
 # Open a fresh wiki
-ok($dav->open(-url => $url), "Open URL: " . $dav->message);
+ok($dav->open(-url => "https://$host:$port/"), "Open URL: " . $dav->message);
 my $resource = $dav->propfind(-url=>"/", -depth=>1);
 ok($resource->is_collection, "Found /");
 my @list = $resource->get_resourcelist->get_resources;
@@ -83,6 +83,49 @@ ok($dav->put(-local=>"t/alex.jpg", -url=>"https://$host:$port/file/Alex"),
    "Post file with token");
 my $data;
 $dav->get(-url=>"/file/Alex", -to=>\$data);
+is($data, read_binary("t/alex.jpg"), "Alex retrieved");
+
+# Open a wiki space
+ok($dav->open(-url => "https://$host:$port/test"), "Open URL: " . $dav->message);
+$resource = $dav->propfind(-url=>".", -depth=>1);
+ok($resource->is_collection, "Found /test");
+@list = $resource->get_resourcelist->get_resources;
+$item = first { $_->get_property('displayname') eq "page" } @list;
+ok($item->is_collection, "Found /test/page");
+$item = first { $_->get_property('displayname') eq "raw" } @list;
+ok($item->is_collection, "Found /test/raw");
+$item = first { $_->get_property('displayname') eq "file" } @list;
+ok($item->is_collection, "Found /test/files");
+
+# Write a page
+$str = "Callisto\n";
+ok($dav->put(-local=>\$str, -url=>"https://$host:$port/test/raw/Moon"),
+   "Post gemtext with token");
+
+# /raw
+$resource = $dav->propfind(-url=>"/test/raw", -depth=>1);
+ok($resource->is_collection, "Found /test/raw");
+@list = $resource->get_resourcelist->get_resources;
+$item = first { $_->get_property('displayname') eq "Moon.gmi" } @list;
+ok(!$item->is_collection, "Found /test/raw/Moon.gmi");
+$str = undef;
+$dav->get(-url=>"/test/raw/Moon", -to=>\$str);
+like($str, qr/^Callisto/, "Moon retrieved");
+
+# /page
+$resource = $dav->propfind(-url=>"/test/page", -depth=>1);
+ok($resource->is_collection, "Found /test/page");
+@list = $resource->get_resourcelist->get_resources;
+$item = first { $_->get_property('displayname') eq "Moon.html" } @list;
+ok(!$item->is_collection, "Found /test/page/Moon.html");
+$str = undef;
+$dav->get(-url=>"/test/page/Moon", -to=>\$str);
+like($str, qr/<p>Callisto/, "Moon retrieved");
+
+# Upload a file
+ok($dav->put(-local=>"t/alex.jpg", -url=>"https://$host:$port/test/file/Alex"),
+   "Post file with token");
+$dav->get(-url=>"/test/file/Alex", -to=>\$data);
 is($data, read_binary("t/alex.jpg"), "Alex retrieved");
 
 done_testing();

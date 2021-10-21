@@ -185,7 +185,6 @@ sub propfind {
     # skip "hidden" files in the Unix world
     # and prevent path traversal using ..
     next if $resource =~ m!/\.!;
-
     # Names
     my $mime;
     my $is_dir;
@@ -246,7 +245,7 @@ sub propfind {
     my $resp = $doc->createElement('D:response');
     $multistat->addChild($resp);
     my $href = $doc->createElement('D:href');
-    $href->appendText($resource);
+    $href->appendText($space ? "/$space$resource" : $resource);
     $resp->addChild($href);
     my $okprops = $doc->createElement('D:prop');
     my $nfprops = $doc->createElement('D:prop');

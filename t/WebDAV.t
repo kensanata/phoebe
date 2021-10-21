@@ -40,7 +40,13 @@ $ua->ssl_opts(verify_hostname => 0);
 ok($dav->open(-url => $url), "Open URL: " . $dav->message);
 my $resource = $dav->propfind(-url=>"/", -depth=>1);
 ok($resource->is_collection, "Found /");
-ok(not(defined $resource->get_resourcelist), "Empty /");
+my @list = $resource->get_resourcelist->get_resources;
+my $item = first { $_->get_property('displayname') eq "page" } @list;
+ok($item->is_collection, "Found /page");
+$item = first { $_->get_property('displayname') eq "raw" } @list;
+ok($item->is_collection, "Found /raw");
+$item = first { $_->get_property('displayname') eq "file" } @list;
+ok($item->is_collection, "Found /files");
 
 # Attempt to write a file without credentials
 my $str = "Ganymede\n";
@@ -51,15 +57,6 @@ ok(not($dav->put(-local=>\$str, -url=>"https://$host:$port/raw/Moon")),
 $dav->credentials(-user => "alex", -pass => "hello", -realm => "Phoebe");
 ok($dav->put(-local=>\$str, -url=>"https://$host:$port/raw/Moon"),
    "Post gemtext with token");
-
-# Now folders exist
-$resource = $dav->propfind(-url=>"/", -depth=>1);
-ok($resource->is_collection, "Found /");
-my @list = $resource->get_resourcelist->get_resources;
-my $item = first { $_->get_property('displayname') eq "page" } @list;
-ok($item->is_collection, "Found /page");
-$item = first { $_->get_property('displayname') eq "raw" } @list;
-ok($item->is_collection, "Found /raw");
 
 # /raw
 $resource = $dav->propfind(-url=>"/raw", -depth=>1);

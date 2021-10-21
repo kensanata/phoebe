@@ -143,34 +143,6 @@ sub propfind {
   }
   $log->debug("PROPFIND requested properties: " . join(", ", map {join "", @$_} @reqprops));
 
-  # here is what we can request:
-  # / depth 0 => /
-  # / depth 1 => /, /page, /file
-  # / depth ∞ => /, /page, /page/*, /file, /file/*
-  # /page depth 0 => /page
-  # /page depth 1 => /page, /page/*
-  # /page/ => /page, /page/*
-  # /page depth ∞ => /page, /page/*
-  # /page/$id depth 0 => /page/$id
-  # /page/$id depth 1 => /page/$id
-  # /page/$id depth ∞ => /page/$id
-  # /raw depth 0 => /raw
-  # /raw depth 1 => /raw, /raw/*
-  # /raw/ => /raw, /raw/*
-  # /raw depth ∞ => /raw, /raw/*
-  # /raw/$id depth 0 => /raw/$id
-  # /raw/$id depth 1 => /raw/$id
-  # /raw/$id depth ∞ => /raw/$id
-  # /file depth 0 => /file
-  # /file depth 1 => /file, /file/*
-  # /file/ => /file, /file/*
-  # /file depth ∞ => /file, /file/*
-  # /file/$id depth 0 => /file/$id
-  # /file/$id depth 1 => /file/$id
-  # /file/$id depth ∞ => /file/$id
-  # /login => /, /login
-  # /login/ => /login
-
   my @resources;
   my $re = '^' . quotemeta($id) . '$' if $id;
   push(@resources, "/")
@@ -252,12 +224,11 @@ sub propfind {
     $log->debug("Processing $dir$resource");
 
     # A stat call for every file and every page! 😭
-    my ($sb, $size, $mtime, $ctime);
+    my ($size, $mtime, $ctime, $sb) = (0, 0, 0);
     if ($displayname eq "login") {
       $size = "";
       $mtime = $ctime = time;
-    } else {
-      $sb = stat($filename) or next;
+    } elsif ($sb = stat($filename)) {
       $size = $sb->size;
       $mtime = $sb->mtime;
       $ctime = $sb->ctime;

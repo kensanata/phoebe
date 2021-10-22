@@ -83,12 +83,12 @@ sub process_webdav {
   my $spaces = space_regex();
   my ($method, $host, $space, $path, $id);
   if (($space, $path, $id)
-      = $request =~ m!^OPTIONS (?:/($spaces))?(/(?:login|(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.1$!
+      = $request =~ m!^OPTIONS (?:/($spaces))?(/(?:login|(?:file|page|raw)(?:/([^/]*))?)?)? HTTP/1\.1$!
       and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
     return if $path eq "/login" and not authorize($stream, $host, $space, $headers);
     options($stream, $path, $id);
   } elsif (($space, $path, $id)
-	   = $request =~ m!^PROPFIND (?:/($spaces))?(/(?:login/?|(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.1$!
+	   = $request =~ m!^PROPFIND (?:/($spaces))?(/(?:login/?|(?:file|page|raw)(?:/([^/]*))?)?)? HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
     propfind($stream, $host, $space, $path, $id, $headers, $buffer);
   } elsif (($space, $path, $id)
@@ -139,6 +139,7 @@ sub options {
 
 sub propfind {
   my ($stream, $host, $space, $path, $id, $headers, $buffer) = @_;
+  $path //= "/";
   my $depth = $headers->{depth} // "infinity";
   $log->debug("PROPFIND depth: $depth");
   $log->debug("PROPFIND content: $buffer");
@@ -167,32 +168,35 @@ sub propfind {
   my $re = '^' . quotemeta($id) . '$' if $id;
   push(@resources, "/")
       if $path eq "/";
-  push(@resources, "/", "/login")
-      if $path eq "/login";
-  push(@resources, "/login")
-      if $path =~ "/login/";
-  push(@resources, "/page")
-      if $path eq "/" and $depth ne "0" or $path eq "/page" or $path eq "/page/" and $depth eq "0";
-  push(@resources, "/raw")
-      if $path eq "/" and $depth ne "0" or $path eq "/raw" or $path eq "/raw/" and $depth eq "0";
+  push(@resources, map { "/$_/" } @{$server->{wiki_space}}) # all of them, but only at the top level
+      if not $space and $path eq "/" and $depth ne "0";
+  push(@resources, "/login/")
+      if $path eq "/" and $depth ne "0"
+      or $path =~ m!^/login/?$!;
+  push(@resources, "/page/")
+      if $path eq "/" and $depth ne "0"
+      or $path =~ m!^/page/?$!;
+  push(@resources, "/raw/")
+      if $path eq "/" and $depth ne "0"
+      or $path =~ m!^/raw/?$!;
   push(@resources, map { "/page/$_" } pages($stream, $host, $space))
       if $path eq "/" and $depth eq "infinity"
-      or $path eq "/page" and $depth ne "0"
-      or $path eq "/page/" and $depth ne "0";
+      or $path =~ m!^/page/?$! and $depth ne "0";
   push(@resources, map { "/raw/$_" } pages($stream, $host, $space))
       if $path eq "/" and $depth eq "infinity"
-      or $path eq "/raw" and $depth ne "0"
-      or $path eq "/raw/" and $depth ne "0";
-  push(@resources, map { "/page/$_" } pages($stream, $host, $space, $re))
-      if $id and $path =~ m!^/page/!;
-  push(@resources, map { "/raw/$_" } pages($stream, $host, $space, $re))
-      if $id and $path =~ m!^/raw/!;
-  push(@resources, "/file")
-      if $path eq "/" and $depth ne "0" or $path eq "/file" or $path eq "/file/" and $depth eq "0";
+      or $path =~ m!^/raw/?$!;
+  push(@resources, map { "/page/$_" } pages($stream, $host, $space, $re)) # only if it exists!
+      if $id and $path eq "/page/$id";
+  push(@resources, map { "/raw/$_" } pages($stream, $host, $space, $re)) # only if it exists!
+      if $id and $path eq "/raw/$id";
+  push(@resources, "/file/")
+      if $path eq "/" and $depth ne "0"
+      or $path =~ m!^/file/?$!;
   push(@resources, map { "/file/$_" } files($stream, $host, $space))
-      if $path eq "/" and $depth eq "infinity" or $path eq "/file" and $depth ne "0" or $path eq "/file/" and $depth ne "0";
+      if $path eq "/" and $depth eq "infinity"
+      or $path =~ m!^/file/?$! and $depth ne "0";
   push(@resources, map { "/file/$_" } files($stream, $host, $space, $re))
-      if $id;
+      if $id and $path eq "/file/$id";
 
   my $doc = XML::LibXML::Document->new('1.0', 'utf-8');
   my $multistat = $doc->createElement('D:multistatus');
@@ -209,18 +213,29 @@ sub propfind {
     my $mime;
     my $is_dir;
     my ($filename, $displayname);
-    if ($resource =~ m!/page/([^/]*)$!) {
+    if ($resource eq "/") {
+      $displayname = $space || $resource;
+      $filename = $dir;
+      $is_dir = 1;
+      $mime = "inode/directory";
+    } elsif ($resource =~ m!/([^/]+)/$!) {
+      $displayname = $1;
+      # the raw directory is a "fake" and is actually the page directory
+      $filename = $dir . ($1 eq "raw" ? "/page" : $resource);
+      $is_dir = 1;
+      $mime = "inode/directory";
+    } elsif ($resource =~ m!/page/([^/]+)$!) {
       $displayname = "$1.html";
       $filename = $dir . "/page/$1.gmi";
       $is_dir = 0;
       $mime = "text/html";
-    } elsif ($resource =~ m!/raw/([^/]*)$!) {
+    } elsif ($resource =~ m!/raw/([^/]+)$!) {
       $displayname = "$1.gmi";
       # the raw directory is a "fake" and is actually the page directory
       $filename = $dir . "/page/$1.gmi";
       $is_dir = 0;
       $mime = "text/plain";
-    } elsif ($resource =~ m!/file/([^/]*)$!) {
+    } elsif ($resource =~ m!/file/([^/]+)$!) {
       $displayname = $1;
       $filename = $dir . $resource;
       $is_dir = 0;
@@ -232,12 +247,9 @@ sub propfind {
 	}
       }
       $mime //= "application/octet-stream"; # fallback for binary files
-    } elsif ($resource =~ m!/([^/]*)$!) {
-      $displayname = $1;
-      # the raw directory is a "fake" and is actually the page directory
-      $filename = $dir . ($1 eq "raw" ? "/page" : $resource);
-      $is_dir = 1;
-      $mime = "inode/directory";
+    } else {
+      $log->error("Requested $resource");
+      next;
     }
 
     $log->debug("Processing $dir$resource");
@@ -374,6 +386,9 @@ sub propfind {
   $stream->write("HTTP/1.1 207 Multi-Status\r\n");
   $stream->write("Content-Type: application/xml; charset=\"utf-8\"\r\n");
   $stream->write("Content-Length: $len\r\n");
+  if ($path =~ m!/(page|raw|file|login)$!) {
+    $stream->write("Content-Location: $path/\r\n");
+  }
   $stream->write("\r\n");
   $stream->write($str);
 }

@@ -162,6 +162,17 @@ $str = undef;
 $dav->get(-url=>"/test/page/Moon", -to=>\$str);
 like($str, qr/<p>Callisto/, "Moon retrieved");
 
+# copy page
+$resource = $dav->copy(-url=>"/test/raw/Moon", -dest=>"/raw/Moon");
+$resource = $dav->propfind(-url=>"/raw", -depth=>1);
+ok($resource->is_collection, "Found /raw");
+@list = $resource->get_resourcelist->get_resources;
+$item = first { $_->get_property('displayname') eq "Moon.gmi" } @list;
+ok(!$item->is_collection, "Found /raw/Moon.gmi");
+$str = undef;
+$dav->get(-url=>"/raw/Moon", -to=>\$str);
+like($str, qr/^Callisto/, "Moon retrieved");
+
 # delete page
 $resource = $dav->delete(-url=>"/test/raw/Moon");
 $resource = $dav->propfind(-url=>"/test/raw", -depth=>1);

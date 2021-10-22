@@ -57,7 +57,7 @@ use App::Phoebe::Web qw(handle_http_header);
 use App::Phoebe qw(@request_handlers @extensions run_extensions $server
 		   $log host_regex space_regex port wiki_dir pages files
 		   with_lock bogus_hash to_url);
-use File::Slurper qw(read_text write_text write_binary read_dir read_lines);
+use File::Slurper qw(read_text write_text read_binary write_binary read_dir read_lines);
 use HTTP::Date qw(time2str time2isoz);
 use Digest::MD5 qw(md5_base64);
 use Encode qw(encode_utf8 decode_utf8);
@@ -70,7 +70,7 @@ use XML::LibXML;
 use IO::Scalar;
 use utf8;
 
-unshift(@request_handlers, '^(OPTIONS|PROPFIND|PUT|DELETE) .* HTTP/1\.1$' => \&handle_http_header);
+unshift(@request_handlers, '^(OPTIONS|PROPFIND|PUT|DELETE|COPY) .* HTTP/1\.1$' => \&handle_http_header);
 
 # note that the requests handled here must be protected in
 # App::Phoebe::RegisteredEditorsOnly!
@@ -99,6 +99,10 @@ sub process_webdav {
 	   = $request =~ m!^DELETE (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
     remove($stream, $host, $space, $path, $id, $headers);
+  } elsif (($space, $path, $id)
+	   = $request =~ m!^COPY (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
+	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
+    copy($stream, $host, $space, $path, $id, $headers);
   } else {
     return 0;
   }
@@ -111,6 +115,7 @@ my %implemented = (
   get      => 'r', # handled by App::Phoebe::Web
   put      => 'w',
   delete   => 'w',
+  copy     => 'w',
 );
 
 sub options {
@@ -391,7 +396,6 @@ sub write_page {
   my $space = shift;
   my $id = shift;
   my $text = shift;
-  $log->info("PUT page $id");
   my $dir = wiki_dir($host, $space);
   my $file = "$dir/page/$id.gmi";
   my $revision = 0;
@@ -458,7 +462,6 @@ sub write_file {
   my $id = shift;
   my $data = shift;
   my $type = shift;
-  $log->info("PUT file $id");
   my $dir = wiki_dir($host, $space);
   my $file = "$dir/file/$id";
   my $meta = "$dir/meta/$id";
@@ -521,7 +524,6 @@ sub delete_page {
   my $host = shift;
   my $space = shift;
   my $id = shift;
-  $log->info("DELETE page $id");
   my $dir = wiki_dir($host, $space);
   my $file = "$dir/page/$id.gmi";
   if (-e $file) {
@@ -564,7 +566,6 @@ sub delete_file {
   my $host = shift;
   my $space = shift;
   my $id = shift;
-  $log->info("DELETE file $id");
   my $dir = wiki_dir($host, $space);
   unlink("$dir/file/$id", "$dir/meta/$id");
   my $changes = "$dir/changes.log";
@@ -576,13 +577,45 @@ sub delete_file {
     say $fh join("\x1f", scalar(time), $id, "🖻", bogus_hash($peerhost));
     close($fh);
   }
+  $log->info("Deleted file $id");
   $stream->write("HTTP/1.1 204 No Content\r\n");
   $stream->write("\r\n");
+}
+
+sub copy {
+  my ($stream, $host, $space, $path, $id, $headers) = @_;
+  return unless authorize($stream, $host, $space, $headers);
+  return webdav_error($stream, "Page name is missing") unless $id;
+  return webdav_error($stream, "Page names must not control characters") if $id =~ /[[:cntrl:]]/;
+  my $destination = $headers->{destination};
+  return webdav_error($stream, "Destination is missing") unless $destination;
+  my $dir = wiki_dir($host, $space);
+  my $source;
+  if ($path =~ m!^/raw/!) {
+    $source = "$dir/page/$id.gmi";
+  } else {
+    $source = "$dir/file/$id";
+  }
+  $log->debug("Copying $source");
+  return webdav_error($stream, "Resource is missing") unless -e $source;
+  my $data = read_binary($source);
+  # figure out the destination
+  my $hosts = host_regex();
+  my $port = port($stream);
+  my $spaces = space_regex();
+  my ($dest_host, $dest_space, $dest_path, $dest_id) =
+      $destination =~ m!^https://($hosts)(?::$port)(?:/($spaces))?(/(?:file|raw)/([^/]*))!;
+  if ($dest_id) {
+    put($stream, $host, $dest_space, $dest_path, $dest_id, $headers, $data);
+  } else {
+    return webdav_error($stream, "Copying to remote servers not supported");
+  }
 }
 
 sub webdav_error {
   my $stream = shift;
   my $message = shift || "Bad Request";
+  $log->error($message);
   $stream->write("HTTP/1.1 400 $message\r\n");
   $stream->write("Content-Type: text/plain\r\n");
   $stream->write("\r\n");

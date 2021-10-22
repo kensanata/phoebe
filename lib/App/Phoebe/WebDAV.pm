@@ -55,7 +55,7 @@ Authentication.
 package App::Phoebe::WebDAV;
 use App::Phoebe::Web qw(handle_http_header);
 use App::Phoebe qw(@request_handlers @extensions run_extensions $server
-		   $log host_regex space_regex port wiki_dir pages files
+		   $log host_regex space_regex space port wiki_dir pages files
 		   with_lock bogus_hash to_url);
 use File::Slurper qw(read_text write_text read_binary write_binary read_dir read_lines);
 use HTTP::Date qw(time2str time2isoz);
@@ -85,28 +85,28 @@ sub process_webdav {
   if (($space, $path, $id)
       = $request =~ m!^OPTIONS (?:/($spaces))?(/(?:login|(?:file|page|raw)(?:/([^/]*))?)?)? HTTP/1\.1$!
       and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    return if $path eq "/login" and not authorize($stream, $host, $space, $headers);
-    options($stream, $path, $id);
+    return if $path eq "/login" and not authorize($stream, $host, space($stream, $host, $space), $headers);
+    options($stream, $path, decode_utf8(uri_unescape($id)));
   } elsif (($space, $path, $id)
 	   = $request =~ m!^PROPFIND (?:/($spaces))?(/(?:login/?|(?:file|page|raw)(?:/([^/]*))?)?)? HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    propfind($stream, $host, $space, $path, $id, $headers, $buffer);
+    propfind($stream, $host, space($stream, $host, $space), $path, decode_utf8(uri_unescape($id)), $headers, $buffer);
   } elsif (($space, $path, $id)
 	   = $request =~ m!^PUT (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    put($stream, $host, $space, $path, $id, $headers, $buffer);
+    put($stream, $host, space($stream, $host, $space), $path, decode_utf8(uri_unescape($id)), $headers, $buffer);
   } elsif (($space, $path, $id)
 	   = $request =~ m!^DELETE (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    remove($stream, $host, $space, $path, $id, $headers);
+    remove($stream, $host, space($stream, $host, $space), $path, decode_utf8(uri_unescape($id)), $headers);
   } elsif (($space, $path, $id)
 	   = $request =~ m!^COPY (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    copy($stream, $host, $space, $path, $id, $headers);
+    copy($stream, $host, space($stream, $host, $space), $path, decode_utf8(uri_unescape($id)), $headers);
   } elsif (($space, $path, $id)
 	   = $request =~ m!^MOVE (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    move($stream, $host, $space, $path, $id, $headers);
+    move($stream, $host, space($stream, $host, $space), $path, decode_utf8(uri_unescape($id)), $headers);
   } else {
     return 0;
   }

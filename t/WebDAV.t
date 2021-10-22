@@ -191,4 +191,18 @@ $resource = $dav->propfind(-url=>"/test/file", -depth=>1);
 @list = $resource->get_resourcelist;
 is(1, scalar(@list), "No more files"); # just /test/file itself
 
+# move page
+$resource = $dav->move(-url=>"/raw/Moon", -dest=>"/test/raw/Moon");
+$resource = $dav->propfind(-url=>"/raw", -depth=>1);
+@list = $resource->get_resourcelist;
+is(1, scalar(@list), "No more pages"); # just /raw itself
+$resource = $dav->propfind(-url=>"/test/raw", -depth=>1);
+ok($resource->is_collection, "Found /test/raw");
+@list = $resource->get_resourcelist->get_resources;
+$item = first { $_->get_property('displayname') eq "Moon.gmi" } @list;
+ok(!$item->is_collection, "Found /test/raw/Moon.gmi");
+$str = undef;
+$dav->get(-url=>"/test/raw/Moon", -to=>\$str);
+like($str, qr/^Callisto/, "Moon retrieved");
+
 done_testing();

@@ -70,7 +70,7 @@ use XML::LibXML;
 use IO::Scalar;
 use utf8;
 
-unshift(@request_handlers, '^(OPTIONS|PROPFIND|PUT|DELETE|COPY) .* HTTP/1\.1$' => \&handle_http_header);
+unshift(@request_handlers, '^(OPTIONS|PROPFIND|PUT|DELETE|COPY|MOVE) .* HTTP/1\.1$' => \&handle_http_header);
 
 # note that the requests handled here must be protected in
 # App::Phoebe::RegisteredEditorsOnly!
@@ -103,6 +103,10 @@ sub process_webdav {
 	   = $request =~ m!^COPY (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
     copy($stream, $host, $space, $path, $id, $headers);
+  } elsif (($space, $path, $id)
+	   = $request =~ m!^MOVE (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
+	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
+    move($stream, $host, $space, $path, $id, $headers);
   } else {
     return 0;
   }
@@ -116,6 +120,7 @@ my %implemented = (
   put      => 'w',
   delete   => 'w',
   copy     => 'w',
+  move     => 'w',
 );
 
 sub options {
@@ -388,6 +393,7 @@ sub put {
     $text =~ s/\r\n/\n/g; # fix DOS EOL convention
     with_lock($stream, $host, $space, sub { write_page($stream, $host, $space, $id, $text) } );
   }
+  return 1;
 }
 
 sub write_page {
@@ -610,6 +616,10 @@ sub copy {
   } else {
     return webdav_error($stream, "Copying to remote servers not supported");
   }
+}
+
+sub move {
+  remove(@_) if copy(@_);
 }
 
 sub webdav_error {

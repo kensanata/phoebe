@@ -78,12 +78,24 @@ $str = undef;
 $dav->get(-url=>"/page/Moon", -to=>\$str);
 like($str, qr/<p>Ganymede/, "Moon retrieved");
 
+# delete page
+$resource = $dav->delete(-url=>"/raw/Moon");
+$resource = $dav->propfind(-url=>"/raw", -depth=>1);
+@list = $resource->get_resourcelist;
+is(1, scalar(@list), "No more pages"); # just /raw itself
+
 # Upload a file
 ok($dav->put(-local=>"t/alex.jpg", -url=>"https://$host:$port/file/Alex"),
    "Post file with token");
 my $data;
 $dav->get(-url=>"/file/Alex", -to=>\$data);
 is($data, read_binary("t/alex.jpg"), "Alex retrieved");
+
+# delete file
+$resource = $dav->delete(-url=>"/file/Alex");
+$resource = $dav->propfind(-url=>"/file", -depth=>1);
+@list = $resource->get_resourcelist;
+is(1, scalar(@list), "No more files"); # just /file itself
 
 # Open a wiki space
 ok($dav->open(-url => "https://$host:$port/test"), "Open URL: " . $dav->message);
@@ -122,10 +134,22 @@ $str = undef;
 $dav->get(-url=>"/test/page/Moon", -to=>\$str);
 like($str, qr/<p>Callisto/, "Moon retrieved");
 
+# delete page
+$resource = $dav->delete(-url=>"/test/raw/Moon");
+$resource = $dav->propfind(-url=>"/test/raw", -depth=>1);
+@list = $resource->get_resourcelist;
+is(1, scalar(@list), "No more pages"); # just /test/raw itself
+
 # Upload a file
 ok($dav->put(-local=>"t/alex.jpg", -url=>"https://$host:$port/test/file/Alex"),
    "Post file with token");
 $dav->get(-url=>"/test/file/Alex", -to=>\$data);
 is($data, read_binary("t/alex.jpg"), "Alex retrieved");
+
+# delete file
+$resource = $dav->delete(-url=>"/test/file/Alex");
+$resource = $dav->propfind(-url=>"/test/file", -depth=>1);
+@list = $resource->get_resourcelist;
+is(1, scalar(@list), "No more files"); # just /test/file itself
 
 done_testing();

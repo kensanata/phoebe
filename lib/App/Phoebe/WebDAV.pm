@@ -70,7 +70,7 @@ use XML::LibXML;
 use IO::Scalar;
 use utf8;
 
-unshift(@request_handlers, '^(OPTIONS|PROPFIND|PUT) .* HTTP/1\.1$' => \&handle_http_header);
+unshift(@request_handlers, '^(OPTIONS|PROPFIND|PUT|DELETE) .* HTTP/1\.1$' => \&handle_http_header);
 
 # note that the requests handled here must be protected in
 # App::Phoebe::RegisteredEditorsOnly!
@@ -101,6 +101,10 @@ sub process_webdav {
 	   = $request =~ m!^PUT (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
     put($stream, $host, $space, $path, $id, $headers, $buffer);
+  } elsif (($space, $path, $id)
+	   = $request =~ m!^DELETE (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
+	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
+    remove($stream, $host, $space, $path, $id, $headers);
   } else {
     return 0;
   }
@@ -361,27 +365,27 @@ sub propfind {
 sub put {
   my ($stream, $host, $space, $path, $id, $headers, $buffer) = @_;
   return unless authorize($stream, $host, $space, $headers);
-  $log->info("Save edit for $id via WebDAV");
+  return remove($stream, $host, $space, $path, $id, $headers) if length($buffer) == 0;
   my $mime = $headers->{"content-type"} // guess_mime_type(\$buffer);
   return webdav_error($stream, "Content type not known") unless $mime;
   return webdav_error($stream, "Page name is missing") unless $id;
   return webdav_error($stream, "Page names must not control characters") if $id =~ /[[:cntrl:]]/;
   if ($path eq "/file/$id") {
-    with_lock($stream, $host, $space, sub { write_file_for_webdav($stream, $host, $space, $id, $buffer, $mime) } );
+    with_lock($stream, $host, $space, sub { write_file($stream, $host, $space, $id, $buffer, $mime) } );
   } else {
     my $text = decode_utf8 $buffer // "";
     $text =~ s/\r\n/\n/g; # fix DOS EOL convention
-    with_lock($stream, $host, $space, sub { write_page_for_webdav($stream, $host, $space, $id, $text) } );
+    with_lock($stream, $host, $space, sub { write_page($stream, $host, $space, $id, $text) } );
   }
 }
 
-sub write_page_for_webdav {
+sub write_page {
   my $stream = shift;
   my $host = shift;
   my $space = shift;
   my $id = shift;
   my $text = shift;
-  $log->info("Writing page $id");
+  $log->info("PUT page $id");
   my $dir = wiki_dir($host, $space);
   my $file = "$dir/page/$id.gmi";
   my $revision = 0;
@@ -441,14 +445,14 @@ sub write_page_for_webdav {
   }
 }
 
-sub write_file_for_webdav {
+sub write_file {
   my $stream = shift;
   my $host = shift;
   my $space = shift;
   my $id = shift;
   my $data = shift;
   my $type = shift;
-  $log->info("Writing file $id");
+  $log->info("PUT file $id");
   my $dir = wiki_dir($host, $space);
   my $file = "$dir/file/$id";
   my $meta = "$dir/meta/$id";
@@ -490,6 +494,83 @@ sub write_file_for_webdav {
   } else {
     $stream->write("HTTP/1.1 200 OK\r\n");
   }
+  $stream->write("\r\n");
+}
+
+# Can't use "delete" as a name because that's a keyword...
+sub remove {
+  my ($stream, $host, $space, $path, $id, $headers) = @_;
+  return unless authorize($stream, $host, $space, $headers);
+  return webdav_error($stream, "Page name is missing") unless $id;
+  return webdav_error($stream, "Page names must not control characters") if $id =~ /[[:cntrl:]]/;
+  if ($path eq "/file/$id") {
+    with_lock($stream, $host, $space, sub { delete_file($stream, $host, $space, $id) } );
+  } else {
+    with_lock($stream, $host, $space, sub { delete_page($stream, $host, $space, $id) } );
+  }
+}
+
+sub delete_page {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  my $id = shift;
+  $log->info("DELETE page $id");
+  my $dir = wiki_dir($host, $space);
+  my $file = "$dir/page/$id.gmi";
+  if (-e $file) {
+    my $revision = 0;
+    mkdir "$dir/keep" unless -d "$dir/keep";
+    if (-d "$dir/keep/$id") {
+      foreach (read_dir("$dir/keep/$id")) {
+	$revision = $1 if m/^(\d+)\.gmi$/ and $1 > $revision;
+      }
+      $revision++;
+    } else {
+      mkdir "$dir/keep/$id";
+      $revision = 1;
+    }
+    # effectively deleting the file
+    rename $file, "$dir/keep/$id/$revision.gmi";
+  }
+  my $index = "$dir/index";
+  if (-f $index) {
+    # remove $id from the index
+    my @pages = grep { $_ ne $id } read_lines $index;
+    write_text($index, join("\n", @pages, ""));
+  }
+  my $changes = "$dir/changes.log";
+  if (not open(my $fh, ">>:encoding(UTF-8)", $changes)) {
+    $log->error("Cannot write log $changes: $!");
+    return webdav_error($stream, "Unable to write log");
+  } else {
+    my $peerhost = $stream->handle->peerhost;
+    say $fh join("\x1f", scalar(time), $id, "🖹", bogus_hash($peerhost));
+    close($fh);
+  }
+  $log->info("Deleted page $id");
+  $stream->write("HTTP/1.1 204 No Content\r\n");
+  $stream->write("\r\n");
+}
+
+sub delete_file {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  my $id = shift;
+  $log->info("DELETE file $id");
+  my $dir = wiki_dir($host, $space);
+  unlink("$dir/file/$id", "$dir/meta/$id");
+  my $changes = "$dir/changes.log";
+  if (not open(my $fh, ">>:encoding(UTF-8)", $changes)) {
+    $log->error("Cannot write log $changes: $!");
+    return webdav_error($stream, "Unable to write log");
+  } else {
+    my $peerhost = $stream->handle->peerhost;
+    say $fh join("\x1f", scalar(time), $id, "🖻", bogus_hash($peerhost));
+    close($fh);
+  }
+  $stream->write("HTTP/1.1 204 No Content\r\n");
   $stream->write("\r\n");
 }
 

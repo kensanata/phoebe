@@ -38,6 +38,34 @@ $ua->ssl_opts(verify_hostname => 0);
 
 # Open a fresh wiki
 ok($dav->open(-url => "https://$host:$port/"), "Open URL: " . $dav->message);
+
+# Check options
+for my $d (qw(/ /page /page/ /raw /raw/ /file /file/)) {
+  my $options = $dav->options(-url => "https://$host:$port$d");
+  for my $op (qw(OPTIONS PROPFIND)) {
+    like($options, qr/$op/, "$op supported for $d");
+  }
+  for my $op (qw(GET PUT DELETE)) {
+    unlike($options, qr/$op/, "$op not supported for $d");
+  }
+}
+for my $d (qw(/page/x)) {
+  my $options = $dav->options(-url => "https://$host:$port$d");
+  for my $op (qw(OPTIONS PROPFIND GET)) {
+    like($options, qr/$op/, "$op supported for $d");
+  }
+  for my $op (qw(PUT DELETE)) {
+    unlike($options, qr/$op/, "$op not supported for $d");
+  }
+}
+for my $d (qw(/raw/x /file/x)) {
+  my $options = $dav->options(-url => "https://$host:$port$d");
+  for my $op (qw(OPTIONS PROPFIND PUT GET DELETE)) {
+    like($options, qr/$op/, "$op supported for $d");
+  }
+}
+
+# Read directories
 my $resource = $dav->propfind(-url=>"/", -depth=>1);
 ok($resource->is_collection, "Found /");
 my @list = $resource->get_resourcelist->get_resources;

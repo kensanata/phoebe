@@ -76,12 +76,6 @@ unshift(@request_handlers, '^(OPTIONS|PROPFIND|PUT|DELETE) .* HTTP/1\.1$' => \&h
 # App::Phoebe::RegisteredEditorsOnly!
 push(@extensions, \&process_webdav);
 
-my %implemented = (
-  options  => 1,
-  propfind => 1,
-  put      => 1,
-);
-
 sub process_webdav {
   my ($stream, $request, $headers, $buffer) = @_;
   my $hosts = host_regex();
@@ -92,7 +86,7 @@ sub process_webdav {
       = $request =~ m!^OPTIONS (?:/($spaces))?(/(?:login|(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.1$!
       and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
     return if $path eq "/login" and not authorize($stream, $host, $space, $headers);
-    options($stream, $path);
+    options($stream, $path, $id);
   } elsif (($space, $path, $id)
 	   = $request =~ m!^PROPFIND (?:/($spaces))?(/(?:login/?|(?:file|page|raw)(?:/([^/]*))?)?) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
@@ -111,9 +105,21 @@ sub process_webdav {
   return 1;
 }
 
+my %implemented = (
+  options  => '*',
+  propfind => '*',
+  get      => 'r', # handled by App::Phoebe::Web
+  put      => 'w',
+  delete   => 'w',
+);
+
 sub options {
-  my ($stream) = @_;
-  my $allow = join(',', map { uc } keys %implemented);
+  my ($stream, $path, $id) = @_;
+  my $allow = join(',', map { uc }
+		   grep { $implemented{$_} eq '*'
+		       or $implemented{$_} eq 'r' and $id
+		       or $implemented{$_} eq 'w' and $id and $path =~ m!^/(raw|file)/.! }
+		   keys %implemented);
   $log->debug("OPTIONS: $allow");
   $stream->write("HTTP/1.1 200 OK\r\n");
   $stream->write("DAV: 1\r\n");

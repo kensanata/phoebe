@@ -1051,7 +1051,7 @@ sub all_logs {
   # merge all logs
   my @log;
   my $dir = $server->{wiki_dir};
-  my @spaces = space_dirs($stream);
+  my @spaces = space_dirs();
   for my $space (@spaces) {
     my $changes = $dir;
     $changes .= "/$space" if $space;
@@ -1947,7 +1947,6 @@ sub space {
 }
 
 sub space_dirs {
-  my $stream = shift;
   my @spaces;
   if (keys %{$server->{host}} > 1) {
     push @spaces, keys %{$server->{host}};

@@ -56,7 +56,7 @@ package App::Phoebe::WebDAV;
 use App::Phoebe::Web qw(handle_http_header);
 use App::Phoebe qw(@request_handlers @extensions run_extensions $server
 		   $log host_regex space_regex space port wiki_dir pages files
-		   with_lock bogus_hash to_url);
+		   with_lock bogus_hash);
 use File::Slurper qw(read_text write_text read_binary write_binary read_dir read_lines);
 use HTTP::Date qw(time2str time2isoz);
 use Digest::MD5 qw(md5_base64);
@@ -86,27 +86,27 @@ sub process_webdav {
       = $request =~ m!^OPTIONS (?:/($spaces))?(/(?:login|(?:file|page|raw)(?:/([^/]*))?)?)? HTTP/1\.1$!
       and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
     return if $path eq "/login" and not authorize($stream, $host, space($stream, $host, $space), $headers);
-    options($stream, $path, decode_utf8(uri_unescape($id)));
+    options($stream, map { decode_utf8(uri_unescape($_)) } $path, $id);
   } elsif (($space, $path, $id)
 	   = $request =~ m!^PROPFIND (?:/($spaces))?(/(?:login/?|(?:file|page|raw)(?:/([^/]*))?)?)? HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    propfind($stream, $host, space($stream, $host, $space), $path, decode_utf8(uri_unescape($id)), $headers, $buffer);
+    propfind($stream, $host, space($stream, $host, $space), (map { decode_utf8(uri_unescape($_)) } $path, $id), $headers, $buffer);
   } elsif (($space, $path, $id)
 	   = $request =~ m!^PUT (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    put($stream, $host, space($stream, $host, $space), $path, decode_utf8(uri_unescape($id)), $headers, $buffer);
+    put($stream, $host, space($stream, $host, $space), (map { decode_utf8(uri_unescape($_)) } $path, $id), $headers, $buffer);
   } elsif (($space, $path, $id)
 	   = $request =~ m!^DELETE (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    remove($stream, $host, space($stream, $host, $space), $path, decode_utf8(uri_unescape($id)), $headers);
+    remove($stream, $host, space($stream, $host, $space), (map { decode_utf8(uri_unescape($_)) } $path, $id), $headers);
   } elsif (($space, $path, $id)
 	   = $request =~ m!^COPY (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    copy($stream, $host, space($stream, $host, $space), $path, decode_utf8(uri_unescape($id)), $headers);
+    copy($stream, $host, space($stream, $host, $space), (map { decode_utf8(uri_unescape($_)) } $path, $id), $headers);
   } elsif (($space, $path, $id)
 	   = $request =~ m!^MOVE (?:/($spaces))?(/(?:file|raw)/([^/]*)) HTTP/1\.1$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    move($stream, $host, space($stream, $host, $space), $path, decode_utf8(uri_unescape($id)), $headers);
+    move($stream, $host, space($stream, $host, $space), (map { decode_utf8(uri_unescape($_)) } $path, $id), $headers);
   } else {
     return 0;
   }
@@ -212,36 +212,31 @@ sub propfind {
     # Names
     my $mime;
     my $is_dir;
-    my ($filename, $displayname);
+    my $filename;
     if ($resource eq "/") {
-      $displayname = $space || $resource;
       $filename = $dir;
       $is_dir = 1;
       $mime = "inode/directory";
     } elsif ($resource =~ m!/([^/]+)/$!) {
-      $displayname = $1;
       # the raw directory is a "fake" and is actually the page directory
       $filename = $dir . ($1 eq "raw" ? "/page" : $resource);
       $is_dir = 1;
       $mime = "inode/directory";
     } elsif ($resource =~ m!/page/([^/]+)$!) {
-      $displayname = "$1.html";
       $filename = $dir . "/page/$1.gmi";
       $is_dir = 0;
       $mime = "text/html";
     } elsif ($resource =~ m!/raw/([^/]+)$!) {
-      $displayname = "$1.gmi";
       # the raw directory is a "fake" and is actually the page directory
       $filename = $dir . "/page/$1.gmi";
       $is_dir = 0;
       $mime = "text/plain";
     } elsif ($resource =~ m!/file/([^/]+)$!) {
-      $displayname = $1;
       $filename = $dir . $resource;
       $is_dir = 0;
-      if (-f "$dir/meta/$displayname") {
+      if (-f "$dir/meta/$1") {
 	# MIME-type for files requires opening the meta files! 😭
-	my %meta = (map { split(/: /, $_, 2) } read_lines("$dir/meta/$displayname"));
+	my %meta = (map { split(/: /, $_, 2) } read_lines("$dir/meta/$1"));
 	if ($meta{'content-type'}) {
 	  $mime = $meta{'content-type'};
 	}
@@ -256,7 +251,7 @@ sub propfind {
 
     # A stat call for every file and every page! 😭
     my ($size, $mtime, $ctime, $sb) = (0, 0, 0);
-    if ($displayname eq "login") {
+    if ($resource eq "/login/") {
       $size = "";
       $mtime = $ctime = time;
     } elsif ($sb = stat($filename)) {
@@ -277,7 +272,7 @@ sub propfind {
     my $resp = $doc->createElement('D:response');
     $multistat->addChild($resp);
     my $href = $doc->createElement('D:href');
-    $href->appendText($space ? "/$space$resource" : $resource);
+    $href->appendText(to_url($space, $resource));
     $resp->addChild($href);
     my $okprops = $doc->createElement('D:prop');
     my $nfprops = $doc->createElement('D:prop');
@@ -310,10 +305,6 @@ sub propfind {
             $prop->addChild($col);
           }
           $okprops->addChild($prop);
-        } elsif ($ns eq 'DAV:' && $name eq 'displayname') {
-	  $prop = $doc->createElement('D:displayname');
-	  $prop->appendText($displayname);
-	  $okprops->addChild($prop);
         } else {
           my $prefix = $prefixes{$ns};
           if (!defined $prefix) {
@@ -338,8 +329,6 @@ sub propfind {
       $okprops->addChild($prop);
       $prop = $doc->createElement('D:resourcetype');
       $okprops->addChild($prop);
-      $prop = $doc->createElement('D:displayname');
-      $okprops->addChild($prop);
     } else {
       $prop = $doc->createElement('D:creationdate');
       $prop->appendText($ctime);
@@ -359,9 +348,6 @@ sub propfind {
 	$prop->addChild($col);
       }
       $okprops->addChild($prop);
-      $prop = $doc->createElement('D:displayname');
-      $prop->appendText($displayname);
-      $okprops->addChild($prop);
     }
     if ($okprops->hasChildNodes) {
       my $propstat = $doc->createElement('D:propstat');
@@ -380,7 +366,7 @@ sub propfind {
       $resp->addChild($propstat);
     }
   }
-  my $str = encode_utf8 $doc->toString(1);
+  my $str = $doc->toString(1);
   my $len = length($str);
   $log->debug("RESPONSE: 207\n" . $doc->toString(1));
   $stream->write("HTTP/1.1 207 Multi-Status\r\n");
@@ -391,6 +377,18 @@ sub propfind {
   }
   $stream->write("\r\n");
   $stream->write($str);
+}
+
+sub to_url {
+  my $space = shift;
+  my $resource = shift;
+  my $href;
+  $href .= "/" . uri_escape_utf8($space) if $space;
+  # split doesn't produce empty fields at the end
+  my $d = substr($resource, -1) eq "/";
+  $href .= join("/", map { uri_escape_utf8($_) } split (/\//, $resource));
+  $href .= "/" if $d;
+  return $href;
 }
 
 sub put {
@@ -627,7 +625,7 @@ sub copy {
   my ($dest_host, $dest_space, $dest_path, $dest_id) =
       $destination =~ m!^https://($hosts)(?::$port)(?:/($spaces))?(/(?:file|raw)/([^/]*))!;
   if ($dest_id) {
-    put($stream, $host, $dest_space, $dest_path, $dest_id, $headers, $data);
+    put($stream, $host, space($stream, $host, $dest_space), $dest_path, decode_utf8(uri_unescape($dest_id)), $headers, $data);
   } else {
     return webdav_error($stream, "Copying to remote servers not supported");
   }

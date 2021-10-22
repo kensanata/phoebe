@@ -18,6 +18,7 @@ use Test::More;
 use File::Slurper qw(write_text write_binary read_binary);
 use utf8; # tests contain UTF-8 characters and it matters
 use List::Util qw(first);
+use URI::Escape;
 
 plan skip_all => 'This is an author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 plan skip_all => 'This test requires HTTP::DAV.' unless eval { require HTTP::DAV };
@@ -67,47 +68,48 @@ for my $d (qw(/raw/x /file/x)) {
 
 # Read directories
 my $resource = $dav->propfind(-url=>"/", -depth=>1);
-ok($resource->is_collection, "Found /");
+ok($resource && $resource->is_collection, "Found /");
 my @list = $resource->get_resourcelist->get_resources;
-my $item = first { $_->get_property('displayname') eq "page" } @list;
-ok($item->is_collection, "Found /page");
-$item = first { $_->get_property('displayname') eq "raw" } @list;
-ok($item->is_collection, "Found /raw");
-$item = first { $_->get_property('displayname') eq "file" } @list;
-ok($item->is_collection, "Found /files");
+my $item = first { $_->get_uri->path eq "/page/" } @list;
+ok($item && $item->is_collection, "Found /page");
+$item = first { $_->get_uri->path eq "/raw/" } @list;
+ok($item && $item->is_collection, "Found /raw");
+$item = first { $_->get_uri->path eq "/file/" } @list;
+ok($item && $item->is_collection, "Found /files");
 
 # Attempt to write a file without credentials
 my $str = "Ganymede\n";
-ok(not($dav->put(-local=>\$str, -url=>"https://$host:$port/raw/Moon")),
+ok(not($dav->put(-local=>\$str, -url=>"https://$host:$port/raw/M%C3%B6%C3%B6n")),
    "Failed to post without token");
 
 # Retry with credentials
 $dav->credentials(-user => "alex", -pass => "hello", -realm => "Phoebe");
-ok($dav->put(-local=>\$str, -url=>"https://$host:$port/raw/Moon"),
+ok($dav->put(-local=>\$str, -url=>"https://$host:$port/raw/M%C3%B6%C3%B6n"),
    "Post gemtext with token");
 
 # /raw
 $resource = $dav->propfind(-url=>"/raw", -depth=>1);
-ok($resource->is_collection, "Found /raw");
+ok($resource && $resource->is_collection, "Found /raw");
 @list = $resource->get_resourcelist->get_resources;
-$item = first { $_->get_property('displayname') eq "Moon.gmi" } @list;
-ok(!$item->is_collection, "Found /raw/Moon.gmi");
+$item = first { decode_utf8(uri_unescape($_->get_uri->path)) eq "/raw/Möön" } @list;
+
+ok($item && !$item->is_collection, "Found /raw/Moon");
 $str = undef;
-$dav->get(-url=>"/raw/Moon", -to=>\$str);
+$dav->get(-url=>"/raw/M%C3%B6%C3%B6n", -to=>\$str);
 like($str, qr/^Ganymede/, "Moon retrieved");
 
 # /page
 $resource = $dav->propfind(-url=>"/page", -depth=>1);
-ok($resource->is_collection, "Found /page");
+ok($resource && $resource->is_collection, "Found /page");
 @list = $resource->get_resourcelist->get_resources;
-$item = first { $_->get_property('displayname') eq "Moon.html" } @list;
-ok(!$item->is_collection, "Found /page/Moon.html");
+$item = first { decode_utf8(uri_unescape($_->get_uri->path)) eq "/page/Möön" } @list;
+ok($item && !$item->is_collection, "Found /page/Moon.html");
 $str = undef;
-$dav->get(-url=>"/page/Moon", -to=>\$str);
+$dav->get(-url=>"/page/M%C3%B6%C3%B6n", -to=>\$str);
 like($str, qr/<p>Ganymede/, "Moon retrieved");
 
 # delete page
-$resource = $dav->delete(-url=>"/raw/Moon");
+$resource = $dav->delete(-url=>"/raw/M%C3%B6%C3%B6n");
 $resource = $dav->propfind(-url=>"/raw", -depth=>1);
 @list = $resource->get_resourcelist;
 is(1, scalar(@list), "No more pages"); # just /raw itself
@@ -128,53 +130,53 @@ is(1, scalar(@list), "No more files"); # just /file itself
 # Open a wiki space
 ok($dav->open(-url => "https://$host:$port/test"), "Open URL: " . $dav->message);
 $resource = $dav->propfind(-url=>".", -depth=>1);
-ok($resource->is_collection, "Found /test");
+ok($resource && $resource->is_collection, "Found /test");
 @list = $resource->get_resourcelist->get_resources;
-$item = first { $_->get_property('displayname') eq "page" } @list;
-ok($item->is_collection, "Found /test/page");
-$item = first { $_->get_property('displayname') eq "raw" } @list;
-ok($item->is_collection, "Found /test/raw");
-$item = first { $_->get_property('displayname') eq "file" } @list;
-ok($item->is_collection, "Found /test/files");
+$item = first { $_->get_uri->path eq "/test/page/" } @list;
+ok($item && $item->is_collection, "Found /test/page");
+$item = first { $_->get_uri->path eq "/test/raw/" } @list;
+ok($item && $item->is_collection, "Found /test/raw");
+$item = first { $_->get_uri->path eq "/test/file/" } @list;
+ok($item && $item->is_collection, "Found /test/files");
 
 # Write a page
 $str = "Callisto\n";
-ok($dav->put(-local=>\$str, -url=>"https://$host:$port/test/raw/Moon"),
+ok($dav->put(-local=>\$str, -url=>"https://$host:$port/test/raw/M%C3%B6%C3%B6n"),
    "Post gemtext with token");
 
 # /raw
 $resource = $dav->propfind(-url=>"/test/raw", -depth=>1);
-ok($resource->is_collection, "Found /test/raw");
+ok($resource && $resource->is_collection, "Found /test/raw");
 @list = $resource->get_resourcelist->get_resources;
-$item = first { $_->get_property('displayname') eq "Moon.gmi" } @list;
-ok(!$item->is_collection, "Found /test/raw/Moon.gmi");
+$item = first { decode_utf8(uri_unescape($_->get_uri->path)) eq "/test/raw/Möön" } @list;
+ok($item && !$item->is_collection, "Found /test/raw/Moon.gmi");
 $str = undef;
-$dav->get(-url=>"/test/raw/Moon", -to=>\$str);
+$dav->get(-url=>"/test/raw/M%C3%B6%C3%B6n", -to=>\$str);
 like($str, qr/^Callisto/, "Moon retrieved");
 
 # /page
 $resource = $dav->propfind(-url=>"/test/page", -depth=>1);
-ok($resource->is_collection, "Found /test/page");
+ok($resource && $resource->is_collection, "Found /test/page");
 @list = $resource->get_resourcelist->get_resources;
-$item = first { $_->get_property('displayname') eq "Moon.html" } @list;
-ok(!$item->is_collection, "Found /test/page/Moon.html");
+$item = first { decode_utf8(uri_unescape($_->get_uri->path)) eq "/test/page/Möön" } @list;
+ok($item && !$item->is_collection, "Found /test/page/Moon.html");
 $str = undef;
-$dav->get(-url=>"/test/page/Moon", -to=>\$str);
+$dav->get(-url=>"/test/page/M%C3%B6%C3%B6n", -to=>\$str);
 like($str, qr/<p>Callisto/, "Moon retrieved");
 
 # copy page
-$resource = $dav->copy(-url=>"/test/raw/Moon", -dest=>"/raw/Moon");
+$resource = $dav->copy(-url=>"/test/raw/M%C3%B6%C3%B6n", -dest=>"/raw/M%C3%B6%C3%B6n");
 $resource = $dav->propfind(-url=>"/raw", -depth=>1);
-ok($resource->is_collection, "Found /raw");
+ok($resource && $resource->is_collection, "Found /raw");
 @list = $resource->get_resourcelist->get_resources;
-$item = first { $_->get_property('displayname') eq "Moon.gmi" } @list;
-ok(!$item->is_collection, "Found /raw/Moon.gmi");
+$item = first { decode_utf8(uri_unescape($_->get_uri->path)) eq "/raw/Möön" } @list;
+ok($item && !$item->is_collection, "Found /raw/Moon.gmi");
 $str = undef;
-$dav->get(-url=>"/raw/Moon", -to=>\$str);
+$dav->get(-url=>"/raw/M%C3%B6%C3%B6n", -to=>\$str);
 like($str, qr/^Callisto/, "Moon retrieved");
 
 # delete page
-$resource = $dav->delete(-url=>"/test/raw/Moon");
+$resource = $dav->delete(-url=>"/test/raw/M%C3%B6%C3%B6n");
 $resource = $dav->propfind(-url=>"/test/raw", -depth=>1);
 @list = $resource->get_resourcelist;
 is(1, scalar(@list), "No more pages"); # just /test/raw itself
@@ -192,17 +194,17 @@ $resource = $dav->propfind(-url=>"/test/file", -depth=>1);
 is(1, scalar(@list), "No more files"); # just /test/file itself
 
 # move page
-$resource = $dav->move(-url=>"/raw/Moon", -dest=>"/test/raw/Moon");
+$resource = $dav->move(-url=>"/raw/M%C3%B6%C3%B6n", -dest=>"/test/raw/M%C3%B6%C3%B6n");
 $resource = $dav->propfind(-url=>"/raw", -depth=>1);
 @list = $resource->get_resourcelist;
 is(1, scalar(@list), "No more pages"); # just /raw itself
 $resource = $dav->propfind(-url=>"/test/raw", -depth=>1);
-ok($resource->is_collection, "Found /test/raw");
+ok($resource && $resource->is_collection, "Found /test/raw");
 @list = $resource->get_resourcelist->get_resources;
-$item = first { $_->get_property('displayname') eq "Moon.gmi" } @list;
-ok(!$item->is_collection, "Found /test/raw/Moon.gmi");
+$item = first { decode_utf8(uri_unescape($_->get_uri->path)) eq "/test/raw/Möön" } @list;
+ok($item && !$item->is_collection, "Found /test/raw/Moon.gmi");
 $str = undef;
-$dav->get(-url=>"/test/raw/Moon", -to=>\$str);
+$dav->get(-url=>"/test/raw/M%C3%B6%C3%B6n", -to=>\$str);
 like($str, qr/^Callisto/, "Moon retrieved");
 
 done_testing();

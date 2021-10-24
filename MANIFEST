@@ -23,7 +23,9 @@ lib/App/Phoebe/StaticFiles.pm
 lib/App/Phoebe/TokiPona.pm
 lib/App/Phoebe/Web.pm
 lib/App/Phoebe/WebComments.pm
+lib/App/Phoebe/WebDAV.pm
 lib/App/Phoebe/WebEdit.pm
+lib/App/Phoebe/WebStaticFiles.pm
 lib/App/Phoebe/Wikipedia.pm
 LICENSE
 Makefile.PL
@@ -81,5 +83,7 @@ t/TokiPona.t
 t/virtual-hosting.t
 t/Web.t
 t/WebComments.t
+t/WebDAV.t
 t/WebEdit.t
+t/WebStaticFiles.t
 t/Wikipedia.t

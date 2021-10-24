@@ -1,6 +1,18 @@
-NEXT
+4.02
 
-- 
+- App::Phoebe::WebDAV is new.
+
+- App::Phoebe::Ijirait changes. No more "map" but a "find" command
+  instead. An "id" command, and a "forget" command, because now the
+  game allows you to remember certain ids that the player has seen.
+
+- Add log processing to phoebe-ctl, in case you use
+  App::Phoebe::DebugIpNumbers.
+
+- Add a --no_tls to phoebe, in case you want to run it as a back-end
+  without TLS.
+
+- Add colour styles to history and diff (behind a link).
 
 4.01
 

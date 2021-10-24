@@ -858,7 +858,7 @@ sub serve_data {
     write_binary($file, ""); # truncate in order to avoid "file changed as we read it" warning
     my @command = ('/bin/tar', '--create', '--gzip',
 		   '--file', $file,
-		   '--exclude', $file,
+		   '--exclude', "data.tar.gz",
 		   '--directory', "$dir/..",
 		   ((split(/\//,$dir))[-1]));
     $log->debug("@command");

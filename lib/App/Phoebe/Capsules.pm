@@ -48,8 +48,8 @@ use URI::Escape;
 
 push(@extensions, \&capsules);
 
-my $capsule_space = "capsule";
-my @capsule_hosts;
+our $capsule_space = "capsule";
+our @capsule_hosts;
 
 sub capsules {
   my $stream = shift;

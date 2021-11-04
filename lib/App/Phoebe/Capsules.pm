@@ -101,7 +101,7 @@ sub capsules {
 	$stream->write("# " . ucfirst($capsule) . "\n");
 	$stream->write("This capsule is empty. Upload files using Titan!\n");
 	$stream->write("=> gemini://transjovian.org/titan What is Titan?\n");
-	$stream->write("=> upload Specify file for upload\n");
+	print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload");
 	return 1;
       } else {
 	return result($stream, "51", "This capsule does not exist");
@@ -110,7 +110,7 @@ sub capsules {
     success($stream);
     $log->info("Serving $capsule");
     $stream->write("# " . ucfirst($capsule) . "\n");
-    $stream->write("=> upload Specify file for upload\n") if $name and $name eq $capsule;
+    print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload") if $name and $name eq $capsule;
     $stream->write("Files:\n");
     for my $file (@files) {
       print_link($stream, $host, $capsule_space, $file, "$capsule/$file");

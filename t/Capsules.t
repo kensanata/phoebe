@@ -43,7 +43,7 @@ ok($name, "Link to capsule");
 
 $page = query_gemini("$base/capsule/$name");
 like($page, qr/# $name/mi, "Title");
-like($page, qr/^=> upload/m, "Upload link");
+like($page, qr/^=> $base\/capsule\/$name\/upload/m, "Upload link");
 
 $page = query_gemini("$base/capsule/$name/upload");
 like($page, qr/^10 /, "Filename");

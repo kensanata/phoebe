@@ -102,7 +102,7 @@ sub capsules {
     if (@files) {
       $stream->write("Files:\n");
       for my $file (@files) {
-	print_link($stream, $host, $capsule_space, $file, "$dir/$file");
+	print_link($stream, $host, $capsule_space, $file, "$capsule/$file");
       };
     } else {
       $stream->write("This capsule is empty. Upload files using Titan!\n");

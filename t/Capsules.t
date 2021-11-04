@@ -57,4 +57,7 @@ like($page, qr/^30 $base\/capsule\/$name/, "Saved haiku");
 $page = query_gemini("$base/capsule/$name/haiku.gmi");
 is($page, "20 text\/gemini\r\n$haiku", "Read haiku");
 
+$page = query_gemini("$base/capsule/$name");
+like($page, qr/^=> $base\/capsule\/$name\/haiku\.gmi haiku\.gmi/m, "List haiku");
+
 done_testing;

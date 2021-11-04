@@ -33,14 +33,32 @@ We both read our books at night
 Winter nights are long
 EOT
 
-like(query_gemini("$base/capsule"), qr/^# Capsules/m, "Capsules");
-
 my $titan = "titan://$host:$port/capsule";
+
+my $page = query_gemini("$base/capsule");
+like($page, qr/^# Capsules/m, "Capsules");
+
+my ($name) = $page =~ qr/^=> \S+ (\S+)/m;
+ok($name, "Link to capsule");
+
+$page = query_gemini("$base/capsule/$name");
+like($page, qr/# $name/mi, "Title");
+like($page, qr/^=> upload/m, "Upload link");
+
+$page = query_gemini("$base/capsule/$name/upload");
+like($page, qr/^10 /, "Filename");
+
+$page = query_gemini("$base/capsule/$name/upload?haiku.gmi");
+like($page, qr/^30 $base\/capsule\/$name\/haiku\.gmi/, "Redirect");
+
+$page = query_gemini("$base/capsule/$name/haiku.gmi");
+like($page, qr/This file does not exist. Upload it using Titan!/, "Invitation");
+
 # no client cert
-my $page = query_gemini("$titan/raw/haiku.gmi;size=71;mime=text/plain;token=hello", $haiku, 0);
+$page = query_gemini("$titan/$name/haiku.gmi;size=71;mime=text/plain;token=hello", $haiku, 0);
 like($page, qr/^60 Uploading files requires a client certificate/, "Client certificate required");
 
-$page = query_gemini("$titan/raw/haiku.gmi;size=71;mime=text/plain;token=hello", $haiku);
+$page = query_gemini("$titan/xxx/haiku.gmi;size=71;mime=text/plain;token=hello", $haiku);
 like($page, qr/^61 This is not your space/, "Wrong client certificate");
 
 $page = query_gemini("$base/capsule/login", undef, 0);
@@ -48,8 +66,7 @@ like($page, qr/^60 You need a client certificate to access your capsule/, "Login
 
 $page = query_gemini("$base/capsule/login");
 $page =~ qr/^30 $base\/capsule\/([a-z]+)\r\n/;
-my $name = $1;
-ok($name, "Login");
+is($name, $1, "Login");
 
 $page = query_gemini("$titan/$name/haiku.gmi;size=71;mime=text/plain;token=hello", $haiku);
 like($page, qr/^30 $base\/capsule\/$name/, "Saved haiku");

@@ -57,17 +57,26 @@ sub capsules {
   my $hosts = capsule_regex();
   my $port = port($stream);
   my ($host, $capsule, $id);
-  if (($host, $capsule, $id) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/([^/]+)$!) {
+  if (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/upload$!) {
+    return result($stream, "10", "Filename");
+  } elsif (($host, $capsule, $id) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/upload\?([^/]+)$!) {
+    return result($stream, "30", "gemini://$host:$port/$capsule_space/$capsule/$id");
+  } elsif (($host, $capsule, $id) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/([^/]+)$!) {
     $capsule = decode_utf8(uri_unescape($capsule));
     my $dir = capsule_dir($host, $capsule);
-    return result($stream, "51", "This capsule does not exist") unless -d $dir;
     $id = decode_utf8(uri_unescape($id));
     my $file = "$dir/$id";
-    return result($stream, "51", "This file does not exist") unless -f $file;
-    $log->info("Serving $file");
-    # this works for text files, too!
-    success($stream, mime_type($id));
-    $stream->write(read_binary($file));
+    if (-f $file) {
+      $log->info("Serving $file");
+      # this works for text files, too!
+      success($stream, mime_type($id));
+      $stream->write(read_binary($file));
+    } else {
+      $log->info("Serving invitation to upload $file");
+      success($stream);
+      $stream->write("This file does not exist. Upload it using Titan!\n");
+      $stream->write("=> gemini://transjovian.org/titan What is Titan?\n");
+    }
     return 1;
   } elsif (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/login$!) {
     my $capsule = capsule_name($stream);
@@ -83,13 +92,16 @@ sub capsules {
     my $name = capsule_name($stream);
     $capsule = decode_utf8(uri_unescape($capsule));
     my $dir = capsule_dir($host, $capsule);
-    if (not -d $dir) {
+    my @files;
+    @files = read_dir($dir) if -d $dir;
+    if (not @files) {
       if ($name and $name eq $capsule) {
 	success($stream);
 	$log->info("New capsule $capsule");
 	$stream->write("# " . ucfirst($capsule) . "\n");
 	$stream->write("This capsule is empty. Upload files using Titan!\n");
 	$stream->write("=> gemini://transjovian.org/titan What is Titan?\n");
+	$stream->write("=> upload Specify file for upload\n");
 	return 1;
       } else {
 	return result($stream, "51", "This capsule does not exist");
@@ -98,16 +110,11 @@ sub capsules {
     success($stream);
     $log->info("Serving $capsule");
     $stream->write("# " . ucfirst($capsule) . "\n");
-    my @files = read_dir($dir);
-    if (@files) {
-      $stream->write("Files:\n");
-      for my $file (@files) {
-	print_link($stream, $host, $capsule_space, $file, "$capsule/$file");
-      };
-    } else {
-      $stream->write("This capsule is empty. Upload files using Titan!\n");
-      $stream->write("=> gemini://transjovian.org/titan What is Titan?\n");
-    }
+    $stream->write("=> upload Specify file for upload\n") if $name and $name eq $capsule;
+    $stream->write("Files:\n");
+    for my $file (@files) {
+      print_link($stream, $host, $capsule_space, $file, "$capsule/$file");
+    };
     return 1;
   } elsif (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/?$!) {
     success($stream);

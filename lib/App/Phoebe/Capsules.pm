@@ -43,6 +43,7 @@ use App::Phoebe qw($server $log @extensions @request_handlers host_regex port su
 use File::Slurper qw(read_dir read_binary write_binary);
 use Net::IDN::Encode qw(domain_to_ascii);
 use Encode qw(encode_utf8 decode_utf8);
+use List::Util qw(sum);
 use Modern::Perl;
 use URI::Escape;
 
@@ -156,18 +157,22 @@ sub capsule_regex {
   return join("|", map { quotemeta domain_to_ascii $_ } @capsule_hosts) || host_regex();
 }
 
+# For 'sha256$5a4a0248b753' the name is tibedied (the first name for Elite names)
 sub capsule_name {
   my $stream = shift;
   my $fingerprint = $stream->handle->get_fingerprint();
   return unless $fingerprint;
-  my $integer = hex(substr($fingerprint, 8, 8));
-  srand($integer);
-  my $digraphs = "..lexegezacebisousesarmaindire.aeratenberalavetiedorquanteisrion";
-  my $max = length($digraphs);
-  my $length = 4 + rand(7); # 4-8
-  my $name = '';
-  while (length($name) < $length) {
-    $name .= substr($digraphs, 2*int(rand($max/2)), 2);
+  my @stack = map { hex } substr($fingerprint, 7, 12) =~ /(....)/g;
+  my $digraphs = "..lexegezacebisousesarmaindirea.eratenberalavetiedorquanteisrion";
+  my $longname = $stack[0] & 0x40;
+  my $name;
+  # say "@stack";
+  for my $n (1 .. 4) {
+    my $d = (($stack[2] >> 8) & 0x1f) << 1;
+    push(@stack, sum(@stack) % 0x10000);
+    shift(@stack);
+    $name .= substr($digraphs, $d, 2)
+	if $n <= 3 or $longname;
   }
   $name =~ s/\.//g;
   return $name;

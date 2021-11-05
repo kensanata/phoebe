@@ -39,7 +39,7 @@ Every client certificate gets assigned a capsule name.
 
 package App::Phoebe::Capsules;
 use App::Phoebe qw($server $log @extensions @request_handlers host_regex port success result print_link wiki_dir
-		   valid_params process_titan to_url);
+		   valid_id valid_mime_type valid_size process_titan to_url);
 use File::Slurper qw(read_dir read_binary write_binary);
 use Net::IDN::Encode qw(domain_to_ascii);
 use Encode qw(encode_utf8 decode_utf8);
@@ -234,6 +234,20 @@ sub is_upload {
     }
   }
   return 0;
+}
+
+# We need our own valid_params because we don't check the token
+sub valid_params {
+  my $stream = shift;
+  my $host = shift;
+  my $space = shift;
+  my $id = shift;
+  my $params = shift;
+  return unless valid_id($stream, $host, $space, $id, $params);
+  # return unless valid_token($stream, $host, $space, $id, $params);
+  return unless valid_mime_type($stream, $host, $space, $id, $params);
+  return unless valid_size($stream, $host, $space, $id, $params);
+  return 1;
 }
 
 sub save_file {

@@ -82,7 +82,7 @@ sub capsules {
     my $capsule = capsule_name($stream);
     if ($capsule) {
       $log->info("Redirect to capsule");
-      result($stream, "30", "gemini://$host:$port/$capsule_space/$capsule");
+      result($stream, "30", "gemini://$host:$port/$capsule_space");
     } else {
       $log->info("Requested client certificate for capsule");
       result($stream, "60", "You need a client certificate to access your capsule");

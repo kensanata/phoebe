@@ -77,4 +77,43 @@ is($page, "20 text\/gemini\r\n$haiku", "Read haiku");
 $page = query_gemini("$base/capsule/$name");
 like($page, qr/^=> $base\/capsule\/$name\/haiku\.gmi haiku\.gmi/m, "List haiku");
 
+# sharing and getting the temporary password
+
+like($page, qr/^=> $base\/capsule\/$name\/share Share access/m, "Share link");
+
+$page = query_gemini("$base/capsule/$name/share", undef, 0);
+like($page, qr/^60 You need a client certificate/, "Sharing without certificate");
+
+$page = query_gemini("$base/capsule/$name/share");
+like($page, qr/^This password .*: (\S+)$/m, "Temporary password");
+$page =~ qr/^This password .*: (\S+)$/m;
+my $pwd = $1;
+ok($pwd, "Password");
+
+$page = query_gemini("$base/capsule/$name/share", undef, 2);
+like($page, qr/^60 You need a different client certificate/, "Sharing with the wrong certificate");
+
+# access using the temporary password
+
+$page = query_gemini("$base/capsule/$name/access");
+like($page, qr/^10/m, "Access requires password");
+
+$page = query_gemini("$base/capsule/$name/access?$pwd", undef, 0);
+like($page, qr/^60 You need a client certificate/, "Access without certificate");
+
+$page = query_gemini("$base/capsule/$name/access?$pwd");
+like($page, qr/^30 $base\/capsule\/$name/m, "Redirect to my own capsule");
+ok(! -f "$dir/fingerprint_equivalents", "Fingerprint equivalents unnecessary");
+
+$page = query_gemini("$base/capsule/$name/access?$pwd", undef, 2); # a different certificate
+like($page, qr/^30 $base\/capsule\/$name/m, "Redirect to the same capsule");
+ok(-f "$dir/fingerprint_equivalents", "Fingerprint equivalents saved");
+like(read_text("$dir/fingerprint_equivalents"), qr/^sha256\S+ sha256\S+$/, "Fingerprint equivalents");
+
+# testing the fingerprint equivalency
+
+$page = query_gemini("$base/capsule/$name", undef, 2);
+like($page, qr/# $name/mi, "Title");
+like($page, qr/^=> $base\/capsule\/$name\/upload/m, "Equivalent upload link");
+
 done_testing;

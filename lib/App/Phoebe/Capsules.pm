@@ -29,11 +29,19 @@ you automatically get an editable capsule with an assigned fantasy name.
 Simply add it to your F<config> file. If you are virtual hosting, name the host
 or hosts for your capsules.
 
-    use App::Phoebe::Capsule;
-    package App::Phoebe::Capsule;
-    @capsule_hosts = qw(transjovian.org);
+    package App::Phoebe::Capsules;
+    use Modern::Perl;
+    our @capsule_hosts = qw(transjovian.org);
+    use App::Phoebe::Capsules;
 
 Every client certificate gets assigned a capsule name.
+
+=head1 TROUBLESHOOTING
+
+In the wiki directory, you can have a file called F<fingerprint_equivalents>.
+Its main use is to allow people to add more fingerprints for their site, such as
+from other devices or friends. The file format is line oriented, each line
+containing two fingerprints, C<FROM> and C<TO>.
 
 =cut
 
@@ -43,7 +51,7 @@ use App::Phoebe qw($server $log @extensions @request_handlers host_regex port su
 use File::Slurper qw(read_dir read_binary write_binary);
 use Net::IDN::Encode qw(domain_to_ascii);
 use Encode qw(encode_utf8 decode_utf8);
-use List::Util qw(sum);
+use List::Util qw(sum first);
 use Modern::Perl;
 use URI::Escape;
 
@@ -51,17 +59,94 @@ push(@extensions, \&capsules);
 
 our $capsule_space = "capsule";
 our @capsule_hosts;
+our $capsule_help;
+our @capsule_tokens;
+our %capsule_equivalent;
+
+# load fingerprint equivalents on the next tick
+Mojo::IOLoop->next_tick(sub {
+  my $dir = $server->{wiki_dir};
+  if (-f "$dir/fingerprint_equivalents") {
+    my $bytes = read_binary("$dir/fingerprint_equivalents");
+    %capsule_equivalent = split(' ', $bytes);
+  } } );
 
 sub capsules {
   my $stream = shift;
   my $url = shift;
   my $hosts = capsule_regex();
   my $port = port($stream);
-  my ($host, $capsule, $id);
+  my ($host, $capsule, $id, $token);
   if (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/upload$!) {
+    $capsule = decode_utf8(uri_unescape($capsule));
     return result($stream, "10", "Filename");
   } elsif (($host, $capsule, $id) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/upload\?([^/]+)$!) {
+    $capsule = decode_utf8(uri_unescape($capsule));
     return result($stream, "30", "gemini://$host:$port/$capsule_space/$capsule/$id");
+  } elsif (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/login$!) {
+    my $capsule = capsule_name($stream);
+    if ($capsule) {
+      $log->info("Redirect to capsule");
+      result($stream, "30", "gemini://$host:$port/$capsule_space");
+    } else {
+      $log->info("Requested client certificate for capsule");
+      result($stream, "60", "You need a client certificate to access your capsule");
+    }
+    return 1;
+  } elsif (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/access$!) {
+    $capsule = decode_utf8(uri_unescape($capsule));
+    return result($stream, "10", "Password");
+  } elsif (($host, $capsule, $token) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/access\?(.+)$!) {
+    $capsule = decode_utf8(uri_unescape($capsule));
+    $token = decode_utf8(uri_unescape($token));
+    # only keep tokens created in the last 10 minutes
+    my $ts = time - 600;
+    @capsule_tokens = grep { $_->[0] > $ts } @capsule_tokens;
+    my $name = capsule_name($stream);
+    if (not $name) {
+      $log->info("Attempt to access a capsule without client certificate");
+      result($stream, "60", "You need a client certificate to access this capsule");
+    } elsif ($name eq $capsule) {
+      $log->info("Attempt to access the same capsule");
+      result($stream, "30", to_url($stream, $host, $capsule_space, $capsule));
+    } else {
+      my $fingerprint = $stream->handle->get_fingerprint();
+      my $target = first { $_->[1] eq $token } @capsule_tokens;
+      if ($target) {
+	$log->info("Access to capsule granted");
+	$capsule_equivalent{$fingerprint} = $target->[2];
+	my $dir = $server->{wiki_dir};
+	write_binary("$dir/fingerprint_equivalents",
+		     join("\n", map { $_ . " " . $capsule_equivalent{$_} } keys %capsule_equivalent));
+	result($stream, "30", to_url($stream, $host, $capsule_space, $capsule));
+      } else {
+	$log->info("Access to capsule denied");
+	success($stream);
+	$stream->write("This password is invalid\n");
+      }
+    }
+    return 1;
+  } elsif (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/share$!) {
+    $capsule = decode_utf8(uri_unescape($capsule));
+    my $name = capsule_name($stream);
+    if (not $name) {
+      $log->info("Attempt to share a capsule without client certificate");
+      result($stream, "60", "You need a client certificate to share this capsule");
+    } elsif ($name ne $capsule) {
+      $log->info("Attempt to share the wrong capsule");
+      result($stream, "60", "You need a different client certificate to share this capsule");
+    } else {
+      $log->info("Share capsule");
+      my $token = capsule_name(sprintf "-------%04X%04X%04X", rand(0xffff), rand(0xffff), rand(0xffff));
+      # only keep tokens created in the last 10 minutes
+      my $ts = time - 600;
+      @capsule_tokens = grep { $_->[0] > $ts } @capsule_tokens;
+      push(@capsule_tokens, [time, $token, $stream->handle->get_fingerprint()]);
+      success($stream);
+      $stream->write("# Share access to " . ucfirst($capsule) . "\n");
+      $stream->write("This password is valid for ten minutes: $token\n");
+    }
+    return 1;
   } elsif (($host, $capsule, $id) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/([^/]+)$!) {
     $capsule = decode_utf8(uri_unescape($capsule));
     my $dir = capsule_dir($host, $capsule);
@@ -79,19 +164,9 @@ sub capsules {
       $stream->write("=> gemini://transjovian.org/titan What is Titan?\n");
     }
     return 1;
-  } elsif (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/login$!) {
-    my $capsule = capsule_name($stream);
-    if ($capsule) {
-      $log->info("Redirect to capsule");
-      result($stream, "30", "gemini://$host:$port/$capsule_space");
-    } else {
-      $log->info("Requested client certificate for capsule");
-      result($stream, "60", "You need a client certificate to access your capsule");
-    }
-    return 1;
   } elsif (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/?$!) {
-    my $name = capsule_name($stream);
     $capsule = decode_utf8(uri_unescape($capsule));
+    my $name = capsule_name($stream);
     my $dir = capsule_dir($host, $capsule);
     my @files;
     @files = read_dir($dir) if -d $dir;
@@ -111,7 +186,10 @@ sub capsules {
     success($stream);
     $log->info("Serving $capsule");
     $stream->write("# " . ucfirst($capsule) . "\n");
-    print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload") if $name and $name eq $capsule;
+    if ($name and $name eq $capsule) {
+      print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload");
+      print_link($stream, $host, $capsule_space, "Share access with other people or other devices", "$capsule/share");
+    }
     $stream->write("Files:\n");
     for my $file (@files) {
       print_link($stream, $host, $capsule_space, $file, "$capsule/$file");
@@ -129,6 +207,7 @@ sub capsules {
       $stream->write("Login if you are interested in a capsule:\n");
       print_link($stream, $host, $capsule_space, "login", "login"); # must provide $id to avoid page/ prefix
     }
+    $stream->write("=> $capsule_help Help\n") if $capsule_help;
     my @capsules = read_dir(wiki_dir($host, $capsule_space));
     $stream->write("Capsules:\n") if @capsules;
     for my $dir (@capsules) {
@@ -139,6 +218,7 @@ sub capsules {
   return;
 }
 
+# capsule is already decoded and gets encoded again
 sub capsule_dir {
   my $host = shift;
   my $capsule = shift;
@@ -149,7 +229,7 @@ sub capsule_dir {
   }
   $dir .= "/$capsule_space";
   mkdir($dir) unless -d $dir;
-  $dir .= "/$capsule";
+  $dir .= "/" . encode_utf8($capsule);
   return $dir;
 }
 
@@ -160,8 +240,10 @@ sub capsule_regex {
 # For 'sha256$5a4a0248b753' the name is tibedied (the first name for Elite names)
 sub capsule_name {
   my $stream = shift;
-  my $fingerprint = $stream->handle->get_fingerprint();
+  # $stream can be a fingerprint string
+  my $fingerprint = ref $stream ? $stream->handle->get_fingerprint() : $stream;
   return unless $fingerprint;
+  $fingerprint = $capsule_equivalent{$fingerprint} if $capsule_equivalent{$fingerprint};
   my @stack = map { hex } substr($fingerprint, 7, 12) =~ /(....)/g;
   my $digraphs = "..lexegezacebisousesarmaindirea.eratenberalavetiedorquanteisrion";
   my $longname = $stack[0] & 0x40;

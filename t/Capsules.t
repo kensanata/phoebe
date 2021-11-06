@@ -95,6 +95,9 @@ like($page, qr/^60 You need a different client certificate/, "Sharing with the w
 
 # access using the temporary password
 
+$page = query_gemini("$base/capsule/$name", undef, 2);
+like($page, qr/^=> $base\/capsule\/$name\/access Access this capsule/m, "Access offered");
+
 $page = query_gemini("$base/capsule/$name/access");
 like($page, qr/^10/m, "Access requires password");
 

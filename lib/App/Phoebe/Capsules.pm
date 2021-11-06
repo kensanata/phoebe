@@ -99,9 +99,6 @@ sub capsules {
   } elsif (($host, $capsule, $token) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/access\?(.+)$!) {
     $capsule = decode_utf8(uri_unescape($capsule));
     $token = decode_utf8(uri_unescape($token));
-    # only keep tokens created in the last 10 minutes
-    my $ts = time - 600;
-    @capsule_tokens = grep { $_->[0] > $ts } @capsule_tokens;
     my $name = capsule_name($stream);
     if (not $name) {
       $log->info("Attempt to access a capsule without client certificate");
@@ -138,10 +135,9 @@ sub capsules {
     } else {
       $log->info("Share capsule");
       my $token = capsule_name(sprintf "-------%04X%04X%04X", rand(0xffff), rand(0xffff), rand(0xffff));
-      # only keep tokens created in the last 10 minutes
-      my $ts = time - 600;
-      @capsule_tokens = grep { $_->[0] > $ts } @capsule_tokens;
       push(@capsule_tokens, [time, $token, $stream->handle->get_fingerprint()]);
+      # forget old access tokens in ten minutes
+      Mojo::IOLoop->timer(601 => \&capsule_token_cleanup);
       success($stream);
       $stream->write("# Share access to " . ucfirst($capsule) . "\n");
       $stream->write("This password is valid for ten minutes: $token\n");
@@ -186,9 +182,13 @@ sub capsules {
     success($stream);
     $log->info("Serving $capsule");
     $stream->write("# " . ucfirst($capsule) . "\n");
-    if ($name and $name eq $capsule) {
-      print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload");
-      print_link($stream, $host, $capsule_space, "Share access with other people or other devices", "$capsule/share");
+    if ($name) {
+      if ($name eq $capsule) {
+	print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload");
+	print_link($stream, $host, $capsule_space, "Share access with other people or other devices", "$capsule/share");
+      } elsif (@capsule_tokens) {
+	print_link($stream, $host, $capsule_space, "Access this capsule", "$capsule/access");
+      }
     }
     $stream->write("Files:\n");
     for my $file (@files) {
@@ -270,6 +270,12 @@ sub mime_type {
   return 'image/jpeg' if /\.jpe?g$/i;
   return 'image/gif' if /\.gif$/i;
   return 'application/octet-stream';
+}
+
+sub capsule_token_cleanup {
+  # only keep tokens created in the last 10 minutes
+  my $ts = time - 600;
+  @capsule_tokens = grep { $_->[0] > $ts } @capsule_tokens;
 }
 
 unshift(@request_handlers, '^titan://(' . capsule_regex() . ')(?::\d+)?/' . $capsule_space . '/' => \&handle_titan);

@@ -124,11 +124,10 @@ sub serve_capsule_login {
 sub serve_capsule_archive {
   my ($stream, $host, $capsule) = @_;
   my $name = capsule_name($stream);
-  return 1 unless is_my_capsule($name, $capsule, 'archive');
-  success($stream);
+  return 1 unless is_my_capsule($stream, $name, $capsule, 'archive');
   # use /bin/tar instead of Archive::Tar to save memory
-  my $dir = wiki_dir($host, $capsule_space) . "/" . utf8_encode($capsule);
-  my $file = "$dir/data.tar.gz";
+  my $dir = wiki_dir($host, $capsule_space) . "/" . encode_utf8($capsule);
+  my $file = "$dir/backup/data.tar.gz";
   if (-e $file and time() - modified($file) <= 300) { # data is valid for 5 minutes
     $log->info("Serving cached data archive for $capsule");
     success($stream, "application/tar");
@@ -138,8 +137,8 @@ sub serve_capsule_archive {
     my @command = ('/bin/tar', '--create', '--gzip',
 		   '--file', $file,
 		   '--exclude', "backup",
-		   '--directory', "$dir/../..",
-		   ((split(/\//,$dir))[-1]));
+		   '--directory', "$dir/..",
+		   encode_utf8($capsule));
     $log->debug("@command");
     if (system(@command) == 0) {
       $log->info("Serving new data archive for $capsule");
@@ -156,7 +155,7 @@ sub serve_capsule_archive {
 sub serve_capsule_backup {
   my ($stream, $host, $capsule, $id) = @_;
   my $name = capsule_name($stream);
-  return 1 unless is_my_capsule($name, $capsule, 'view the backup of');
+  return 1 unless is_my_capsule($stream, $name, $capsule, 'view the backup of');
   if ($id) {
     success($stream);
     $stream->write("TODO: content of $id");

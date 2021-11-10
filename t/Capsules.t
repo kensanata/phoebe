@@ -15,6 +15,8 @@
 
 use Modern::Perl;
 use Test::More;
+use List::Util qw(first);
+use File::Slurper qw(read_binary);
 use utf8;
 
 our @use = qw(Capsules);
@@ -55,10 +57,10 @@ $page = query_gemini("$base/capsule/$name/haiku.gmi");
 like($page, qr/This file does not exist. Upload it using Titan!/, "Invitation");
 
 # no client cert
-$page = query_gemini("$titan/$name/haiku.gmi;size=71;mime=text/plain;token=hello", $haiku, 0);
+$page = query_gemini("$titan/$name/haiku.gmi;size=71;mime=text/plain", $haiku, 0);
 like($page, qr/^60 Uploading files requires a client certificate/, "Client certificate required");
 
-$page = query_gemini("$titan/xxx/haiku.gmi;size=71;mime=text/plain;token=hello", $haiku);
+$page = query_gemini("$titan/xxx/haiku.gmi;size=71;mime=text/plain", $haiku);
 like($page, qr/^61 This is not your space/, "Wrong client certificate");
 
 $page = query_gemini("$base/capsule/login", undef, 0);
@@ -68,7 +70,7 @@ $page = query_gemini("$base/capsule/login");
 $page =~ qr/^30 $base\/capsule\/([a-z]+)\r\n/;
 is($name, $1, "Login");
 
-$page = query_gemini("$titan/$name/haiku.gmi;size=71;mime=text/plain;token=hello", $haiku);
+$page = query_gemini("$titan/$name/haiku.gmi;size=71;mime=text/plain", $haiku);
 like($page, qr/^30 $base\/capsule\/$name/, "Saved haiku");
 
 $page = query_gemini("$base/capsule/$name/haiku.gmi");
@@ -118,5 +120,43 @@ like(read_text("$dir/fingerprint_equivalents"), qr/^sha256\S+ sha256\S+$/, "Fing
 $page = query_gemini("$base/capsule/$name", undef, 2);
 like($page, qr/# $name/mi, "Title");
 like($page, qr/^=> $base\/capsule\/$name\/upload/m, "Equivalent upload link");
+
+# test backup
+ok(! -d "$dir/capsule/$name/backup", "No backup dir has been created");
+ok(! -f "$dir/capsule/$name/backup/haiku.gmi", "No backup has been made");
+my $ts = time - 1000;
+is(utime($ts, $ts, "$dir/capsule/$name/haiku.gmi"), 1, "File backdated");
+
+$haiku = <<"EOT";
+Nervous late at night
+Typing furiously, in vain
+There's always a bug
+EOT
+
+$page = query_gemini("$titan/$name/haiku.gmi;size=69;mime=text/plain", $haiku);
+like($page, qr/^30 $base\/capsule\/$name/, "Saved haiku");
+ok(-d "$dir/capsule/$name/backup", "Backup dir has been created");
+ok(-f "$dir/capsule/$name/backup/haiku.gmi", "Backup has been made");
+like(read_text("$dir/capsule/$name/haiku.gmi"), qr/Nervous late at night/, "File saved");
+like(read_text("$dir/capsule/$name/backup/haiku.gmi"), qr/On the red sofa/, "Backup saved");
+
+
+ SKIP: {
+   -x '/bin/tar' or skip "Missing /bin/tar on this system";
+   qx'/bin/tar --version' =~ /GNU tar/ or skip "No GNU tar on this system";
+
+   $page = query_gemini("$base/capsule/$name/archive");
+   like($page, qr/^20 application\/tar\r\n/m, "Download tar file");
+
+   $page =~ s/^20 application\/tar\r\n//;
+   my $tar = read_binary("$dir/capsule/$name/backup/data.tar.gz");
+   ok($tar eq $page, "tar bytes are correct");
+
+   open(my $fh, "tar --list --gzip --file $dir/capsule/$name/backup/data.tar.gz |");
+   my @files = <$fh>;
+   close($fh);
+   ok((first { "$name/haiku.gmi\n" } @files), "Found haiku in the archive");
+   ok((grep !/backup/, @files), "No backups in the archive (@files)");
+}
 
 done_testing;

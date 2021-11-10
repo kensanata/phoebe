@@ -118,27 +118,25 @@ sub serve_capsule_access {
   $capsule = decode_utf8(uri_unescape($capsule));
   $token = decode_utf8(uri_unescape($token));
   my $name = capsule_name($stream);
-  if (not $name) {
-    $log->info("Attempt to access a capsule without client certificate");
-    result($stream, "60", "You need a client certificate to access this capsule");
-  } elsif ($name eq $capsule) {
-    $log->info("Attempt to access the same capsule");
-    result($stream, "30", to_url($stream, $host, $capsule_space, $capsule));
-  } else {
-    my $fingerprint = $stream->handle->get_fingerprint();
-    my $target = first { $_->[1] eq $token } @capsule_tokens;
-    if ($target) {
-      $log->info("Access to capsule granted");
+  return 1 unless is_my_capsule($stream, $name, $capsule, 'access');
+  my $fingerprint = $stream->handle->get_fingerprint();
+  my $target = first { $_->[1] eq $token } @capsule_tokens;
+  if ($target) {
+    $log->info("Access to capsule granted");
+    if ($fingerprint ne $target->[2]) {
+      # if the user is testing it, then the two fingerprints are the same and no
+      # equivalency needs to be saved
       $capsule_equivalent{$fingerprint} = $target->[2];
       my $dir = $server->{wiki_dir};
       write_binary("$dir/fingerprint_equivalents",
-		   join("\n", map { $_ . " " . $capsule_equivalent{$_} } keys %capsule_equivalent));
-      result($stream, "30", to_url($stream, $host, $capsule_space, $capsule));
-    } else {
-      $log->info("Access to capsule denied");
-      success($stream);
-      $stream->write("This password is invalid\n");
+		   join("\n", map { $_ . " " . $capsule_equivalent{$_} }
+			keys %capsule_equivalent));
     }
+    result($stream, "30", to_url($stream, $host, $capsule_space, $capsule));
+  } else {
+    $log->info("Access to capsule denied");
+    success($stream);
+    $stream->write("This password is invalid\n");
   }
   return 1;
 }
@@ -147,21 +145,28 @@ sub serve_capsule_sharing {
   my ($stream, $host, $capsule) = @_;
   $capsule = decode_utf8(uri_unescape($capsule));
   my $name = capsule_name($stream);
+  return 1 unless is_my_capsule($stream, $name, $capsule, 'share');
+  $log->info("Share capsule");
+  my $token = capsule_name(sprintf "-------%04X%04X%04X", rand(0xffff), rand(0xffff), rand(0xffff));
+  push(@capsule_tokens, [time, $token, $stream->handle->get_fingerprint()]);
+  # forget old access tokens in ten minutes
+  Mojo::IOLoop->timer(601 => \&capsule_token_cleanup);
+  success($stream);
+  $stream->write("# Share access to " . ucfirst($capsule) . "\n");
+  $stream->write("This password is valid for ten minutes: $token\n");
+  return 1;
+}
+
+sub is_my_capsule {
+  my ($stream, $name, $capsule, $verb) = @_;
   if (not $name) {
-    $log->info("Attempt to share a capsule without client certificate");
-    result($stream, "60", "You need a client certificate to share this capsule");
+    $log->info("Attempt to $verb a capsule without client certificate");
+    result($stream, "60", "You need a client certificate to $verb this capsule");
+    return 0;
   } elsif ($name ne $capsule) {
-    $log->info("Attempt to share the wrong capsule");
-    result($stream, "60", "You need a different client certificate to share this capsule");
-  } else {
-    $log->info("Share capsule");
-    my $token = capsule_name(sprintf "-------%04X%04X%04X", rand(0xffff), rand(0xffff), rand(0xffff));
-    push(@capsule_tokens, [time, $token, $stream->handle->get_fingerprint()]);
-    # forget old access tokens in ten minutes
-    Mojo::IOLoop->timer(601 => \&capsule_token_cleanup);
-    success($stream);
-    $stream->write("# Share access to " . ucfirst($capsule) . "\n");
-    $stream->write("This password is valid for ten minutes: $token\n");
+    $log->info("Attempt to $verb the wrong capsule");
+    result($stream, "60", "You need a different client certificate to $verb this capsule");
+    return 0;
   }
   return 1;
 }

@@ -77,145 +77,172 @@ sub capsules {
   my $hosts = capsule_regex();
   my $port = port($stream);
   my ($host, $capsule, $id, $token);
-  if (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/upload$!) {
-    $capsule = decode_utf8(uri_unescape($capsule));
+  if ($url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/upload$!) {
     return result($stream, "10", "Filename");
   } elsif (($host, $capsule, $id) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/upload\?([^/]+)$!) {
     $capsule = decode_utf8(uri_unescape($capsule));
     return result($stream, "30", "gemini://$host:$port/$capsule_space/$capsule/$id");
   } elsif (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/login$!) {
-    my $capsule = capsule_name($stream);
-    if ($capsule) {
-      $log->info("Redirect to capsule");
-      result($stream, "30", "gemini://$host:$port/$capsule_space");
-    } else {
-      $log->info("Requested client certificate for capsule");
-      result($stream, "60", "You need a client certificate to access your capsule");
-    }
-    return 1;
+    return serve_capsule_login($stream, $host);
   } elsif (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/access$!) {
-    $capsule = decode_utf8(uri_unescape($capsule));
     return result($stream, "10", "Password");
   } elsif (($host, $capsule, $token) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/access\?(.+)$!) {
-    $capsule = decode_utf8(uri_unescape($capsule));
-    $token = decode_utf8(uri_unescape($token));
-    my $name = capsule_name($stream);
-    if (not $name) {
-      $log->info("Attempt to access a capsule without client certificate");
-      result($stream, "60", "You need a client certificate to access this capsule");
-    } elsif ($name eq $capsule) {
-      $log->info("Attempt to access the same capsule");
-      result($stream, "30", to_url($stream, $host, $capsule_space, $capsule));
-    } else {
-      my $fingerprint = $stream->handle->get_fingerprint();
-      my $target = first { $_->[1] eq $token } @capsule_tokens;
-      if ($target) {
-	$log->info("Access to capsule granted");
-	$capsule_equivalent{$fingerprint} = $target->[2];
-	my $dir = $server->{wiki_dir};
-	write_binary("$dir/fingerprint_equivalents",
-		     join("\n", map { $_ . " " . $capsule_equivalent{$_} } keys %capsule_equivalent));
-	result($stream, "30", to_url($stream, $host, $capsule_space, $capsule));
-      } else {
-	$log->info("Access to capsule denied");
-	success($stream);
-	$stream->write("This password is invalid\n");
-      }
-    }
-    return 1;
+    return serve_capsule_access($stream, $host, $capsule, $token);
   } elsif (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/share$!) {
-    $capsule = decode_utf8(uri_unescape($capsule));
-    my $name = capsule_name($stream);
-    if (not $name) {
-      $log->info("Attempt to share a capsule without client certificate");
-      result($stream, "60", "You need a client certificate to share this capsule");
-    } elsif ($name ne $capsule) {
-      $log->info("Attempt to share the wrong capsule");
-      result($stream, "60", "You need a different client certificate to share this capsule");
-    } else {
-      $log->info("Share capsule");
-      my $token = capsule_name(sprintf "-------%04X%04X%04X", rand(0xffff), rand(0xffff), rand(0xffff));
-      push(@capsule_tokens, [time, $token, $stream->handle->get_fingerprint()]);
-      # forget old access tokens in ten minutes
-      Mojo::IOLoop->timer(601 => \&capsule_token_cleanup);
-      success($stream);
-      $stream->write("# Share access to " . ucfirst($capsule) . "\n");
-      $stream->write("This password is valid for ten minutes: $token\n");
-    }
-    return 1;
+    return serve_capsule_sharing($stream, $host, $capsule);
   } elsif (($host, $capsule, $id) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/([^/]+)$!) {
-    $capsule = decode_utf8(uri_unescape($capsule));
-    my $dir = capsule_dir($host, $capsule);
-    $id = decode_utf8(uri_unescape($id));
-    my $file = "$dir/$id";
-    if (-f $file) {
-      $log->info("Serving $file");
-      # this works for text files, too!
-      success($stream, mime_type($id));
-      $stream->write(read_binary($file));
-    } else {
-      $log->info("Serving invitation to upload $file");
-      success($stream);
-      $stream->write("This file does not exist. Upload it using Titan!\n");
-      $stream->write("=> gemini://transjovian.org/titan What is Titan?\n");
-    }
-    return 1;
+    return serve_capsule_page($stream, $host, $capsule, $id);
   } elsif (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/?$!) {
-    $capsule = decode_utf8(uri_unescape($capsule));
-    my $name = capsule_name($stream);
-    my $dir = capsule_dir($host, $capsule);
-    my @files;
-    @files = read_dir($dir) if -d $dir;
-    if (not @files) {
-      if ($name and $name eq $capsule) {
-	success($stream);
-	$log->info("New capsule $capsule");
-	$stream->write("# " . ucfirst($capsule) . "\n");
-	$stream->write("This capsule is empty. Upload files using Titan!\n");
-	$stream->write("=> gemini://transjovian.org/titan What is Titan?\n");
-	print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload");
-	return 1;
-      } else {
-	return result($stream, "51", "This capsule does not exist");
-      }
-    }
-    success($stream);
-    $log->info("Serving $capsule");
-    $stream->write("# " . ucfirst($capsule) . "\n");
-    if ($name) {
-      if ($name eq $capsule) {
-	print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload");
-	print_link($stream, $host, $capsule_space, "Share access with other people or other devices", "$capsule/share");
-      } elsif (@capsule_tokens) {
-	print_link($stream, $host, $capsule_space, "Access this capsule", "$capsule/access");
-      }
-    }
-    $stream->write("Files:\n");
-    for my $file (@files) {
-      print_link($stream, $host, $capsule_space, $file, "$capsule/$file");
-    };
-    return 1;
+    return serve_capsule_menu($stream, $host, $capsule);
   } elsif (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/?$!) {
-    success($stream);
-    $log->info("Serving capsules");
-    $stream->write("# Capsules\n");
-    my $capsule = capsule_name($stream);
-    if ($capsule) {
-      $stream->write("This is your capsule:\n");
-      print_link($stream, $host, $capsule_space, $capsule, $capsule); # must provide $id to avoid page/ prefix
-    } else {
-      $stream->write("Login if you are interested in a capsule:\n");
-      print_link($stream, $host, $capsule_space, "login", "login"); # must provide $id to avoid page/ prefix
-    }
-    $stream->write("=> $capsule_help Help\n") if $capsule_help;
-    my @capsules = read_dir(wiki_dir($host, $capsule_space));
-    $stream->write("Capsules:\n") if @capsules;
-    for my $dir (@capsules) {
-      print_link($stream, $host, $capsule_space, $dir, $dir); # must provide $id to avoid page/ prefix
-    };
-    return 1;
+    return serve_main_menu($stream, $host);
   }
   return;
+}
+
+sub serve_capsule_login {
+  my ($stream, $host) = @_;
+  my $capsule = capsule_name($stream);
+  if ($capsule) {
+    $log->info("Redirect to capsule");
+    result($stream, "30", to_url($stream, $host, $capsule_space, ""));
+  } else {
+    $log->info("Requested client certificate for capsule");
+    result($stream, "60", "You need a client certificate to access your capsule");
+  }
+  return 1;
+}
+
+sub serve_capsule_access {
+  my ($stream, $host, $capsule, $token) = @_;
+  $capsule = decode_utf8(uri_unescape($capsule));
+  $token = decode_utf8(uri_unescape($token));
+  my $name = capsule_name($stream);
+  if (not $name) {
+    $log->info("Attempt to access a capsule without client certificate");
+    result($stream, "60", "You need a client certificate to access this capsule");
+  } elsif ($name eq $capsule) {
+    $log->info("Attempt to access the same capsule");
+    result($stream, "30", to_url($stream, $host, $capsule_space, $capsule));
+  } else {
+    my $fingerprint = $stream->handle->get_fingerprint();
+    my $target = first { $_->[1] eq $token } @capsule_tokens;
+    if ($target) {
+      $log->info("Access to capsule granted");
+      $capsule_equivalent{$fingerprint} = $target->[2];
+      my $dir = $server->{wiki_dir};
+      write_binary("$dir/fingerprint_equivalents",
+		   join("\n", map { $_ . " " . $capsule_equivalent{$_} } keys %capsule_equivalent));
+      result($stream, "30", to_url($stream, $host, $capsule_space, $capsule));
+    } else {
+      $log->info("Access to capsule denied");
+      success($stream);
+      $stream->write("This password is invalid\n");
+    }
+  }
+  return 1;
+}
+
+sub serve_capsule_sharing {
+  my ($stream, $host, $capsule) = @_;
+  $capsule = decode_utf8(uri_unescape($capsule));
+  my $name = capsule_name($stream);
+  if (not $name) {
+    $log->info("Attempt to share a capsule without client certificate");
+    result($stream, "60", "You need a client certificate to share this capsule");
+  } elsif ($name ne $capsule) {
+    $log->info("Attempt to share the wrong capsule");
+    result($stream, "60", "You need a different client certificate to share this capsule");
+  } else {
+    $log->info("Share capsule");
+    my $token = capsule_name(sprintf "-------%04X%04X%04X", rand(0xffff), rand(0xffff), rand(0xffff));
+    push(@capsule_tokens, [time, $token, $stream->handle->get_fingerprint()]);
+    # forget old access tokens in ten minutes
+    Mojo::IOLoop->timer(601 => \&capsule_token_cleanup);
+    success($stream);
+    $stream->write("# Share access to " . ucfirst($capsule) . "\n");
+    $stream->write("This password is valid for ten minutes: $token\n");
+  }
+  return 1;
+}
+
+sub serve_capsule_page {
+  my ($stream, $host, $capsule, $id) = @_;
+  $capsule = decode_utf8(uri_unescape($capsule));
+  my $dir = capsule_dir($host, $capsule);
+  $id = decode_utf8(uri_unescape($id));
+  my $file = "$dir/$id";
+  if (-f $file) {
+    $log->info("Serving $file");
+    # this works for text files, too!
+    success($stream, mime_type($id));
+    $stream->write(read_binary($file));
+  } else {
+    $log->info("Serving invitation to upload $file");
+    success($stream);
+    $stream->write("This file does not exist. Upload it using Titan!\n");
+    $stream->write("=> gemini://transjovian.org/titan What is Titan?\n");
+  }
+  return 1;
+}
+sub serve_capsule_menu {
+  my ($stream, $host, $capsule) = @_;
+  $capsule = decode_utf8(uri_unescape($capsule));
+  my $name = capsule_name($stream);
+  my $dir = capsule_dir($host, $capsule);
+  my @files;
+  @files = read_dir($dir) if -d $dir;
+  if (not @files) {
+    if ($name and $name eq $capsule) {
+      success($stream);
+      $log->info("New capsule $capsule");
+      $stream->write("# " . ucfirst($capsule) . "\n");
+      $stream->write("This capsule is empty. Upload files using Titan!\n");
+      $stream->write("=> gemini://transjovian.org/titan What is Titan?\n");
+      print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload");
+      return 1;
+    } else {
+      return result($stream, "51", "This capsule does not exist");
+    }
+  }
+  success($stream);
+  $log->info("Serving $capsule");
+  $stream->write("# " . ucfirst($capsule) . "\n");
+  if ($name) {
+    if ($name eq $capsule) {
+      print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload");
+      print_link($stream, $host, $capsule_space, "Share access with other people or other devices", "$capsule/share");
+    } elsif (@capsule_tokens) {
+      print_link($stream, $host, $capsule_space, "Access this capsule", "$capsule/access");
+    }
+  }
+  $stream->write("Files:\n");
+  for my $file (@files) {
+    print_link($stream, $host, $capsule_space, $file, "$capsule/$file");
+  };
+  return 1;
+}
+
+sub serve_main_menu {
+  my ($stream, $host) = @_;
+  success($stream);
+  $log->info("Serving capsules");
+  $stream->write("# Capsules\n");
+  my $capsule = capsule_name($stream);
+  if ($capsule) {
+    $stream->write("This is your capsule:\n");
+    print_link($stream, $host, $capsule_space, $capsule, $capsule); # must provide $id to avoid page/ prefix
+  } else {
+    $stream->write("Login if you are interested in a capsule:\n");
+    print_link($stream, $host, $capsule_space, "login", "login"); # must provide $id to avoid page/ prefix
+  }
+  $stream->write("=> $capsule_help Help\n") if $capsule_help;
+  my @capsules = read_dir(wiki_dir($host, $capsule_space));
+  $stream->write("Capsules:\n") if @capsules;
+  for my $dir (@capsules) {
+    print_link($stream, $host, $capsule_space, $dir, $dir); # must provide $id to avoid page/ prefix
+  };
+  return 1;
 }
 
 # capsule is already decoded and gets encoded again

@@ -156,15 +156,18 @@ sub serve_capsule_backup {
   my ($stream, $host, $capsule, $id) = @_;
   my $name = capsule_name($stream);
   return 1 unless is_my_capsule($stream, $name, $capsule, 'view the backup of');
+  my $dir = capsule_dir($host, $capsule) . "/backup";
   if ($id) {
-    success($stream);
-    $stream->write("TODO: content of $id");
+    $log->info("Serving $capsule backup $id");
+    # this works for text files, too!
+    success($stream, mime_type($id));
+    my $file = $dir . "/" . encode_utf8($id);
+    $stream->write(read_binary($file));
   } else {
     $log->info("Backup for $capsule");
     success($stream);
     $stream->write("# " . ucfirst($capsule) . " backup\n");
     $stream->write("When editing a page, a backup is as long there is at least 10 minutes passed since the last edit.\n");
-    my $dir = capsule_dir($host, $capsule) . "/backup";
     my @files;
     @files = read_dir($dir) if -d $dir;
     if (not @files) {
@@ -172,7 +175,7 @@ sub serve_capsule_backup {
     } else {
       $stream->write("Files:\n");
       for my $file (@files) {
-	print_link($stream, $host, $capsule_space, $file, "$capsule/$file");
+	print_link($stream, $host, $capsule_space, $file, "$capsule/backup/$file");
       };
     }
   }

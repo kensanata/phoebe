@@ -139,7 +139,10 @@ ok(-d "$dir/capsule/$name/backup", "Backup dir has been created");
 ok(-f "$dir/capsule/$name/backup/haiku.gmi", "Backup has been made");
 like(read_text("$dir/capsule/$name/haiku.gmi"), qr/Nervous late at night/, "File saved");
 like(read_text("$dir/capsule/$name/backup/haiku.gmi"), qr/On the red sofa/, "Backup saved");
-
+$page = query_gemini("$base/capsule/$name/haiku.gmi");
+like($page, qr/Nervous late at night/, "Current page");
+$page = query_gemini("$base/capsule/$name/backup/haiku.gmi");
+like($page, qr/On the red sofa/, "Backup page");
 
  SKIP: {
    -x '/bin/tar' or skip "Missing /bin/tar on this system";

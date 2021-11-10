@@ -87,13 +87,13 @@ sub capsules {
   } elsif (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/access$!) {
     return result($stream, "10", "Password");
   } elsif (($host, $capsule, $token) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/access\?(.+)$!) {
-    return serve_capsule_access($stream, $host, $capsule, $token);
+    return serve_capsule_access($stream, $host, decode_utf8(uri_unescape($capsule)), decode_utf8(uri_unescape($token)));
   } elsif (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/share$!) {
-    return serve_capsule_sharing($stream, $host, $capsule);
+    return serve_capsule_sharing($stream, $host, decode_utf8(uri_unescape($capsule)));
   } elsif (($host, $capsule, $id) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/([^/]+)$!) {
-    return serve_capsule_page($stream, $host, $capsule, $id);
+    return serve_capsule_page($stream, $host, map { decode_utf8(uri_unescape($_)) } $capsule, $id);
   } elsif (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/?$!) {
-    return serve_capsule_menu($stream, $host, $capsule);
+    return serve_capsule_menu($stream, $host, decode_utf8(uri_unescape($capsule)));
   } elsif (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/?$!) {
     return serve_main_menu($stream, $host);
   }
@@ -113,10 +113,67 @@ sub serve_capsule_login {
   return 1;
 }
 
+sub serve_capsule_archive {
+  my ($stream, $host, $capsule) = @_;
+  my $capsule = capsule_name($stream);
+  return 1 unless is_my_capsule($name, $capsule, 'archive');
+  success($stream);
+  # use /bin/tar instead of Archive::Tar to save memory
+  my $dir = wiki_dir($host, $capsule_name . "/" utf8_encode($capsule));
+  my $file = "$dir/data.tar.gz";
+  if (-e $file and time() - modified($file) <= 300) { # data is valid for 5 minutes
+    $log->info("Serving cached data archive for $capsule");
+    success($stream, "application/tar");
+    $stream->write(read_binary($file));
+  } else {
+    write_binary($file, ""); # truncate in order to avoid "file changed as we read it" warning
+    my @command = ('/bin/tar', '--create', '--gzip',
+		   '--file', $file,
+		   '--exclude', "backup",
+		   '--directory', "$dir/../..",
+		   ((split(/\//,$dir))[-1]));
+    $log->debug("@command");
+    if (system(@command) == 0) {
+      $log->info("Serving new data archive for $capsule");
+      success($stream, "application/tar");
+      $stream->write(read_binary($file));
+    } else {
+      $log->error("Creation of data archive for $capsule failed");
+      result($stream, "59", "Archive creation failed");
+    }
+  }
+  return 1;
+}
+
+sub serve_capsule_backup {
+  my ($stream, $host, $capsule, $id) = @_;
+  my $capsule = capsule_name($stream);
+  return 1 unless is_my_capsule($name, $capsule, 'view the backup of');
+  if ($id) {
+    success($stream);
+    $stream->write("TODO: content of $id");
+  } else {
+    $log->info("Backup for $capsule");
+    success($stream);
+    $stream->write("# " . ucfirst($capsule) . " backup\n");
+    $stream->write("When editing a page, a backup is as long there is at least 10 minutes passed since the last edit.");
+    my $dir = capsule_dir($host, $capsule) . "/backup";
+    my @files;
+    @files = read_dir($dir) if -d $dir;
+    if (not @files) {
+      $stream->write("There are no backup files, yet.\n") unless @files;
+    } else {
+      $stream->write("Files:\n");
+      for my $file (@files) {
+	print_link($stream, $host, $capsule_space, $file, "$capsule/$file");
+      };
+    }
+  }
+  return 1;
+}
+
 sub serve_capsule_access {
   my ($stream, $host, $capsule, $token) = @_;
-  $capsule = decode_utf8(uri_unescape($capsule));
-  $token = decode_utf8(uri_unescape($token));
   my $name = capsule_name($stream);
   return 1 unless is_my_capsule($stream, $name, $capsule, 'access');
   my $fingerprint = $stream->handle->get_fingerprint();
@@ -143,7 +200,6 @@ sub serve_capsule_access {
 
 sub serve_capsule_sharing {
   my ($stream, $host, $capsule) = @_;
-  $capsule = decode_utf8(uri_unescape($capsule));
   my $name = capsule_name($stream);
   return 1 unless is_my_capsule($stream, $name, $capsule, 'share');
   $log->info("Share capsule");
@@ -173,9 +229,7 @@ sub is_my_capsule {
 
 sub serve_capsule_page {
   my ($stream, $host, $capsule, $id) = @_;
-  $capsule = decode_utf8(uri_unescape($capsule));
   my $dir = capsule_dir($host, $capsule);
-  $id = decode_utf8(uri_unescape($id));
   my $file = "$dir/$id";
   if (-f $file) {
     $log->info("Serving $file");
@@ -192,7 +246,6 @@ sub serve_capsule_page {
 }
 sub serve_capsule_menu {
   my ($stream, $host, $capsule) = @_;
-  $capsule = decode_utf8(uri_unescape($capsule));
   my $name = capsule_name($stream);
   my $dir = capsule_dir($host, $capsule);
   my @files;
@@ -387,7 +440,7 @@ sub save_file {
   my $host = $upload->{host};
   my $dir = capsule_dir($host, $capsule);
   my $id = $upload->{id};
-  my $file = "$dir/$id";
+  my $file = "$dir/" . encode_utf8($id);
   if ($size == 0) {
     return result($stream, "51", "This capsule does not exist") unless -d $dir;
     return result($stream, "51", "This file does not exist") unless -f $file;

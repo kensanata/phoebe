@@ -238,7 +238,7 @@ sub is_my_capsule {
 sub serve_capsule_page {
   my ($stream, $host, $capsule, $id) = @_;
   my $dir = capsule_dir($host, $capsule);
-  my $file = "$dir/$id";
+  my $file = $dir . "/" . encode_utf8($id);
   if (-f $file) {
     $log->info("Serving $file");
     # this works for text files, too!
@@ -450,7 +450,7 @@ sub save_file {
   my $host = $upload->{host};
   my $dir = capsule_dir($host, $capsule);
   my $id = $upload->{id};
-  my $file = "$dir/" . encode_utf8($id);
+  my $file = $dir . "/" . encode_utf8($id);
   if ($size == 0) {
     return result($stream, "51", "This capsule does not exist") unless -d $dir;
     return result($stream, "51", "This file does not exist") unless -f $file;
@@ -467,7 +467,7 @@ sub save_file {
 
 sub backup {
   my ($dir, $id) = @_;
-  my $file = "$dir/" . encode_utf8($id);
+  my $file = $dir . "/" . encode_utf8($id);
   my $backup_dir = "$dir/backup";
   my $backup_file = $backup_dir . "/" . encode_utf8($id);
   return unless -f $file and (time - (stat($file))[9]) > 900;

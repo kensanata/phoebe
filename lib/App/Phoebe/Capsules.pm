@@ -259,7 +259,7 @@ sub serve_capsule_menu {
   my $name = capsule_name($stream);
   my $dir = capsule_dir($host, $capsule);
   my @files;
-  @files = read_dir($dir) if -d $dir;
+  @files = grep { $_ ne "backup" } read_dir($dir) if -d $dir;
   if (not @files) {
     if ($name and $name eq $capsule) {
       success($stream);

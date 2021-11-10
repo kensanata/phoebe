@@ -182,13 +182,14 @@ sub serve_capsule_backup {
 
 sub serve_capsule_access {
   my ($stream, $host, $capsule, $token) = @_;
-  my $name = capsule_name($stream);
-  return 1 unless is_my_capsule($stream, $name, $capsule, 'access');
   my $fingerprint = $stream->handle->get_fingerprint();
   my $target = first { $_->[1] eq $token } @capsule_tokens;
-  if ($target) {
-    $log->info("Access to capsule granted");
+  if (not $fingerprint) {
+    $log->info("Attempt to access a capsule without client certificate");
+    result($stream, "60", "You need a client certificate to access this capsule");
+  } elsif ($target) {
     if ($fingerprint ne $target->[2]) {
+      $log->info("Access to capsule granted");
       # if the user is testing it, then the two fingerprints are the same and no
       # equivalency needs to be saved
       $capsule_equivalent{$fingerprint} = $target->[2];
@@ -196,6 +197,8 @@ sub serve_capsule_access {
       write_binary("$dir/fingerprint_equivalents",
 		   join("\n", map { $_ . " " . $capsule_equivalent{$_} }
 			keys %capsule_equivalent));
+    } else {
+      $log->info("Access to capsule unnecessary for the owner");
     }
     result($stream, "30", to_url($stream, $host, $capsule_space, $capsule));
   } else {
@@ -227,7 +230,7 @@ sub is_my_capsule {
     $log->info("Attempt to $verb a capsule without client certificate");
     result($stream, "60", "You need a client certificate to $verb this capsule");
     return 0;
-  } elsif ($name ne $capsule) {
+  } elsif ($capsule and $name ne $capsule) {
     $log->info("Attempt to $verb the wrong capsule");
     result($stream, "60", "You need a different client certificate to $verb this capsule");
     return 0;

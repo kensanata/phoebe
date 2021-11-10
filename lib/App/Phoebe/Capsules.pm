@@ -163,7 +163,7 @@ sub serve_capsule_backup {
     $log->info("Backup for $capsule");
     success($stream);
     $stream->write("# " . ucfirst($capsule) . " backup\n");
-    $stream->write("When editing a page, a backup is as long there is at least 10 minutes passed since the last edit.");
+    $stream->write("When editing a page, a backup is as long there is at least 10 minutes passed since the last edit.\n");
     my $dir = capsule_dir($host, $capsule) . "/backup";
     my @files;
     @files = read_dir($dir) if -d $dir;

@@ -472,8 +472,8 @@ sub backup {
   my $file = $dir . "/" . encode_utf8($id);
   my $backup_dir = "$dir/backup";
   my $backup_file = $backup_dir . "/" . encode_utf8($id);
-  return unless -f $file and (time - (stat($file))[9]) > 900;
-  # make a backup if the last edit was more than 15 minutes ago
+  return unless -f $file and (time - (stat($file))[9]) > 600;
+  # make a backup if the last edit was more than 10 minutes ago
   mkdir($backup_dir) unless -d $backup_dir;
   write_binary($backup_file, read_binary($file));
 }

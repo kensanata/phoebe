@@ -38,10 +38,14 @@ Every client certificate gets assigned a capsule name.
 
 =head1 TROUBLESHOOTING
 
-In the wiki directory, you can have a file called F<fingerprint_equivalents>.
+🔥 In the wiki directory, you can have a file called F<fingerprint_equivalents>.
 Its main use is to allow people to add more fingerprints for their site, such as
 from other devices or friends. The file format is line oriented, each line
 containing two fingerprints, C<FROM> and C<TO>.
+
+🔥 The capsule name I<login> is reserved.
+
+🔥 The file names I<archive>, I<backup>, and I<upload> are reserved.
 
 =cut
 
@@ -84,7 +88,11 @@ sub capsules {
     return result($stream, "30", "gemini://$host:$port/$capsule_space/$capsule/$id");
   } elsif (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/login$!) {
     return serve_capsule_login($stream, $host);
-  } elsif (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/access$!) {
+  } elsif (($host, $capsule) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/archive$!) {
+    return serve_capsule_archive($stream, $host, decode_utf8(uri_unescape($capsule)));
+  } elsif (($host, $capsule, $id) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/backup(?:/([^/]+))?$!) {
+    return serve_capsule_backup($stream, $host, map { decode_utf8(uri_unescape($_)) } $capsule, $id||"");
+  } elsif ($url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/access$!) {
     return result($stream, "10", "Password");
   } elsif (($host, $capsule, $token) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/access\?(.+)$!) {
     return serve_capsule_access($stream, $host, decode_utf8(uri_unescape($capsule)), decode_utf8(uri_unescape($token)));
@@ -115,11 +123,11 @@ sub serve_capsule_login {
 
 sub serve_capsule_archive {
   my ($stream, $host, $capsule) = @_;
-  my $capsule = capsule_name($stream);
+  my $name = capsule_name($stream);
   return 1 unless is_my_capsule($name, $capsule, 'archive');
   success($stream);
   # use /bin/tar instead of Archive::Tar to save memory
-  my $dir = wiki_dir($host, $capsule_name . "/" utf8_encode($capsule));
+  my $dir = wiki_dir($host, $capsule_space) . "/" . utf8_encode($capsule);
   my $file = "$dir/data.tar.gz";
   if (-e $file and time() - modified($file) <= 300) { # data is valid for 5 minutes
     $log->info("Serving cached data archive for $capsule");
@@ -147,7 +155,7 @@ sub serve_capsule_archive {
 
 sub serve_capsule_backup {
   my ($stream, $host, $capsule, $id) = @_;
-  my $capsule = capsule_name($stream);
+  my $name = capsule_name($stream);
   return 1 unless is_my_capsule($name, $capsule, 'view the backup of');
   if ($id) {
     success($stream);
@@ -270,6 +278,8 @@ sub serve_capsule_menu {
     if ($name eq $capsule) {
       print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload");
       print_link($stream, $host, $capsule_space, "Share access with other people or other devices", "$capsule/share");
+      print_link($stream, $host, $capsule_space, "Access backup", "$capsule/backup");
+      print_link($stream, $host, $capsule_space, "Download archive", "$capsule/archive");
     } elsif (@capsule_tokens) {
       print_link($stream, $host, $capsule_space, "Access this capsule", "$capsule/access");
     }
@@ -448,10 +458,22 @@ sub save_file {
     $log->info("Deleted $file");
   } else {
     mkdir($dir) unless -d $dir;
+    backup($dir, $id);
     write_binary($file, $buffer);
     $log->info("Wrote $file");
     return result($stream, "30", to_url($stream, $host, $capsule_space, $capsule));
   }
+}
+
+sub backup {
+  my ($dir, $id) = @_;
+  my $file = "$dir/" . encode_utf8($id);
+  my $backup_dir = "$dir/backup";
+  my $backup_file = $backup_dir . "/" . encode_utf8($id);
+  return unless -f $file and (time - (stat($file))[9]) > 900;
+  # make a backup if the last edit was more than 15 minutes ago
+  mkdir($backup_dir) unless -d $backup_dir;
+  write_binary($backup_file, read_binary($file));
 }
 
 1;

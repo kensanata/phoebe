@@ -110,8 +110,8 @@ sub capsules {
 
 sub serve_capsule_login {
   my ($stream, $host) = @_;
-  my $capsule = capsule_name($stream);
-  if ($capsule) {
+  my $name = capsule_name($stream);
+  if ($name) {
     $log->info("Redirect to capsule");
     result($stream, "30", to_url($stream, $host, $capsule_space, ""));
   } else {

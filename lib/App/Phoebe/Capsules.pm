@@ -408,7 +408,7 @@ sub is_upload {
   $log->info("Looking at capsule $request");
   my $hosts = capsule_regex();
   my $port = port($stream);
-  if ($request =~ m!^titan://($hosts)(?::$port)?/$capsule_space/([^/]+)/([^/;]+);([^?#]+)$!) {
+  if ($request =~ m!^titan://($hosts)(?::$port)?/$capsule_space/([^/?#;]+)/([^/?#;]+);([^?#]+)$!) {
     my $host = $1;
     my ($capsule, $id, %params) = map {decode_utf8(uri_unescape($_))} $2, $3, split(/[;=&]/, $4);
     if (valid_params($stream, $host, $capsule_space, $id, \%params)) {
@@ -420,8 +420,24 @@ sub is_upload {
 	params => \%params,
       }
     }
+    # valid_params printed a response and closed the stream
   }
-  return 0;
+  $log->debug("Capsule upload with malformed titan URL");
+  if ($request =~ m!^titan://($hosts)(?::$port)?/$capsule_space/([^/?#;]+)/([^/?#;]+);([^?#]*)[?#]!) {
+    result($stream, "59", "The titan URL must not have a query or a fragment at the end");
+  } elsif ($request =~ m!^titan://($hosts)(?::$port)?/$capsule_space/([^/?#;]+)/([^/?#;]+)/!) {
+    result($stream, "59", "These capsules do not allow uploads for subdirectories");
+  } elsif ($request =~ m!^titan://($hosts)(?::$port)?/$capsule_space/([^/?#;]+)/([^/?#;]+)$!) {
+    result($stream, "59", "The titan URL is missing the parameters after a semikolon $1 $2 $3 $4");
+  } elsif ($request =~ m!^titan://($hosts)(?::$port)?/$capsule_space/([^/?#;]+)/?(;.*)$!) {
+    result($stream, "59", "The titan URL is missing the file name");
+  } elsif ($request =~ m!^titan://($hosts)(?::$port)?/$capsule_space/?$!) {
+    result($stream, "59", "The titan URL is missing the capsule name and the file name");
+  } else {
+    result($stream, "59", "The titan URL is malformed");
+  }
+  $stream->close_gracefully();
+  return;
 }
 
 # We need our own valid_params because we don't check the token

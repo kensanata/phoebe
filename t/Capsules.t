@@ -162,4 +162,9 @@ like($page, qr/On the red sofa/, "Backup page");
    ok((grep !/backup/, @files), "No backups in the archive (@files)");
 }
 
+# upload to the wrong place
+
+$page = query_gemini("$titan/$name;size=69;mime=text/plain", $haiku);
+like($page, qr/^59 The titan URL is missing the file name/, "Saved haiku");
+
 done_testing;

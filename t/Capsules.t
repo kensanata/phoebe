@@ -165,6 +165,11 @@ like($page, qr/On the red sofa/, "Backup page");
 # upload to the wrong place
 
 $page = query_gemini("$titan/$name;size=69;mime=text/plain", $haiku);
-like($page, qr/^59 The titan URL is missing the file name/, "Saved haiku");
+like($page, qr/^59 The titan URL is missing the file name/, "Missing file name");
+
+# upload the wrong MIME type
+
+$page = query_gemini("$titan/$name/no-extension;size=69;mime=text/plain", $haiku);
+like($page, qr/^59 The MIME type provided/, "Wrong file extension");
 
 done_testing;

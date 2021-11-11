@@ -440,7 +440,8 @@ sub is_upload {
   return;
 }
 
-# We need our own valid_params because we don't check the token
+# We need our own valid_params because we don't check the token but we do check
+# the extension
 sub valid_params {
   my $stream = shift;
   my $host = shift;
@@ -450,7 +451,23 @@ sub valid_params {
   return unless valid_id($stream, $host, $space, $id, $params);
   # return unless valid_token($stream, $host, $space, $id, $params);
   return unless valid_mime_type($stream, $host, $space, $id, $params);
+  return unless valid_extension($stream, $host, $space, $id, $params);
   return unless valid_size($stream, $host, $space, $id, $params);
+  return 1;
+}
+
+sub valid_extension {
+  my ($stream, $host, $space, $id, $params) = @_;
+  my $type = mime_type($id);
+  if ($params->{mime} eq "text/plain" and $type eq "text/gemini") {
+    # special case
+    return 1;
+  } elsif ($type ne $params->{mime}) {
+    $log->debug("MIME type mismatch");
+    result($stream, "59", "The MIME type provided ($params->{mime}) conflicts with the MIME type detected ($type)");
+    $stream->close_gracefully();
+    return;
+  }
   return 1;
 }
 

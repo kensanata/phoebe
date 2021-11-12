@@ -169,7 +169,7 @@ sub serve_capsule_backup {
     $log->info("Backup for $capsule");
     success($stream);
     $stream->write("# " . ucfirst($capsule) . " backup\n");
-    $stream->write("When editing a page, a backup is as long there is at least 10 minutes passed since the last edit.\n");
+    $stream->write("When editing a page, a backup is saved here as long as at least 10 minutes have passed.\n");
     my @files;
     @files = read_dir($dir) if -d $dir;
     if (not @files) {
@@ -297,38 +297,29 @@ sub serve_capsule_menu {
   my $name = capsule_name($stream);
   my $dir = capsule_dir($host, $capsule);
   my @files;
-  @files = grep { $_ ne "backup" } read_dir($dir) if -d $dir;
-  if (not @files) {
-    if ($name and $name eq $capsule) {
-      success($stream);
-      $log->info("New capsule $capsule");
-      $stream->write("# " . ucfirst($capsule) . "\n");
-      $stream->write("This capsule is empty. Upload files using Titan!\n");
-      $stream->write("=> gemini://transjovian.org/titan What is Titan?\n");
-      print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload");
-      return 1;
-    } else {
-      return result($stream, "51", "This capsule does not exist");
-    }
-  }
+  @files = read_dir($dir) if -d $dir;
+  my $has_backup = first { $_ eq "backup" } @files;
+  @files = grep { $_ ne "backup" } @files if $has_backup;
   success($stream);
   $log->info("Serving $capsule");
   $stream->write("# " . ucfirst($capsule) . "\n");
   if ($name) {
     if ($name eq $capsule) {
       print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload");
-      print_link($stream, $host, $capsule_space, "Delete file", "$capsule/delete");
+      print_link($stream, $host, $capsule_space, "Delete file", "$capsule/delete") if @files;
       print_link($stream, $host, $capsule_space, "Share access with other people or other devices", "$capsule/share");
-      print_link($stream, $host, $capsule_space, "Access backup", "$capsule/backup");
-      print_link($stream, $host, $capsule_space, "Download archive", "$capsule/archive");
+      print_link($stream, $host, $capsule_space, "Access backup", "$capsule/backup") if $has_backup;
+      print_link($stream, $host, $capsule_space, "Download archive", "$capsule/archive") if @files;
     } elsif (@capsule_tokens) {
       print_link($stream, $host, $capsule_space, "Access this capsule", "$capsule/access");
     }
   }
-  $stream->write("Files:\n");
-  for my $file (@files) {
-    print_link($stream, $host, $capsule_space, $file, "$capsule/$file");
-  };
+  if (@files) {
+    $stream->write("Files:\n");
+    for my $file (@files) {
+      print_link($stream, $host, $capsule_space, $file, "$capsule/$file");
+    }
+  }
   return 1;
 }
 

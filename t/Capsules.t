@@ -172,4 +172,21 @@ like($page, qr/^59 The titan URL is missing the file name/, "Missing file name")
 $page = query_gemini("$titan/$name/no-extension;size=69;mime=text/plain", $haiku);
 like($page, qr/^59 The MIME type provided/, "Wrong file extension");
 
+# delete file
+
+$page = query_gemini("$base/capsule/$name");
+like($page, qr/delete/, "Deleting files");
+like($page, qr/haiku\.gmi/, "File listed");
+$page = query_gemini("$base/capsule/$name/delete");
+like($page, qr/^# Delete a file in $name/mi, "Deleting page header");
+like($page, qr/^=> $base\/capsule\/$name\/delete\/haiku\.gmi/m, "Deleting page menu");
+$page = query_gemini("$base/capsule/$name/delete/haiku.gmi");
+like($page, qr/^30 $base\/capsule\/$name\r\n/, "Redirect after delete");
+$page = query_gemini("$base/capsule/$name");
+unlike($page, qr/haiku\.gmi/, "File listed");
+$page = query_gemini("$base/capsule/$name/delete");
+like($page, qr/^There are no files to delete/m, "No more files to delete");
+ok(! -f "$dir/capsule/$name/haiku.gmi", "File is gone");
+like(read_text("$dir/capsule/$name/backup/haiku.gmi"), qr/Nervous late at night/, "Backup saved");
+
 done_testing;

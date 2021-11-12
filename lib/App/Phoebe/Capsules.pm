@@ -92,6 +92,8 @@ sub capsules {
     return serve_capsule_archive($stream, $host, decode_utf8(uri_unescape($capsule)));
   } elsif (($host, $capsule, $id) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/backup(?:/([^/]+))?$!) {
     return serve_capsule_backup($stream, $host, map { decode_utf8(uri_unescape($_)) } $capsule, $id||"");
+  } elsif (($host, $capsule, $id) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/delete(?:/([^/]+))?$!) {
+    return serve_capsule_delete($stream, $host, map { decode_utf8(uri_unescape($_)) } $capsule, $id||"");
   } elsif ($url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/access$!) {
     return result($stream, "10", "Password");
   } elsif (($host, $capsule, $token) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/([^/]+)/access\?(.+)$!) {
@@ -182,6 +184,38 @@ sub serve_capsule_backup {
   return 1;
 }
 
+sub serve_capsule_delete {
+  my ($stream, $host, $capsule, $id) = @_;
+  my $name = capsule_name($stream);
+  return 1 unless is_my_capsule($stream, $name, $capsule, 'delete a file in');
+  my $dir = capsule_dir($host, $capsule);
+  if ($id) {
+    $log->info("Delete $id from $capsule");
+    my $file = $dir . "/" . encode_utf8($id);
+    my $backup_dir = "$dir/backup";
+    my $backup_file = $backup_dir . "/" . encode_utf8($id);
+    mkdir($backup_dir) unless -d $backup_dir;
+    rename $file, $backup_file if -f $file;
+    result($stream, "30", to_url($stream, $host, $capsule_space, $capsule));
+  } else {
+    $log->info("Delete for $capsule");
+    success($stream);
+    $stream->write("# Delete a file in " . ucfirst($capsule) . "\n");
+    $stream->write("Deleting a file moves it to the backup.\n");
+    my @files;
+    @files = grep { $_ ne "backup" } read_dir($dir) if -d $dir;
+    if (not @files) {
+      $stream->write("There are no files to delete.\n") unless @files;
+    } else {
+      $stream->write("Files:\n");
+      for my $file (@files) {
+	print_link($stream, $host, $capsule_space, $file, "$capsule/delete/$file");
+      };
+    }
+  }
+  return 1;
+}
+
 sub serve_capsule_access {
   my ($stream, $host, $capsule, $token) = @_;
   my $fingerprint = $stream->handle->get_fingerprint();
@@ -257,6 +291,7 @@ sub serve_capsule_page {
   }
   return 1;
 }
+
 sub serve_capsule_menu {
   my ($stream, $host, $capsule) = @_;
   my $name = capsule_name($stream);
@@ -282,6 +317,7 @@ sub serve_capsule_menu {
   if ($name) {
     if ($name eq $capsule) {
       print_link($stream, $host, $capsule_space, "Specify file for upload", "$capsule/upload");
+      print_link($stream, $host, $capsule_space, "Delete file", "$capsule/delete");
       print_link($stream, $host, $capsule_space, "Share access with other people or other devices", "$capsule/share");
       print_link($stream, $host, $capsule_space, "Access backup", "$capsule/backup");
       print_link($stream, $host, $capsule_space, "Download archive", "$capsule/archive");

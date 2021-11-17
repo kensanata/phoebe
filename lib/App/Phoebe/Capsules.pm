@@ -176,7 +176,7 @@ sub serve_capsule_backup {
       $stream->write("There are no backup files, yet.\n") unless @files;
     } else {
       $stream->write("Files:\n");
-      for my $file (@files) {
+      for my $file (sort @files) {
 	print_link($stream, $host, $capsule_space, $file, "$capsule/backup/$file");
       };
     }
@@ -208,7 +208,7 @@ sub serve_capsule_delete {
       $stream->write("There are no files to delete.\n") unless @files;
     } else {
       $stream->write("Files:\n");
-      for my $file (@files) {
+      for my $file (sort @files) {
 	print_link($stream, $host, $capsule_space, $file, "$capsule/delete/$file");
       };
     }
@@ -316,7 +316,7 @@ sub serve_capsule_menu {
   }
   if (@files) {
     $stream->write("Files:\n");
-    for my $file (@files) {
+    for my $file (sort @files) {
       print_link($stream, $host, $capsule_space, $file, "$capsule/$file");
     }
   }

@@ -339,7 +339,7 @@ sub serve_main_menu {
   $stream->write("=> $capsule_help Help\n") if $capsule_help;
   my @capsules = read_dir(wiki_dir($host, $capsule_space));
   $stream->write("Capsules:\n") if @capsules;
-  for my $dir (@capsules) {
+  for my $dir (sort @capsules) {
     print_link($stream, $host, $capsule_space, $dir, $dir); # must provide $id to avoid page/ prefix
   };
   return 1;

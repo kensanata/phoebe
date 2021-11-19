@@ -36,6 +36,10 @@ or hosts for your capsules.
 
 Every client certificate gets assigned a capsule name.
 
+You can provide a link with some documentation, if you want:
+
+    our $capsule_help = '//transjovian.org/phoebe/page/Capsules';
+
 =head1 TROUBLESHOOTING
 
 🔥 In the wiki directory, you can have a file called F<fingerprint_equivalents>.

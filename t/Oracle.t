@@ -13,6 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use File::Slurper qw(read_binary write_binary);
+use Mojo::JSON qw(decode_json encode_json);
+use List::Util qw(first);
 use Modern::Perl;
 use Test::More;
 use utf8;
@@ -55,7 +58,7 @@ unlike($page, qr/answer/, "Unidentified visitor does not get to answer the quest
 
 $page = query_gemini("$base/oracle/question/$n", undef, 2);
 unlike($page, qr/delete/, "Somebody else does not get to delete the question");
-like($page, qr/^=> \/oracle\/question\/$n\/answer Submit an answer/m, "Somebody else may answer");
+like($page, qr/^=> \/oracle\/question\/$n\/answer/m, "Somebody else may answer");
 
 $page = query_gemini("$base/oracle/question/$n/answer", undef, 0);
 like($page, qr/^60/, "Unidentified visitor does not get a prompt for an answer");
@@ -67,7 +70,7 @@ $page = query_gemini("$base/oracle/question/" . ($n+1) . "/answer", undef, 2);
 like($page, qr/deleted/, "Attempt to answer an unknown question");
 
 $page = query_gemini("$base/oracle/question/$n/answer?4", undef, 2);
-like($page, qr/^30/, "Answer given");
+like($page, qr/^30 $base\/oracle\/question\/$n\r$/m, "Answer given");
 
 $page = query_gemini("$base/oracle/question/$n");
 like($page, qr/^## Answer #1/m, "Answer title");
@@ -81,9 +84,47 @@ $page = query_gemini("$base/oracle/question/$n", undef, 2);
 like($page, qr/^## Your answer/m, "Your answer title");
 like($page, qr/^4/m, "Your answer text");
 like($page, qr/^=> \/oracle\/question\/$n\/1\/delete Delete this answer/m, "Link to delete your answer");
-unlike($page, qr/^=> \/oracle\/question\/$n\/answer Submit an answer/m, "You no longer may answer");
+unlike($page, qr/^=> \/oracle\/question\/$n\/answer/m, "You no longer may answer");
 
 $page = query_gemini("$base/oracle/question/$n/answer?4", undef, 2);
 like($page, qr/already answered/, "Do not answer twice");
+
+$page = query_gemini("$base/oracle/question/$n/2/delete", undef, 0);
+unlike($page, qr/^40/, "Unidentified visitor does not get to delete an answer");
+
+$page = query_gemini("$base/oracle/question/$n/2/delete");
+unlike($page, qr/^30/, "Question owner gets to delete an answer");
+
+# delete the answers we have
+my $data = decode_json read_binary("$dir/oracle/oracle.json");
+my $question = first { $_->{number} eq $n } @$data;
+ok($question, "Found question in the JSON file");
+$question->{answers} = [];
+write_binary("$dir/oracle/oracle.json", encode_json $data);
+
+$page = query_gemini("$base/oracle/question/$n/answer?4", undef, 2);
+like($page, qr/^30/, "Answer given, again");
+
+$page = query_gemini("$base/oracle/question/$n/2/delete", undef, 2);
+unlike($page, qr/^30/, "Answer owner also gets to delete an answer");
+
+# assume two answers exist so that adding the third answer marks the question as
+# answered
+$question->{answers} = [
+  {fingerprint => "x", text => "3"},
+  {fingerprint => "y", text => "5"}, ];
+write_binary("$dir/oracle/oracle.json", encode_json $data);
+
+$page = query_gemini("$base/oracle/question/$n/answer?4", undef, 2);
+like($page, qr/^30 $base\/oracle\/\r$/m, "Answer given, setting the question to answered");
+
+$page = query_gemini("$base/oracle/", undef, 2);
+unlike($page, qr/$n/, "Question is answered and thus invisible for the question asker");
+
+$page = query_gemini("$base/oracle/", undef, 0);
+unlike($page, qr/$n/, "Question is answered and thus invisible for unidentified visitors");
+
+$page = query_gemini("$base/oracle/");
+like($page, qr/$n/, "Question is visible for the question asker");
 
 done_testing;

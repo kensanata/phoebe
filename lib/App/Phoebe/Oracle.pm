@@ -102,7 +102,6 @@ sub save_data {
   my ($stream, $host, $data) = @_;
   my $dir = wiki_dir($host, $oracle_space);
   my $bytes = encode_json $data;
-  $log->info("Saving " . length($bytes) . " bytes");
   with_lock($stream, $host, $oracle_space, sub {
     write_binary("$dir/oracle.json", $bytes)});
 }
@@ -124,18 +123,18 @@ sub serve_main_menu {
   $stream->write("=> /$oracle_space/ask Ask a question\n");
   my @questions = grep {
     $_->{status} ne 'answered'
-	or $_->{fingerprint} eq $fingerprint
+	or $fingerprint and $fingerprint eq $_->{fingerprint}
   } @$data;
   for my $question (@questions) {
     $stream->write("\n\n");
     $stream->write("## Question #$question->{number}\n");
     $stream->write($question->{text});
     $stream->write("\n");
-    if ($question->{status} eq 'asked') {
-      $stream->write("=> /$oracle_space/question/$question->{number} Answer\n");
-    } elsif ($question->{status} eq 'answered') {
+    if ($fingerprint and $fingerprint eq $question->{fingerprint}) {
       $stream->write("=> /$oracle_space/question/$question->{number} Manage\n");
-    } elsif ($question->{status} eq 'published') {
+    } elsif ($question->{status} eq 'asked') {
+      $stream->write("=> /$oracle_space/question/$question->{number} Answer\n");
+    } else {
       $stream->write("=> /$oracle_space/question/$question->{number} Show\n");
     }
   }
@@ -186,12 +185,12 @@ sub serve_question {
     $stream->write("This question has been answered and it has not been published.\n");
     $stream->write("You are not the owner of this question, which is why you cannot do anything about it.\n");
     $stream->write("Switch identity or pick a different client certificate if you think you are the owner of this question\n");
-    $stream->write("=> /$oracle_space Back to the oracle\n");
+    $stream->write("=> /$oracle_space/ Back to the oracle\n");
     return;
   }
   $log->info("Serving oracle $question->{number}");
   $stream->write("# Question #$question->{number}\n");
-  $stream->write("=> /$oracle_space Back to the oracle\n");
+  $stream->write("=> /$oracle_space/ Back to the oracle\n");
   if ($fingerprint) {
     if ($fingerprint eq $question->{fingerprint}) {
       $stream->write("=> /$oracle_space/question/$number/delete Delete this question\n");
@@ -233,9 +232,6 @@ sub serve_question {
 	$stream->write("\n");
 	$stream->write("=> /$oracle_space/question/$question->{number}/$n/delete Delete this answer\n");
 	last;
-      }
-      if (not $answered) {
-	$stream->write("=> /$oracle_space/question/$question->{number}/answer Submit an answer to the oracle\n");
       }
     }
   } else {
@@ -309,7 +305,7 @@ sub answer_question {
     success($stream);
     $stream->write("# Answer a question\n");
     $stream->write("The question you wanted to answer has been deleted.\n");
-    $stream->write("=> /$oracle_space Back to the oracle\n");
+    $stream->write("=> /$oracle_space/ Back to the oracle\n");
     return 1;
   } elsif ($fingerprint eq $question->{fingerprint}) {
     $log->info("The question asker may not answer");
@@ -342,8 +338,71 @@ sub answer_question {
     my $n = grep { $_->{text} } @{$question->{answers}};
     $question->{status} = 'answered' if $n >= $max_answers;
     save_data($stream, $host, $data);
+    result($stream, "30", to_url($stream, $host, $oracle_space, "")) if $question->{status} eq 'answered';
     result($stream, "30", to_url($stream, $host, $oracle_space, "question/$question->{number}"));
   }
+  return 1;
+}
+
+sub delete_answer {
+  my ($stream, $host, $question_number, $answer_number) = @_;
+  my $fingerprint = $stream->handle->get_fingerprint();
+  if (not $fingerprint) {
+    $log->info("Deleting an answer requires a certificate");
+    result($stream, "60", "You need a client certificate to delete an answer");
+    return 1;
+  }
+  my $data = load_data($host);
+  my $question = first { $_->{number} eq $question_number } @$data;
+  if (not $question) {
+    $log->info("Deleting an answer of a deleted question");
+    success($stream);
+    $stream->write("# Delete an answer\n");
+    $stream->write("The answer you wanted to answer belongs to a deleted question.\n");
+    $stream->write("=> /$oracle_space/ Back to the oracle\n");
+    return 1;
+  }
+  my $n = 0;
+  my $answer;
+  for (@{$question->{answers}}) {
+    next unless ++$n eq $answer_number;
+    $answer = $_;
+    last;
+  }
+  if (not $answer) {
+    $log->info("Deleting an answer that does not exist (@{$question->{answers}})");
+    success($stream);
+    $stream->write("# Delete an answer\n");
+    $stream->write("The answer you wanted to delete does not exist.\n");
+    $stream->write("=> /$oracle_space/question/$question->{number} Show\n");
+    return 1;
+  } elsif ($fingerprint ne $answer->{fingerprint}
+	   and $fingerprint ne $question->{fingerprint}) {
+    $log->info("Deleting an answer not your own");
+    success($stream);
+    $stream->write("# Delete an answer\n");
+    $stream->write("The answer you wanted to delete belongs to somebody else.\n");
+    $stream->write("Switch identity or pick a different client certificate if you think you are the owner of this question or this answer\n");
+    $stream->write("=> /$oracle_space/question/$question->{number} Show\n");
+    return 1;
+  } elsif (not $answer->{text}) {
+    $log->info("Deleting a deleted answer");
+    result($stream, "30", to_url($stream, $host, $oracle_space, "question/$question->{number}"));
+  }
+  $log->info("Deleting an answer");
+  $answer->{text} = undef;
+  if ($question->{status} ne 'asked') {
+    my $n = grep { $_->{text} } @{$question->{answers}};
+    if (not $n) {
+      # answered or published question with no answers gets deleted
+      @$data = grep { $_->{number} ne $question->{number} } @$data;
+      save_data($stream, $host, $data);
+      $stream->write("=> /$oracle_space/ Back to the oracle\n");
+      return 1;
+    }
+  }
+  save_data($stream, $host, $data);
+  result($stream, "30", to_url($stream, $host, $oracle_space, "question/$question->{number}"));
   return 1;
 }
 

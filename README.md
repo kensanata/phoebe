@@ -54,6 +54,7 @@
 - [App::Phoebe::Ijirait](#appphoebeijirait)
 - [App::Phoebe::MokuPona](#appphoebemokupona)
 - [App::Phoebe::Oddmuse](#appphoebeoddmuse)
+- [App::Phoebe::Oracle](#appphoebeoracle)
 - [App::Phoebe::PageHeadings](#appphoebepageheadings)
 - [App::Phoebe::RegisteredEditorsOnly](#appphoeberegisterededitorsonly)
 - [App::Phoebe::Spartan](#appphoebespartan)
@@ -1241,6 +1242,10 @@ or hosts for your capsules.
 
 Every client certificate gets assigned a capsule name.
 
+You can provide a link with some documentation, if you want:
+
+    our $capsule_help = '//transjovian.org/phoebe/page/Capsules';
+
 # Troubleshooting
 
 🔥 In the wiki directory, you can have a file called `fingerprint_equivalents`.
@@ -1592,6 +1597,38 @@ multiple Oddmuse wikis running on the same machine, each only serving
       "campaignwiki.org" => 1, );
 
     use App::Phoebe::Oddmuse;
+
+# App::Phoebe::Oracle
+
+By default, Phoebe creates a wiki editable by all. With this extension, the
+`/oracle` space turns into a special site: if you have a client certificate,
+you can pose questions and get answers.
+
+When you ask a question, you can delete any answers on it, and the question
+itself. Once it has gotten three answers, it is hidden from view and only you
+can decide wether to delete it, or whether to publish it. If the question is no
+longer waiting for answers, deleting every answer deletes the question, too.
+
+You can only answer questions not your own. You can answer every question just
+once (even if you or the question asker deletes your answer, there is no going
+back). You can delete your answer. If the question is no longer waiting for
+answers, deleting the last answer deletes the question, too.
+
+Simply add it to your `config` file. If you are virtual hosting, name the host
+or hosts for your capsules.
+
+    package App::Phoebe::Oracle;
+    use Modern::Perl;
+    our @oracle_hosts = qw(transjovian.org);
+    use App::Phoebe::Oracle;
+
+If you don't want to use `/oracle` for the game, you can change it:
+
+    our $oracle_space = 'truth';
+
+If you want to change the maximu number of answers that a question may have:
+
+    our $max_answers = 5;
 
 # App::Phoebe::PageHeadings
 

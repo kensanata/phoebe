@@ -353,9 +353,9 @@ sub with_lock {
     if ($@) {
       $log->error("Unable to run code with locked $lock: $@");
       result($stream, "40", "An error occured, unfortunately");
+      $stream->close_gracefully();
     }
     rmdir($lock);
-    $stream->close_gracefully();
   } elsif ($count > 25) {
     $log->error("Unable to unlock $lock");
     result($stream, "40", "The wiki is locked; try again in a few seconds");

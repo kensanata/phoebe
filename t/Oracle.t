@@ -146,7 +146,7 @@ $page = query_gemini("$base/oracle/question/$n/delete", undef, 0);
 like($page, qr/^60/m, "Unidentified visitors may not delete a question");
 
 $page = query_gemini("$base/oracle/question/$n/delete", undef, 2);
-like($page, qr/^40/m, "Other people may not delete a question");
+like($page, qr/switch identity/i, "Other people may not delete a question");
 
 $page = query_gemini("$base/oracle/question/$n/delete");
 like($page, qr/^30/m, "Deleted");

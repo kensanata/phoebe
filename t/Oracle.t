@@ -127,4 +127,31 @@ unlike($page, qr/$n/, "Question is answered and thus invisible for unidentified 
 $page = query_gemini("$base/oracle/");
 like($page, qr/$n/, "Question is visible for the question asker");
 
+$page = query_gemini("$base/oracle/question/$n");
+like($page, qr/publish/m, "Question asker may publish");
+
+$page = query_gemini("$base/oracle/question/$n/publish");
+like($page, qr/^30/m, "Published");
+
+$page = query_gemini("$base/oracle/");
+like($page, qr/$n/m, "Question is visible for the question asker, obviously");
+
+$page = query_gemini("$base/oracle/", undef, 0);
+like($page, qr/$n/m, "Question is visible for unidentified visitors, too");
+
+$page = query_gemini("$base/oracle/", undef, 2);
+like($page, qr/$n/m, "Question is visible for other people, too");
+
+$page = query_gemini("$base/oracle/question/$n/delete", undef, 0);
+like($page, qr/^60/m, "Unidentified visitors may not delete a question");
+
+$page = query_gemini("$base/oracle/question/$n/delete", undef, 2);
+like($page, qr/^40/m, "Other people may not delete a question");
+
+$page = query_gemini("$base/oracle/question/$n/delete");
+like($page, qr/^30/m, "Deleted");
+
+$page = query_gemini("$base/oracle/");
+unlike($page, qr/$n/, "Question is gone");
+
 done_testing;

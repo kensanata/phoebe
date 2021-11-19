@@ -219,19 +219,24 @@ sub serve_question {
     # answered it, you may delete your answer
     if ($fingerprint) {
       my $n = 0;
-      my $found = 0;
       my $answered = 0;
       for my $answer (@{$question->{answers}}) {
 	$n++;
-	next unless $answer->{text};
 	next unless $answer->{fingerprint} eq $fingerprint;
 	$answered = 1;
+	next unless $answer->{text};
+	$answered = 2;
 	$stream->write("\n");
 	$stream->write("## Your answer\n");
 	$stream->write($answer->{text});
 	$stream->write("\n");
 	$stream->write("=> /$oracle_space/question/$question->{number}/$n/delete Delete this answer\n");
-	last;
+	return 1;
+      }
+      if ($answered == 1) {
+	$stream->write("\n");
+	$stream->write("(Your answer was deleted.)\n");
+	return 1;
       }
     }
   } else {
@@ -403,6 +408,68 @@ sub delete_answer {
   }
   save_data($stream, $host, $data);
   result($stream, "30", to_url($stream, $host, $oracle_space, "question/$question->{number}"));
+  return 1;
+}
+
+sub publish_question {
+  my ($stream, $host, $number) = @_;
+  my $fingerprint = $stream->handle->get_fingerprint();
+  if (not $fingerprint) {
+    $log->info("Publishing a question requires a certificate");
+    result($stream, "60", "You need a client certificate to publish a question");
+    return 1;
+  }
+  my $data = load_data($host);
+  my $question = first { $_->{number} eq $number } @$data;
+  if (not $question) {
+    $log->info("Publishing a deleted question");
+    success($stream);
+    $stream->write("# Publish a question\n");
+    $stream->write("The question you wanted to publish has been deleted.\n");
+    $stream->write("=> /$oracle_space/ Back to the oracle\n");
+    return 1;
+  } elsif ($fingerprint ne $question->{fingerprint}) {
+    $log->info("Only the question asker may publish");
+    $stream->write("# Publish a question\n");
+    $stream->write("You are not the owner of this question, which is why you cannot publish it.\n");
+    $stream->write("Switch identity or pick a different client certificate if you think you are the owner of this question\n");
+    $stream->write("=> /$oracle_space/ Back to the oracle\n");
+    return 1;
+  }
+  $log->info("Publishing a question");
+  $question->{status} = 'published';
+  save_data($stream, $host, $data);
+  result($stream, "30", to_url($stream, $host, $oracle_space, "question/$question->{number}"));
+  return 1;
+}
+
+sub delete_question {
+  my ($stream, $host, $number) = @_;
+  my $fingerprint = $stream->handle->get_fingerprint();
+  if (not $fingerprint) {
+    $log->info("Deleting a question requires a certificate");
+    result($stream, "60", "You need a client certificate to delete a question");
+    return 1;
+  }
+  my $data = load_data($host);
+  my $question = first { $_->{number} eq $number } @$data;
+  if (not $question) {
+    $log->info("Deleting a deleted question");
+    result($stream, "30", to_url($stream, $host, $oracle_space, ""));
+    return 1;
+  } elsif ($fingerprint ne $question->{fingerprint}) {
+    $log->info("Only the question asker may delete");
+    success($stream);
+    $stream->write("# Delete a question\n");
+    $stream->write("You are not the owner of this question, which is why you cannot delete it.\n");
+    $stream->write("Switch identity or pick a different client certificate if you think you are the owner of this question\n");
+    $stream->write("=> /$oracle_space/question/$question->{number} Back to the question\n");
+    return 1;
+  }
+  $log->info("Deleting a question");
+  @$data = grep { $_->{number} ne $question->{number} } @$data;
+  save_data($stream, $host, $data);
+  result($stream, "30", to_url($stream, $host, $oracle_space, ""));
   return 1;
 }
 

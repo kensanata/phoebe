@@ -61,6 +61,7 @@ use Mojo::JSON qw(decode_json encode_json);
 use Net::IDN::Encode qw(domain_to_ascii);
 use List::Util qw(first any none);
 use Encode qw(encode_utf8 decode_utf8);
+use POSIX qw(strftime);
 use Modern::Perl;
 use URI::Escape;
 
@@ -108,20 +109,20 @@ sub load_data {
   return decode_json read_binary("$dir/oracle.json");
 }
 
-sub new_number {
-  my $data = shift;
-  while (1) {
-    my $n = int(rand(10000));
-    return $n unless any { $n eq $_->{number} } @$data;
-  }
-}
-
 sub save_data {
   my ($stream, $host, $data) = @_;
   my $dir = wiki_dir($host, $oracle_space);
   my $bytes = encode_json $data;
   with_lock($stream, $host, $oracle_space, sub {
     write_binary("$dir/oracle.json", $bytes)});
+}
+
+sub new_number {
+  my $data = shift;
+  while (1) {
+    my $n = int(rand(10000));
+    return $n unless any { $n eq $_->{number} } @$data;
+  }
 }
 
 sub decode_query {
@@ -145,7 +146,7 @@ sub serve_main_menu {
   } @$data;
   for my $question (@questions) {
     $stream->write("\n\n");
-    $stream->write("## Question #$question->{number}\n");
+    $stream->write("## $question->{date} Question #$question->{number}\n");
     $stream->write(encode_utf8 $question->{text});
     $stream->write("\n");
     if ($fingerprint and $fingerprint eq $question->{fingerprint}) {
@@ -296,6 +297,7 @@ sub ask_question {
   } else {
     $log->info("Saving a new question for the oracle");
     $question = {
+      date => strftime("%Y-%m-%d", gmtime),
       number => new_number($data),
       text => $text,
       fingerprint => $fingerprint,

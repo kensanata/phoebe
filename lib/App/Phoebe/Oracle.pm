@@ -94,6 +94,7 @@ use Encode qw(encode_utf8 decode_utf8);
 use POSIX qw(strftime);
 use Modern::Perl;
 use URI::Escape;
+use utf8;
 
 push(@extensions, \&oracle);
 
@@ -203,8 +204,10 @@ sub serve_log {
   for my $question (@questions) {
     my $text = $question->{text};
     $text =~ s/\n/ /g;
-    $text = substr($text, 0, 51);
-    $text =~ s/\s+\S+$/…/ if length($text) > 50;
+    if (length($text) > 50) {
+      $text = substr($text, 0, 50);
+      $text =~ s/\s+\S+$/…/ or $text =~ s/\s+$/…/;
+    }
     $text = encode_utf8 $text;
     $stream->write("=> /$oracle_space/question/$question->{number} $question->{date} Question #$question->{number}: $text\n");
   }

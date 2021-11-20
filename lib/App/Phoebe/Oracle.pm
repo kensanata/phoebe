@@ -94,6 +94,8 @@ sub oracle {
     return delete_question($stream, $host, $number);
   } elsif (($host, @numbers) = $url =~ m!^gemini://($hosts)(?::$port)?/$oracle_space/question/(\d+)/(\d+)/delete$!) {
     return delete_answer($stream, $host, @numbers);
+  } elsif (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/$oracle_space/log$!) {
+    return serve_log($stream, $host);
   }
   return;
 }
@@ -140,13 +142,14 @@ sub serve_main_menu {
   $log->info("Serving oracles");
   $stream->write("# Oracle\n");
   $stream->write("=> /$oracle_space/ask Ask a question\n");
+  $stream->write("=> /$oracle_space/log Check the log\n");
   my @questions = grep {
     $_->{status} ne 'answered'
 	or $fingerprint and $fingerprint eq $_->{fingerprint}
   } @$data;
   for my $question (@questions) {
     $stream->write("\n\n");
-    $stream->write("## $question->{date} Question #$question->{number}\n");
+    $stream->write("## Question #$question->{number}\n");
     $stream->write(encode_utf8 $question->{text});
     $stream->write("\n");
     if ($fingerprint and $fingerprint eq $question->{fingerprint}) {
@@ -156,6 +159,24 @@ sub serve_main_menu {
     } else {
       $stream->write("=> /$oracle_space/question/$question->{number} Show\n");
     }
+  }
+  return 1;
+}
+
+sub serve_log {
+  my ($stream, $host) = @_;
+  my $data = load_data($host);
+  success($stream);
+  $log->info("Serving oracle log");
+  $stream->write("# Oracle Log\n");
+  my @questions = grep { $_->{status} ne 'answered' } @$data;
+  for my $question (@questions) {
+    my $text = $question->{text};
+    $text =~ s/\n/ /g;
+    $text = substr($text, 0, 51);
+    $text =~ s/\s+\S+$/…/ if length($text) > 50;
+    $text = encode_utf8 $text;
+    $stream->write("=> /$oracle_space/question/$question->{number} $question->{date} Question #$question->{number}: $text\n");
   }
   return 1;
 }

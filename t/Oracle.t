@@ -46,6 +46,9 @@ $page =~ /^=> \/oracle\/question\/(\d+) Show question/m;
 my $n = $1;
 ok($n > 0, "Question number");
 
+$page = query_gemini("$base/oracle/log");
+like($page, qr/^=> \/oracle\/question\/(\d+) \d\d\d\d-\d\d-\d\d Question #$n: 2 \+ 2 ≟$/m, "Log");
+
 $page = query_gemini("$base/oracle/question/$n");
 like($page, qr/^# Question #$n/m, "Question title");
 like($page, qr/^2 \+ 2 ≟/m, "Question text");

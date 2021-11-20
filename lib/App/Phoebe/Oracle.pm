@@ -52,6 +52,36 @@ If you want to change the maximu number of answers that a question may have:
 
     our $max_answers = 5;
 
+If you want to notify Antenna whenever a new question has been asked:
+
+    use App::Phoebe qw($log);
+    use IO::Socket::SSL;
+    # a very simple Gemini client
+    sub query {
+      my $url = shift;
+      my($scheme, $authority, $path, $query, $fragment) =
+	$url =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(\S*))?|;
+      my ($host, $port) = split(/:/, $authority);
+      my $socket = IO::Socket::SSL->new(
+	PeerHost => $host, PeerPort => $port||1965,
+	# don't verify the server certificate
+	SSL_verify_mode => SSL_VERIFY_NONE, );
+      $socket->print($url);
+      undef $/; # slurp
+      return <$socket>;
+    }
+    # wrap the save_data sub in our own code
+    *old_save_oracle_data = \&App::Phoebe::Oracle::save_data;
+    *App::Phoebe::Oracle::save_data = \&new_save_oracle_data;
+    # call Antenna after saving
+    sub new_save_oracle_data {
+      old_save_oracle_data(@_);
+      my $gemlog = "gemini://transjovian.org/oracle/log";
+      my $res = query("gemini://warmedal.se/~antenna/submit?$gemlog");
+      my ($code) = $res =~ /^(\d+)/;
+      $log->info("Antenna: $code");
+    }
+
 =cut
 
 package App::Phoebe::Oracle;

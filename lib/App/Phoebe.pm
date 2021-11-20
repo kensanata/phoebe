@@ -135,34 +135,6 @@ for it, for Gemini only:
     }
     1;
 
-You can use the methods of L<Mojo::IOLoop> in the config file. The most useful
-of these is probably C<recurring> for recurring tasks. The following submits a
-gemlog to Antenna every 24 hours.
-
-    # tested by t/example-antenna.t
-    use App::Phoebe qw($log);
-    use IO::Socket::SSL;
-    sub query {
-      my $url = shift;
-      my($scheme, $authority, $path, $query, $fragment) =
-	$url =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(\S*))?|;
-      my ($host, $port) = split(/:/, $authority);
-      my $socket = IO::Socket::SSL->new(
-	PeerHost => $host, PeerPort => $port||1965,
-	# don't verify the server certificate
-	SSL_verify_mode => SSL_VERIFY_NONE, );
-      $socket->print($url);
-      undef $/; # slurp
-      return <$socket>;
-    }
-    Mojo::IOLoop->recurring(
-      24 * 60 * 60 => sub {
-	my $gemlog = "gemini://transjovian.org/oracle/log";
-	my $res = query("gemini://warmedal.se/~antenna/submit?$gemlog");
-	$log->info("Antenna: $res");
-      });
-    1;
-
 =cut
 
 package App::Phoebe;

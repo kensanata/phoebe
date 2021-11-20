@@ -60,7 +60,7 @@ use File::Slurper qw(read_binary write_binary);
 use Mojo::JSON qw(decode_json encode_json);
 use Net::IDN::Encode qw(domain_to_ascii);
 use List::Util qw(first any none);
-use Encode qw(decode_utf8);
+use Encode qw(encode_utf8 decode_utf8);
 use Modern::Perl;
 use URI::Escape;
 
@@ -146,7 +146,7 @@ sub serve_main_menu {
   for my $question (@questions) {
     $stream->write("\n\n");
     $stream->write("## Question #$question->{number}\n");
-    $stream->write($question->{text});
+    $stream->write(encode_utf8 $question->{text});
     $stream->write("\n");
     if ($fingerprint and $fingerprint eq $question->{fingerprint}) {
       $stream->write("=> /$oracle_space/question/$question->{number} Manage\n");
@@ -178,7 +178,7 @@ sub serve_questions {
     } elsif ($question->{status} eq 'published') {
       $stream->write("## Published question #$question->{number}\n");
     }
-    $stream->write($question->{text});
+    $stream->write(encode_utf8 $question->{text});
     $stream->write("\n");
     $stream->write("=> /$oracle_space/question/$question->{number} Show answers\n");
   }
@@ -231,7 +231,7 @@ sub serve_question {
     # if the question is being asked and you're not the question asker, list the
     # question but not the answers
     $stream->write("\n");
-    $stream->write($question->{text});
+    $stream->write(encode_utf8 $question->{text});
     $stream->write("\n");
     # if you haven't answered the question, you may answer it; if you have
     # answered it, you may delete your answer
@@ -246,7 +246,7 @@ sub serve_question {
 	$answered = 2;
 	$stream->write("\n");
 	$stream->write("## Your answer\n");
-	$stream->write($answer->{text});
+	$stream->write(encode_utf8 $answer->{text});
 	$stream->write("\n");
 	$stream->write("=> /$oracle_space/question/$question->{number}/$n/delete Delete this answer\n");
 	return 1;
@@ -259,7 +259,7 @@ sub serve_question {
     }
   } else {
     $stream->write("\n");
-    $stream->write($question->{text});
+    $stream->write(encode_utf8 $question->{text});
     $stream->write("\n");
     my $n = 0;
     for my $answer (@{$question->{answers}}) {
@@ -267,7 +267,7 @@ sub serve_question {
       next unless $answer->{text};
       $stream->write("\n");
       $stream->write("## Answer #$n\n");
-      $stream->write($answer->{text});
+      $stream->write(encode_utf8 $answer->{text});
       $stream->write("\n");
       if ($fingerprint
 	  and ($fingerprint eq $question->{fingerprint}

@@ -40,7 +40,7 @@ like($page, qr/^60/, "Client certificate required");
 $page = query_gemini("$base/oracle/ask");
 like($page, qr/^10/, "Ask a question");
 
-$page = query_gemini("$base/oracle/ask?2+%2b+2");
+$page = query_gemini("$base/oracle/ask?2+%2b+2%20%E2%89%9F");
 like($page, qr/^# The oracle accepts/m, "Oracle accepts the question");
 $page =~ /^=> \/oracle\/question\/(\d+) Show question/m;
 my $n = $1;
@@ -48,7 +48,7 @@ ok($n > 0, "Question number");
 
 $page = query_gemini("$base/oracle/question/$n");
 like($page, qr/^# Question #$n/m, "Question title");
-like($page, qr/^2 \+ 2/m, "Question text");
+like($page, qr/^2 \+ 2 ≟/m, "Question text");
 like($page, qr/^=> \/oracle\/question\/$n\/delete Delete this question/m, "Link to delete this question");
 unlike($page, qr/answer/, "Question asker does not get to answer");
 
@@ -69,12 +69,12 @@ like($page, qr/^10/, "Prompt for an answer");
 $page = query_gemini("$base/oracle/question/" . ($n+1) . "/answer", undef, 2);
 like($page, qr/deleted/, "Attempt to answer an unknown question");
 
-$page = query_gemini("$base/oracle/question/$n/answer?4", undef, 2);
+$page = query_gemini("$base/oracle/question/$n/answer?4%E2%80%BC", undef, 2);
 like($page, qr/^30 $base\/oracle\/question\/$n\r$/m, "Answer given");
 
 $page = query_gemini("$base/oracle/question/$n");
 like($page, qr/^## Answer #1/m, "Answer title");
-like($page, qr/^4/m, "Answer text");
+like($page, qr/^4‼/m, "Answer text");
 like($page, qr/^=> \/oracle\/question\/$n\/1\/delete Delete this answer/m, "Link to delete this answer");
 
 $page = query_gemini("$base/oracle/question/$n", undef, 0);

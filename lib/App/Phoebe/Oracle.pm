@@ -210,19 +210,18 @@ sub serve_question {
   $stream->write("# Question #$question->{number}\n");
   $stream->write("=> /$oracle_space/ Back to the oracle\n");
   if ($fingerprint) {
+    my $n = grep { $_->{text} } @{$question->{answers}};
     if ($fingerprint eq $question->{fingerprint}) {
       $stream->write("=> /$oracle_space/question/$number/delete Delete this question\n");
-      if ($question->{status} eq 'answered') {
+      if (($question->{status} eq 'asked' and $n > 0)
+	  or $question->{status} eq 'answered') {
 	$stream->write("=> /$oracle_space/question/$number/publish Publish this question\n");
       }
-    } else {
-      my $n = grep { $_->{text} } @{$question->{answers}};
-      if ($n < $max_answers
-	  and none { $fingerprint eq $_->{fingerprint} } @{$question->{answers}}) {
-	# only allow answers if the undeleted answers is below the maximum, and
-	# you haven't answered before (even if it was subsequently deleted
-	$stream->write("=> /$oracle_space/question/$number/answer Answer this question\n");
-      }
+    } elsif ($n < $max_answers
+	     and none { $fingerprint eq $_->{fingerprint} } @{$question->{answers}}) {
+      # only allow answers if the undeleted answers is below the maximum, and
+      # you haven't answered before (even if it was subsequently deleted
+      $stream->write("=> /$oracle_space/question/$number/answer Answer this question\n");
     }
   }
   if ($question->{status} eq 'asked'

@@ -50,6 +50,7 @@ $page = query_gemini("$base/oracle/question/$n");
 like($page, qr/^# Question #$n/m, "Question title");
 like($page, qr/^2 \+ 2 ≟/m, "Question text");
 like($page, qr/^=> \/oracle\/question\/$n\/delete Delete this question/m, "Link to delete this question");
+unlike($page, qr/publish/, "Cannot publish a question without answer");
 unlike($page, qr/answer/, "Question asker does not get to answer");
 
 $page = query_gemini("$base/oracle/question/$n", undef, 0);
@@ -75,6 +76,8 @@ like($page, qr/^30 $base\/oracle\/question\/$n\r$/m, "Answer given");
 $page = query_gemini("$base/oracle/question/$n");
 like($page, qr/^## Answer #1/m, "Answer title");
 like($page, qr/^4‼/m, "Answer text");
+like($page, qr/^=> \/oracle\/question\/$n\/publish Publish this question/m, "Link to publish this question");
+like($page, qr/^=> \/oracle\/question\/$n\/delete Delete this question/m, "Link to delete this question");
 like($page, qr/^=> \/oracle\/question\/$n\/1\/delete Delete this answer/m, "Link to delete this answer");
 
 $page = query_gemini("$base/oracle/question/$n", undef, 0);

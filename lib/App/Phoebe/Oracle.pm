@@ -182,7 +182,7 @@ sub serve_main_menu {
   for my $question (@questions) {
     $stream->write("\n\n");
     $stream->write("## Question #$question->{number}\n");
-    $stream->write(encode_utf8 $question->{text});
+    $stream->write("> " . encode_utf8 $question->{text});
     $stream->write("\n");
     if ($fingerprint and $fingerprint eq $question->{fingerprint}) {
       $stream->write("This is your question. You need to publish or delete it before you can ask another one.\n");

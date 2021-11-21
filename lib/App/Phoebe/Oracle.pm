@@ -172,7 +172,11 @@ sub serve_main_menu {
   success($stream);
   $log->info("Serving oracles");
   $stream->write("# Oracle\n");
-  $stream->write("You need to use an identity or pick a client certificate if you want to ask a question or give an answer.\n");
+  if ($fingerprint) {
+    $stream->write("You need to use an identity or pick a client certificate if you want to ask a question or give an answer.\n");
+  } else {
+    $stream->write("You have an identity or a client certificate picked, so you can ask a question or answer questions by others.\n");
+  }
   $stream->write("=> /$oracle_space/ask Ask a question\n");
   $stream->write("=> /$oracle_space/log Check the log\n");
   my @questions = grep {

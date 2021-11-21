@@ -192,7 +192,11 @@ sub serve_main_menu {
       $stream->write("=> /$oracle_space/question/$question->{number} Answer\n");
     } else {
       my $n = grep { $_->{text} } @{$question->{answers}};
-      $stream->write("This question has $n answers.\n");
+      if ($n == 1) {
+	$stream->write("This question has one answer.\n");
+      } else {
+	$stream->write("This question has $n answers.\n");
+      }
       $stream->write("=> /$oracle_space/question/$question->{number} Show\n");
     }
   }

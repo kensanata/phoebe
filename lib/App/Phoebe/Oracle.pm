@@ -185,7 +185,10 @@ sub serve_main_menu {
     $stream->write("> " . encode_utf8 $question->{text});
     $stream->write("\n");
     if ($fingerprint and $fingerprint eq $question->{fingerprint}) {
-      $stream->write("This is your question. You need to publish or delete it before you can ask another one.\n");
+      $stream->write("This is your question.");
+      $stream->write(" You need to publish or delete it before you can ask another one.")
+	  if $question->{status} ne 'published';
+      $stream->write("\n");
       $stream->write("=> /$oracle_space/question/$question->{number} Manage\n");
     } elsif ($question->{status} eq 'asked') {
       $stream->write("This question is still looking for answers.\n");

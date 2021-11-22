@@ -217,7 +217,8 @@ sub get_ip_numbers {
 # options.
 sub host_regex {
   my $stream = shift;
-  return join("|", map { quotemeta domain_to_ascii $_ } keys %{$server->{host}});
+  my $re = join("|", map { quotemeta domain_to_ascii $_ } keys %{$server->{host}});
+  return qr($re)i; # case insensitive hostnames
 }
 
 # A regular expression matching wiki spaces in URLs. The tricky part is that we
@@ -672,7 +673,7 @@ sub handle_url {
 # if you call this yourself, $id must look like "page/foo"
 sub to_url {
   my $stream = shift;
-  my $host = shift;
+  my $host = lc shift;
   my $space = shift;
   my $id = shift;
   my $scheme = shift || "gemini";

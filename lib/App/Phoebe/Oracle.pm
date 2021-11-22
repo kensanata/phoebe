@@ -179,6 +179,7 @@ sub serve_main_menu {
   }
   $stream->write("=> /$oracle_space/ask Ask a question\n");
   $stream->write("=> /$oracle_space/log Check the log\n");
+  # skipping answered and unpublished questions, unless you asked the question
   my @questions = grep {
     $_->{status} ne 'answered'
 	or $fingerprint and $fingerprint eq $_->{fingerprint}
@@ -195,9 +196,15 @@ sub serve_main_menu {
       $stream->write("\n");
       $stream->write("=> /$oracle_space/question/$question->{number} Manage\n");
     } elsif ($question->{status} eq 'asked') {
-      $stream->write("This question is still looking for answers.\n");
-      $stream->write("=> /$oracle_space/question/$question->{number} Answer\n");
+      if ($fingerprint and any { $fingerprint eq $_->{fingerprint} } @{$question->{answers}}) {
+	$stream->write("This question is still looking for answers, but you already gave your answer.\n");
+	$stream->write("=> /$oracle_space/question/$question->{number} Take a look\n");
+      } else {
+	$stream->write("This question is still looking for answers.\n");
+	$stream->write("=> /$oracle_space/question/$question->{number} Answer\n");
+      }
     } else {
+      # it's published
       my $n = grep { $_->{text} } @{$question->{answers}};
       if ($n == 1) {
 	$stream->write("This question has one answer.\n");

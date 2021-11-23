@@ -113,10 +113,14 @@ debug:
 	for t in t/*.t; do DEBUG=4 perl "$$t"; done
 
 # Regenerate the certificates used by the wiki. These use eliptic
-# curves and are valid for five years.
+# curves and are valid for five years, for a common name "Phoebe"
+# (which is not used) and multiple alternative subject names (add more
+# and different ones).
 cert:
 	openssl req -new -x509 -newkey ec \
 	-pkeyopt ec_paramgen_curve:prime256v1 \
+        -subj "/CN=Phoebe" \
+        -addext "subjectAltName=DNS:localhost,DNS:phoebe.local" \
 	-days 1825 -nodes -out cert.pem -keyout key.pem
 
 # Print all the info about the certificate.

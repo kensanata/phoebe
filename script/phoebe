@@ -256,6 +256,18 @@ one go:
 
     titan --url=titan://localhost/ --token=hello *.gmi
 
+=head2 Certificates
+
+If you want to generate your own certificates, here's how you would generate a
+certificate for two domains (you can add as many as you need), and a common name
+of "Phoebe" (use whatever you want).
+
+    openssl req -new -x509 -newkey ec \
+    -pkeyopt ec_paramgen_curve:prime256v1 \
+    -subj "/CN=Phoebe" \
+    -addext "subjectAltName=DNS:localhost,DNS:phoebe.local" \
+    -days 1825 -nodes -out cert.pem -keyout key.pem
+
 =head2 Image uploads
 
 OK, how do image uploads work? First, we need to specify which MIME types Phoebe

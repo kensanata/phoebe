@@ -9,6 +9,7 @@
 - [Installation](#installation)
 - [Dependencies](#dependencies)
 - [Quickstart](#quickstart)
+- [Certificates](#certificates)
 - [Image uploads](#image-uploads)
 - [Using systemd](#using-systemd)
 - [Installing Perl](#installing-perl)
@@ -273,6 +274,18 @@ If you have a bunch of Gemtext files in a directory, you can upload them all in
 one go:
 
     titan --url=titan://localhost/ --token=hello *.gmi
+
+## Certificates
+
+If you want to generate your own certificates, here's how you would generate a
+certificate for two domains (you can add as many as you need), and a common name
+of "Phoebe" (use whatever you want).
+
+    openssl req -new -x509 -newkey ec \
+    -pkeyopt ec_paramgen_curve:prime256v1 \
+    -subj "/CN=Phoebe" \
+    -addext "subjectAltName=DNS:localhost,DNS:phoebe.local" \
+    -days 1825 -nodes -out cert.pem -keyout key.pem
 
 ## Image uploads
 
@@ -1629,6 +1642,36 @@ If you don't want to use `/oracle` for the game, you can change it:
 If you want to change the maximu number of answers that a question may have:
 
     our $max_answers = 5;
+
+If you want to notify Antenna whenever a new question has been asked:
+
+    use App::Phoebe qw($log);
+    use IO::Socket::SSL;
+    # a very simple Gemini client
+    sub query {
+      my $url = shift;
+      my($scheme, $authority, $path, $query, $fragment) =
+        $url =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(\S*))?|;
+      my ($host, $port) = split(/:/, $authority);
+      my $socket = IO::Socket::SSL->new(
+        PeerHost => $host, PeerPort => $port||1965,
+        # don't verify the server certificate
+        SSL_verify_mode => SSL_VERIFY_NONE, );
+      $socket->print($url);
+      undef $/; # slurp
+      return <$socket>;
+    }
+    # wrap the save_data sub in our own code
+    *old_save_oracle_data = \&App::Phoebe::Oracle::save_data;
+    *App::Phoebe::Oracle::save_data = \&new_save_oracle_data;
+    # call Antenna after saving
+    sub new_save_oracle_data {
+      old_save_oracle_data(@_);
+      my $gemlog = "gemini://transjovian.org/oracle/log";
+      my $res = query("gemini://warmedal.se/~antenna/submit?$gemlog");
+      my ($code) = $res =~ /^(\d+)/;
+      $log->info("Antenna: $code");
+    }
 
 # App::Phoebe::PageHeadings
 

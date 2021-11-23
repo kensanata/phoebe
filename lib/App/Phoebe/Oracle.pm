@@ -361,7 +361,7 @@ sub ask_question {
   my $fingerprint = $stream->handle->get_fingerprint();
   return result($stream, "60", "You need a client certificate to ask a question") unless $fingerprint;
   my $data = load_data($host);
-  my $question = first { $_->{fingerprint} eq $fingerprint } @$data;
+  my $question = first { $_->{fingerprint} eq $fingerprint and $_->{status} ne 'published' } @$data;
   if ($question) {
     $log->info("Asking the oracle a question but there already is one asked question");
     success($stream);

@@ -148,6 +148,9 @@ like($page, qr/$n/m, "Question is visible for unidentified visitors, too");
 $page = query_gemini("$base/oracle/", undef, 2);
 like($page, qr/$n/m, "Question is visible for other people, too");
 
+$page = query_gemini("$base/oracle/ask");
+like($page, qr/^10/, "With the question published, you can ask another");
+
 $page = query_gemini("$base/oracle/question/$n/delete", undef, 0);
 like($page, qr/^60/m, "Unidentified visitors may not delete a question");
 

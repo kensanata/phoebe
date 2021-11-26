@@ -204,13 +204,18 @@ sub speed_bump_add {
   $speed_data->{$ip}->{probation} = $now + 2 * $seconds;
   return $seconds if $seconds < 2419200;
   # finally, check if there are enough other IPs in the same network to warrant a net range block
-  $speed_data->{$ip}->{cidr} ||= speed_bump_cidr($ip, $now);
-  my $cidr = $speed_data->{$ip}->{cidr};
-  if ($cidr) {
+  my $cidr;
+  # only compute it if it's not cached
+  $cidr = speed_bump_cidr($ip, $now) if not $speed_data->{$ip}->{cidr};
+  # only set the cache if we computed it
+  $speed_data->{$ip}->{cidr} = $cidr if $cidr;
+  # if we have a CIDR, count the other IP numbers in our data with the same CIDR
+  if ($speed_data->{$ip}->{cidr}) {
     my $count = 0;
     for (keys %$speed_data) {
       $count++ if exists $speed_data->{$_}->{cidr} and $speed_data->{$_}->{cidr} eq $cidr;
     }
+    # ban the CIDR if we have three or more
     speed_bump_add_cidr($cidr, $now + $seconds) if $count >= 3;
   }
   return $seconds;

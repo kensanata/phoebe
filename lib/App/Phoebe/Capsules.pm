@@ -55,7 +55,7 @@ containing two fingerprints, C<FROM> and C<TO>.
 
 package App::Phoebe::Capsules;
 use App::Phoebe qw($server $log @extensions @request_handlers host_regex port success result print_link wiki_dir
-		   valid_id valid_mime_type valid_size process_titan to_url);
+		   valid_id valid_mime_type valid_size to_url);
 use File::Slurper qw(read_dir read_binary write_binary);
 use Net::IDN::Encode qw(domain_to_ascii);
 use Encode qw(encode_utf8 decode_utf8);
@@ -411,7 +411,8 @@ sub capsule_token_cleanup {
 
 unshift(@request_handlers, '^titan://(' . capsule_regex() . ')(?::\d+)?/' . $capsule_space . '/' => \&handle_titan);
 
-# We need our own Titan handler because we want a different copy of is_upload; and once we we're here we can run our extension directly.
+# We need our own Titan handler because we want a different copy of is_upload;
+# and once we're here we can run our extension directly.
 sub handle_titan {
   my $stream = shift;
   my $data = shift;

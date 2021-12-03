@@ -755,9 +755,9 @@ sub pages {
     return if not -d "$dir/page";
     my @pages = map { s/\.gmi$//; $_ } read_dir("$dir/page");
     write_text($index, join("\n", @pages, ""));
-    return sort { newest_first($stream, $host, $a, $b) } @pages;
+    return sort newest_first @pages;
   }
-  my @lines = sort { newest_first($stream, $host, $a, $b) } read_lines $index;
+  my @lines = sort newest_first read_lines $index;
   return grep /$re/i, @lines if $re;
   return @lines;
 }

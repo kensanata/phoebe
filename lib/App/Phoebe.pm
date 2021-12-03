@@ -139,7 +139,7 @@ for it, for Gemini only:
 
 package App::Phoebe;
 use Modern::Perl '2018';
-use File::Slurper qw(read_text read_binary read_lines read_dir write_text write_binary);
+use File::Slurper qw(read_text read_binary read_dir write_text write_binary);
 use Encode qw(encode_utf8 decode_utf8);
 use Net::IDN::Encode qw(domain_to_ascii);
 use Socket qw(:addrinfo SOCK_RAW);
@@ -478,7 +478,7 @@ sub delete_page {
   my $index = "$dir/index";
   if (-f $index) {
     # remove $id from the index
-    my @pages = grep { $_ ne $id } read_lines $index;
+    my @pages = grep { $_ ne $id } split /\n/, read_text $index;
     write_text($index, join("\n", @pages, ""));
   }
   my $changes = "$dir/changes.log";
@@ -757,7 +757,7 @@ sub pages {
     write_text($index, join("\n", @pages, ""));
     return sort newest_first @pages;
   }
-  my @lines = sort newest_first read_lines $index;
+  my @lines = sort newest_first split /\n/, read_text $index;
   return grep /$re/i, @lines if $re;
   return @lines;
 }
@@ -1850,7 +1850,7 @@ sub serve_file {
     result($stream, "40", "Metadata not found");
     return;
   }
-  my %meta = (map { split(/: /, $_, 2) } read_lines($meta));
+  my %meta = (map { split(/: /, $_, 2) } split /\n/, read_text $meta);
   if (not $meta{'content-type'}) {
     result($stream, "59", "Metadata corrupt");
     return;

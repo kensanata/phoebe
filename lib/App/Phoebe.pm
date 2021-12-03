@@ -2109,13 +2109,8 @@ sub valid_mime_type {
   my $params = shift;
   my $type = $params->{mime};
   my ($main_type) = split(/\//, $type, 1);
-  my @types = @{$server->{wiki_mime_type}};
-  if (not $type) {
-    $log->debug("Uploads require a MIME type");
-    result($stream, "59", "Uploads require a MIME type");
-    $stream->close_gracefully();
-    return;
-  } elsif ($type ne "text/plain" and not grep(/^$type$/, @types) and not grep(/^$main_type$/, @types)) {
+  my @types = @{$server->{wiki_mime_type}} || "text/plain";
+  if ($type ne "text/plain" and not grep(/^$type$/, @types) and not grep(/^$main_type$/, @types)) {
     $log->debug("This wiki does not allow $type");
     result($stream, "59", "This wiki does not allow $type");
     $stream->close_gracefully();

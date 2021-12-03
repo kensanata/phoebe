@@ -1,5 +1,10 @@
 # TODO
 
+- I need to rethink how with_lock works. If the code cannot execute,
+  it is rescheduled, but that means we cannot close the stream. If the
+  code is called via an extension, cannot execute and reschedules,
+  then process_gemini closes the stream. This is not good.
+
 - Remove %oddmuse_wiki_dirs
 - colour changes ignores the current space, where as changes for all spaces does not
 - add a footer

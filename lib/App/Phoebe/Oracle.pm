@@ -146,6 +146,7 @@ sub save_data {
   my ($stream, $host, $data) = @_;
   my $dir = wiki_dir($host, $oracle_space);
   my $bytes = encode_json $data;
+  # We don't close the stream on a successful call.
   with_lock($stream, $host, $oracle_space, sub {
     write_binary("$dir/oracle.json", $bytes)});
 }

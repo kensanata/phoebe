@@ -302,6 +302,8 @@ sub process_titan {
     }
     alarm(0);
   };
+  # save page might still be waiting for the lock so we must not close the
+  # stream: save_page will close the stream
   return unless $@;
   $log->error("Error: $@");
   $stream->close_gracefully();
@@ -315,16 +317,35 @@ sub save_page {
   my $type = shift;
   my $data = shift;
   my $length = shift;
+  # If the operation succeeds, we can close the stream; if the operation fails,
+  # we can close the stream; but if the operation was rescheduled, we must not
+  # close the stream!
   if ($type ne "text/plain") {
     if ($length == 0) {
-      with_lock($stream, $host, $space, sub { delete_file($stream, $host, $space, $id) } );
+      with_lock($stream, $host, $space,
+		sub {
+		  delete_file($stream, $host, $space, $id);
+		  $stream->close_gracefully();
+		});
     } else {
-      with_lock($stream, $host, $space, sub { write_file($stream, $host, $space, $id, $data, $type) } );
+      with_lock($stream, $host, $space,
+		sub {
+		  write_file($stream, $host, $space, $id, $data, $type);
+		  $stream->close_gracefully();
+		});
     }
   } elsif ($length == 0) {
-    with_lock($stream, $host, $space, sub { delete_page($stream, $host, $space, $id) } );
+    with_lock($stream, $host, $space,
+	      sub {
+		delete_page($stream, $host, $space, $id);
+		$stream->close_gracefully();
+	      });
   } elsif (utf8::decode($data)) { # decodes in-place and returns success
-    with_lock($stream, $host, $space, sub { write_page($stream, $host, $space, $id, $data) } );
+    with_lock($stream, $host, $space,
+	      sub {
+		write_page($stream, $host, $space, $id, $data);
+		$stream->close_gracefully();
+	      });
   } else {
     $log->debug("The text is invalid UTF-8");
     result($stream, "59", "The text is invalid UTF-8");
@@ -356,6 +377,8 @@ sub with_lock {
       result($stream, "40", "An error occured, unfortunately");
       $stream->close_gracefully();
     }
+    # in the successful case, with_lock doesn't close in case there is more code
+    # that needs to run, or possibly $code has closed the stream.
     rmdir($lock);
   } elsif ($count > 25) {
     $log->error("Unable to unlock $lock");

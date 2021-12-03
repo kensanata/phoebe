@@ -399,6 +399,8 @@ sub put {
   return webdav_error($stream, "Content type not known") unless $mime;
   return webdav_error($stream, "Page name is missing") unless $id;
   return webdav_error($stream, "Page names must not control characters") if $id =~ /[[:cntrl:]]/;
+  # We don't need to close the stream because this is called via process_gemini
+  # which always closes the stream in the end.
   if ($path eq "/file/$id") {
     with_lock($stream, $host, $space, sub { write_file($stream, $host, $space, $id, $buffer, $mime) } );
   } else {
@@ -531,6 +533,8 @@ sub remove {
   return unless authorize($stream, $host, $space, $headers);
   return webdav_error($stream, "Page name is missing") unless $id;
   return webdav_error($stream, "Page names must not control characters") if $id =~ /[[:cntrl:]]/;
+  # We don't need to close the stream because this is called via process_gemini
+  # which always closes the stream in the end.
   if ($path eq "/file/$id") {
     with_lock($stream, $host, $space, sub { delete_file($stream, $host, $space, $id) } );
   } else {

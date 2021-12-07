@@ -67,7 +67,7 @@ If you want to notify Antenna whenever a new question has been asked:
 	# don't verify the server certificate
 	SSL_verify_mode => SSL_VERIFY_NONE, );
       $socket->print($url);
-      undef $/; # slurp
+      local $/ = undef; # slurp
       return <$socket>;
     }
     # wrap the save_data sub in our own code

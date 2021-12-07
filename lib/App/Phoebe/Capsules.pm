@@ -51,6 +51,32 @@ containing two fingerprints, C<FROM> and C<TO>.
 
 🔥 The file names I<archive>, I<backup>, and I<upload> are reserved.
 
+=head1 NO WIKI, ONLY CAPSULES
+
+Here's how to disable all wiki functions of Phoebe and just use capsules. The
+C<nothing_else> function comes right after C<capsules> as an extension and
+always returns 1, so Phoebe considers this request handled. Therefore, the
+regular request handlers won't get used. Make sure that any extensions you do
+want to have are prepended to C<@extensions> after setting it (using
+C<unshift>).
+
+    # tested by t/example-capsules-only.t
+    package App::Phoebe::Capsules;
+    use Modern::Perl;
+    use App::Phoebe qw($log @request_handlers @extensions);
+    use App::Phoebe::Capsules;
+    our $capsule_help = '//transjovian.org/phoebe/page/Capsules';
+    our $capsule_space;
+    @extensions = (\&capsules, \&nothing_else);
+    sub nothing_else {
+      my ($stream, $url) = @_;
+      $log->info("No handler for $url: only capsules!");
+      result($stream, "30", "/$capsule_space");
+      1;
+    }
+    $log->info('Only capsules!');
+    1;
+
 =cut
 
 package App::Phoebe::Capsules;
@@ -111,6 +137,7 @@ sub capsules {
   } elsif (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/$capsule_space/?$!) {
     return serve_main_menu($stream, $host);
   }
+  $log->info("Capsules have no match for $url");
   return;
 }
 

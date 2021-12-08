@@ -45,7 +45,7 @@ Optionally, people can also access it using a regular web browser.
 
 Gemini itself is very simple network protocol, like Gopher or Finger, but with
 TLS. Gemtext is a very simple markup language, a bit like Markdown, but line
-oriented. See L</GEMTEXT>.
+oriented.
 
 =head1 GEMTEXT
 
@@ -149,7 +149,7 @@ one go:
 
     titan --url=titan://localhost/ --token=hello *.gmi
 
-=head2 Certificates
+=head1 CERTIFICATES
 
 If you want to generate your own certificates, here's how you would generate a
 certificate for two domains (you can add as many as you need), and a common name
@@ -161,7 +161,7 @@ of "Phoebe" (use whatever you want).
     -addext "subjectAltName=DNS:localhost,DNS:phoebe.local" \
     -days 1825 -nodes -out cert.pem -keyout key.pem
 
-=head2 Image uploads
+=head1 IMAGE UPLOADS
 
 OK, how do image uploads work? First, we need to specify which MIME types Phoebe
 accepts. The files are going to be served back with that MIME type, so even if
@@ -179,7 +179,7 @@ with a list of common MIME types.
 
 =back
 
-Let's continue using the setup we used for the L</Quickstart> section. Restart
+Let's continue using the setup we used for the L</QUICKSTART> section. Restart
 the server and allow photos:
 
     phoebe --wiki_mime_type=image/jpeg
@@ -240,7 +240,7 @@ C<--wiki_page_size_limit> option, but you need to restart Phoebe:
 
 Now you can upload about 10MB…
 
-=head2 Using systemd
+=head1 USING SYSTEMD
 
 Systemd is going to handle daemonisation for us. There's more documentation
 available online.
@@ -279,14 +279,7 @@ Check the log output:
 
     sudo journalctl --unit phoebe
 
-=head2 Installing Perl
-
-If you are on GNU/Linx or macOS, I recommend installing from
-L<Perlbrew|https://perlbrew.pl/>. Each Perl installation comes with its own
-library directories, so if you switch Perl version, you need to reinstall Phoebe
-for that Perl version.
-
-=head2 Troubleshooting
+=head1 Troubleshooting
 
 🔥 Unknown command phoebe 🔥 If you installed Phoebe using cpan or cpanm and you
 still get this error, then something about your Perl installation isn't working.

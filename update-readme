@@ -145,6 +145,13 @@ I'm going to be using `curl` and `openssl` in the Quickstart section of
 their data, the code calls `tar` (available from packages with the same name on
 Debian derived systems).
 
+## Installing Perl
+
+If you are on GNU/Linx or macOS, I recommend installing from
+[Perlbrew](https://perlbrew.pl/). Each Perl installation comes with its own
+library directories, so if you switch Perl version, you need to reinstall Phoebe
+for that Perl version.
+
 ## See also
 EOT
 

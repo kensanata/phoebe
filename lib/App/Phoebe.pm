@@ -2109,9 +2109,10 @@ sub valid_mime_type {
   my $params = shift;
   my $type = $params->{mime};
   my ($main_type) = split(/\//, $type, 1);
-  my @types = @{$server->{wiki_mime_type}} || "text/plain";
+  my @types = @{$server->{wiki_mime_type}};
+  @types = ("text/plain") unless @types;
   if ($type ne "text/plain" and not grep(/^$type$/, @types) and not grep(/^$main_type$/, @types)) {
-    $log->debug("This wiki does not allow $type");
+    $log->debug("This wiki does not allow $type (@types)");
     result($stream, "59", "This wiki does not allow $type");
     $stream->close_gracefully();
     return;

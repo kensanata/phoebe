@@ -95,8 +95,7 @@ dev:
 	    --log_level=4 --wiki_main_page=Welcome \
 	    --wiki_mime_type=image/jpeg
 
-# Update the README file. The Perl script no only converts the POD
-# documentation to Markdown, it also adds a table of contents.
+# Update the README file.
 README.md: script/phoebe \
   $(sort $(filter-out phoebe,$(filter-out %~,$(wildcard script/*)))) \
   lib/App/Phoebe.pm $(sort $(wildcard lib/App/Phoebe/*.pm))

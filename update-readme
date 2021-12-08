@@ -1,24 +1,159 @@
 #!/usr/bin/env perl
 use Modern::Perl;
-use Pod::Markdown;
-use Text::Slugify qw(slugify);
 use File::Slurper qw(read_text write_text);
+use URI::Escape;
+use utf8;
+
 die "Read which Perl script?" unless @ARGV;
 my @pods = map { read_text($_) } @ARGV;
-for (@pods) {
-  s/^=head(\d) NAME\n\n(\S+).*/=head$1 $2/m; # replace NAME with the lib on the next paragraph
-  s/^=head(\d) DESCRIPTION\n\n//m;
-  s/^=head(\d) SYNOPSIS\n\n//m;
-  s/^=head(\d) ([A-Z ]+)$/"=head$1 ".ucfirst(lc($2))/gem; # change OPTIONS to Options
+
+my $markdown = <<EOT;
+# Phoebe Wiki
+
+Phoebe does two and a half things:
+
+It's a program that you run on a computer and other people connect to it using
+their Gemini client in order to read the pages on it.
+
+It's a wiki, which means that people can edit the pages without needing an
+account. All they need is a client that speaks both Gemini and Titan, and the
+password. The default password is "hello". 😃
+
+Optionally, people can also access it using a regular web browser.
+
+Gemini itself is very simple network protocol, like Gopher or Finger, but with
+TLS. Gemtext is a very simple markup language, a bit like Markdown, but line
+oriented. See ["GEMTEXT"](#gemtext).
+
+To take a look for yourself, check out the test wiki via the web or via the web.
+
+- [What is Gemini?](https://gemini.circumlunar.space/)
+- [Gemini link collection](https://git.sr.ht/~kr1sp1n/awesome-gemini)
+- [Test site, via the web](https://transjovian.org:1965/test)
+- [Test site, via Gemini](gemini://transjovian.org/test)
+
+## Reading the wiki
+
+This repository comes with a Perl script called
+[gemini](https://metacpan.org/pod/gemini) to download Gemini URLs.
+
+Other clients can be found here:
+
+- [Gemini software](https://gemini.circumlunar.space/software/)
+- [Gemini clients](https://transjovian.org:1965/gemini/page/Clients)
+
+See [App::Phoebe::Web](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWeb) to
+enable reading via the web.
+
+## Gemtext
+
+Pages are written in gemtext, a lightweight hypertext format. You can use your
+favourite text editor to write them.
+
+A text line is a paragraph of text.
+
+    This is a paragraph.
+    This is another paragraph.
+
+A link line starts with "=>", a space, a URL, optionally followed by whitespace
+and some text; the URL can be absolute or relative.
+
+    => http://transjovian.org/ The Transjovian Council on the web
+    => Welcome                 Welcome to The Transjovian Council
+
+A line starting with "\`\`\`" toggles preformatting on and off.
+
+    Here is an example:
+    ```
+    The tapping calms me:
+    Constant mindless murmuring
+    Rain drops against glass
+    ```
+
+A line starting with "#", "##", or "###", followed by a space and some text is a
+heading.
+
+    ## License
+    The GNU Affero General Public License.
+
+A line starting with "\*", followed by a space and some text is a list item.
+
+    * one item
+    * another item
+
+A line starting with ">", followed by a space and some text is a quote.
+
+    The monologue at the end is fantastic, with the city lights and the rain.
+    > I have seen things you people would not believe.
+
+## Editing the wiki
+
+How do you edit a Phoebe wiki? You need to use a Titan-enabled client.
+
+[Titan](https://transjovian.org:1965/titan) is a companion protocol to Gemini:
+it allows clients to upload files to Gemini sites, if servers allow this. On
+Phoebe, you can edit "raw" pages. That is, at the bottom of a page you'll see a
+link to the "raw" page. If you follow it, you'll see the page content as plain
+text. You can submit a changed version of this text to the same URL using Titan.
+
+Known clients:
+
+This repository comes with a Perl script called
+[titan](https://metacpan.org/pod/titan) to upload files.
+
+[Gemini Write](https://alexschroeder.ch/cgit/gemini-write/) is an extension for
+the Emacs Gopher and Gemini client [Elpher](https://thelambdalab.xyz/elpher/).
+
+[Gemini & Titan for Bash](https://alexschroeder.ch/cgit/gemini-titan/about/) are
+two shell functions that allow you to download and upload files.
+
+[Lagrange](https://gmi.skyjake.fi/lagrange/) is a GUI client that is Titan
+enabled.
+
+See [App::Phoebe::WebEdit](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWebEdit) to
+enable editing via the web.
+
+## Installation
+
+Using `cpan`:
+
+    cpan App::Phoebe
+
+Manual install:
+
+    perl Makefile.PL
+    make
+    make install
+
+## Dependencies
+
+If you are not using `cpan` or `cpanm` to install Phoebe, you'll need to install
+the following dependencies:
+
+- [Algorithm::Diff](https://metacpan.org/pod/Algorithm%3A%3ADiff), or `libalgorithm-diff-xs-perl`
+- [File::ReadBackwards](https://metacpan.org/pod/File%3A%3AReadBackwards), or `libfile-readbackwards-perl`
+- [File::Slurper](https://metacpan.org/pod/File%3A%3ASlurper), or `libfile-slurper-perl`
+- [Mojolicious](https://metacpan.org/pod/Mojolicious), or `libmojolicious-perl`
+- [IO::Socket::SSL](https://metacpan.org/pod/IO%3A%3ASocket%3A%3ASSL), or `libio-socket-ssl-perl`
+- [Modern::Perl](https://metacpan.org/pod/Modern%3A%3APerl), or `libmodern-perl-perl`
+- [URI::Escape](https://metacpan.org/pod/URI%3A%3AEscape), or `liburi-escape-xs-perl`
+- [Net::IDN::Encode](https://metacpan.org/pod/Net%3A%3AIDN%3A%3AEncode), or `libnet-idn-encode-perl`
+- [Encode::Locale](https://metacpan.org/pod/Encode%3A%3ALocale), or `libencode-locale-perl`
+
+I'm going to be using `curl` and `openssl` in the Quickstart section of
+`phoebe`, so you'll need those tools as well. And finally, when people download
+their data, the code calls `tar` (available from packages with the same name on
+Debian derived systems).
+
+## See also
+EOT
+
+for my $pod (@pods) {
+  if ($pod =~ /\n=head1 NAME\n\n(.*?\n)\n/s) {
+    my ($name, $description) = split(/ /, $1, 2);
+    my $url = "https://metacpan.org/pod/" . uri_escape($name);
+    $markdown .= "\n* [$name]($url) $description";
+  }
 }
-my $pod = join("\n", @pods);
-my $parser = Pod::Markdown->new;
-my $markdown;
-$parser->output_string(\$markdown);
-$parser->parse_string_document($pod);
-my @toc = $pod =~ /\n=head[12] (.*)/g;
-foreach (@toc) {$_ = ucfirst lc if /^[A-Z ]+$/ }
-my $toc = "**Table of Contents**\n\n"
-    . join("\n", map { my $item = $_; s/:://g; "- [$item](#" . slugify($_) . ")" } @toc)
-    . "\n\n";
-write_text('README.md', "# Phoebe Wiki\n\n" . $toc . $markdown);
+
+write_text('README.md', $markdown);

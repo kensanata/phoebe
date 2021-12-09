@@ -314,7 +314,7 @@ sub save_page {
   my $host = shift;
   my $space = shift;
   my $id = shift;
-  my $type = shift;
+  my $type = shift || "text/plain";
   my $data = shift;
   my $length = shift;
   # If the operation succeeds, we can close the stream; if the operation fails,
@@ -2107,10 +2107,9 @@ sub valid_mime_type {
   my $space = shift;
   my $id = shift;
   my $params = shift;
-  my $type = $params->{mime};
+  my $type = $params->{mime} || "text/plain";
   my ($main_type) = split(/\//, $type, 1);
   my @types = @{$server->{wiki_mime_type}};
-  @types = ("text/plain") unless @types;
   if ($type ne "text/plain" and not grep(/^$type$/, @types) and not grep(/^$main_type$/, @types)) {
     $log->debug("This wiki does not allow $type (@types)");
     result($stream, "59", "This wiki does not allow $type");

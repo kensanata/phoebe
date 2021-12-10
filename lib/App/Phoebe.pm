@@ -2110,9 +2110,12 @@ sub valid_mime_type {
   my $type = $params->{mime} || "text/plain";
   my ($main_type) = split(/\//, $type, 1);
   my @types = @{$server->{wiki_mime_type}};
-  if ($type ne "text/plain" and not grep(/^$type$/, @types) and not grep(/^$main_type$/, @types)) {
-    $log->debug("This wiki does not allow $type (@types)");
-    result($stream, "59", "This wiki does not allow $type");
+  # the wiki always allows text/plain or text/gemini
+  if ($type eq "text/plain" or $type eq "text/gemini") {
+    return 1;
+  } elsif (not grep(/^$type$/, @types) and not grep(/^$main_type$/, @types)) {
+    $log->debug("This wiki does not allow $type, only @types");
+    result($stream, "59", "This wiki does not allow $type, only @types");
     $stream->close_gracefully();
     return;
   }

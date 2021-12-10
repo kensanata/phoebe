@@ -94,6 +94,29 @@ I'm going to be using `curl` and `openssl` in the Quickstart section of
 their data, the code calls `tar` (available from packages with the same name on
 Debian derived systems).
 
+## Docker
+
+If you want to create your own docker image, there is a Dockerfile to
+build this in the repository. Check out the repository, change into
+the working directory, and build a docker image, tagging it
+`test/phoebe`:
+
+```bash
+docker build --tag test/phoebe .
+```
+
+To start the container from this image and run Phoebe, mapping the
+local `wiki` directory and using your system’s network (the
+container’s host):
+
+```bash
+docker run --network=host --volume=$(pwd)/wiki:/wiki test/phoebe
+```
+
+To stop the container, find the correct container using `docker
+container ls` and then stop it using `docker container stop $id` (and
+replacing `$id` with the correct one).
+
 ## See also
 
 * [phoebe](https://metacpan.org/pod/phoebe) - a Gemini-first wiki server

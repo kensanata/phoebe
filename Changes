@@ -1,3 +1,8 @@
+4.05
+
+- Uploading of text/gemini is now treated like text/plain, resulting
+  in a page (instead of an attempted file upload).
+
 4.04
 
 - App::Phoebe::Oracle is new.

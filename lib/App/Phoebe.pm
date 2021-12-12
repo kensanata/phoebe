@@ -2022,7 +2022,7 @@ sub is_upload {
     my $host = $1;
     my($scheme, $authority, $path, $query, $fragment) =
 	$request =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?|;
-    if ($path =~ m!^(?:/($spaces_regex))?(?:/raw|/page)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!) {
+    if ($path =~ m!^(?:/($spaces_regex))?(?:/raw|/page|/file)?/([^/;=&]+(?:;\w+=[^;=&]+)+)!) {
       my $space = $1;
       my ($id, @params) = split(/[;=&]/, $2);
       my $params = { map {decode_utf8(uri_unescape($_))} @params };

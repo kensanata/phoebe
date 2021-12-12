@@ -2113,8 +2113,13 @@ sub valid_mime_type {
   # the wiki always allows text/plain or text/gemini
   if ($type eq "text/plain" or $type eq "text/gemini") {
     return 1;
+  } elsif (not @types) {
+    $log->debug("This wiki does not allow file uploads");
+    result($stream, "59", "This wiki does not allow file uploads");
+    $stream->close_gracefully();
+    return;
   } elsif (not grep(/^$type$/, @types) and not grep(/^$main_type$/, @types)) {
-    $log->debug("This wiki does not allow $type, only @types");
+    $log->debug("This wiki does not allow $type");
     result($stream, "59", "This wiki does not allow $type, only @types");
     $stream->close_gracefully();
     return;

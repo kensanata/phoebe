@@ -320,7 +320,7 @@ sub save_page {
   # If the operation succeeds, we can close the stream; if the operation fails,
   # we can close the stream; but if the operation was rescheduled, we must not
   # close the stream!
-  if ($type ne "text/plain") {
+  if ($type ne "text/plain" and $type ne "text/gemini") {
     if ($length == 0) {
       with_lock($stream, $host, $space,
 		sub {

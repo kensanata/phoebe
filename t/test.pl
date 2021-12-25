@@ -66,7 +66,7 @@ if ($example) {
       last;
     }
   }
-  ok($found, "$0 found");
+  die "Did not find the sources for $0\n" unless $found;
   # test $example at the end
 }
 write_text("$dir/config", $config . "\n1;\n") if $config;

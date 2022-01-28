@@ -526,8 +526,8 @@ sub oddmuse_serve_tag {
   my $tag = shift;
   success($stream);
   $log->info("Serving tag $tag");
-  $stream->write("This page is about the tag $tag.\n");
-  print_link($stream, $host, $space, normal_to_free($tag), "tag/$tag");
+  $stream->write("This page lists all the pages tagged $tag.\n");
+  print_link($stream, $host, $space, normal_to_free($tag), "page/$tag");
   $stream->write("\n");
   my $url = "$oddmuse_wikis{$host}?raw=1&search=tag:$tag";
   my $page = oddmuse_get_raw($stream, $url) // return;

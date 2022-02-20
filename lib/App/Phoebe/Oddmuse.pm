@@ -102,7 +102,8 @@ our %oddmuse_wiki_links = ("communitywiki.org" => 1);
 our %oddmuse_wiki_tokens = (
   "emacswiki.org" => "emacs" );
 
-our $oddmuse_namespace_regex = '[\p{Uppercase}\d][\w_  ]*';
+# Also allow percent encoded…
+our $oddmuse_namespace_regex = '[\p{Uppercase}\d][%\w_  ]*';
 
 *oddmuse_old_space_regex = \&App::Phoebe::space_regex;
 *App::Phoebe::space_regex = \&oddmuse_new_space_regex;

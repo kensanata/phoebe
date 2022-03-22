@@ -100,10 +100,12 @@ die "$!: giving up after ${total}s\n" unless $ok;
 
 # Test Oddmuse, and create the Test page in the main namespace (with the text
 # "Alex"), in the "Travels" namespace (with the text "Berta"), and in a Mëtal
-# namespace (with the text "Chloë").
+# namespace (with the text "Chloë"), and the page "Link" that links to it.
 $res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Fnord")->result;
 is($res->code, 302, "Oddmuse save page");
 $res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Alex")->result;
+is($res->code, 302, "Oddmuse updated page");
+$res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Link&text=[M%C3%ABtal:Test Mëtal Link]")->result;
 is($res->code, 302, "Oddmuse updated page");
 $res = $ua->get("http://localhost:$oddmuse_port/wiki?title=Test&text=Check%20out%20[[Bet]].&ns=Travels")->result;
 is($res->code, 302, "Oddmuse save page in namespace");
@@ -211,6 +213,9 @@ like($page, qr(^to:\n> ｢Berta｣$)m, "To");
 $page = query_gemini("$base/Travels/page/Test/1");
 like($page, qr(^Check out Bet\.$)m, "Revision 1");
 like($page, qr(^=> $base/Travels/page/Bet Bet$)m, "Link");
+
+$page = query_gemini("$base/page/Link");
+like($page, qr(^=> $base/M%C3%ABtal/page/Test Mëtal Link)m, "Page Link (namespace)");
 
 $page = query_gemini("$base/M%C3%ABtal/page/Test");
 like($page, qr(Chloë), "Page (namespace)");

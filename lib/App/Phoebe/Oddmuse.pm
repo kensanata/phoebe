@@ -211,44 +211,44 @@ sub oddmuse_process_request {
     result($stream, "31", "gemini://$host" . ($n ? ":$port" : "") . "/" . ($space ? $space : "") . ""); # this supports "up"
   } elsif (($host, $space, $id, $n) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/page/([^/]+)(?:/(\d+))?$!
 	   and $id ne $server->{wiki_main_page}) {
-    oddmuse_serve_page($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), $n);
+    oddmuse_serve_page($stream, $host, decode_utf8(uri_unescape($space)), free_to_normal(decode_utf8(uri_unescape($id))), $n);
   } elsif (($host, $space, $id) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/tag/([^/]+)$!) {
-    oddmuse_serve_tag($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))));
+    oddmuse_serve_tag($stream, $host, decode_utf8(uri_unescape($space)), free_to_normal(decode_utf8(uri_unescape($id))));
   } elsif (($host, $space, $id) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/raw/([^/]+)$!
 	   and $id ne $server->{wiki_main_page}) {
-    oddmuse_serve_raw($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))));
+    oddmuse_serve_raw($stream, $host, decode_utf8(uri_unescape($space)), free_to_normal(decode_utf8(uri_unescape($id))));
   } elsif (($host, $space, $id) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/html/([^/]+)$!) {
-    oddmuse_serve_html($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))));
+    oddmuse_serve_html($stream, $host, decode_utf8(uri_unescape($space)), free_to_normal(decode_utf8(uri_unescape($id))));
   } elsif (($host, $space, $n) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/(?:blog|more)(?:/(\d+))?$!) {
-    oddmuse_serve_blog($stream, $host, $space, $n||10);
+    oddmuse_serve_blog($stream, $host, decode_utf8(uri_unescape($space)), $n||10);
   } elsif (($host, $space, $n) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/index$!) {
-    oddmuse_serve_index($stream, $host, $space);
+    oddmuse_serve_index($stream, $host, decode_utf8(uri_unescape($space)));
   } elsif (($host, $space, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
-    oddmuse_serve_changes($stream, $host, $space, $n||3, $style); # days!
+    oddmuse_serve_changes($stream, $host, decode_utf8(uri_unescape($space)), $n||3, $style); # days!
   } elsif (($host, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?/do/all/changes(?:/(\d+))?(?:/(colour|fancy))?$!) {
     oddmuse_serve_changes($stream, $host, undef, $n||3, $style, 1); # days!
   } elsif (($host, $space, $id, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/history/([^/]*)(?:/(colour|fancy))?$!) {
-    oddmuse_serve_history($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), $style);
+    oddmuse_serve_history($stream, $host, decode_utf8(uri_unescape($space)), free_to_normal(decode_utf8(uri_unescape($id))), $style);
   } elsif (($host, $space, $id, $n, $style) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/diff/([^/]*)(?:/(\d+))?(?:/(colour))?$!) {
-    oddmuse_serve_diff($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), $n, $style);
+    oddmuse_serve_diff($stream, $host, decode_utf8(uri_unescape($space)), free_to_normal(decode_utf8(uri_unescape($id))), $n, $style);
   } elsif ($url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/match$!) {
     result($stream, "10", "Find page by name (Perl regex)");
   } elsif (($host, $space, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/match\?([^#]+)!) {
-    oddmuse_serve_match($stream, $host, $space, decode_query($query));
+    oddmuse_serve_match($stream, $host, decode_utf8(uri_unescape($space)), decode_query($query));
   } elsif ($url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/search$!) {
     result($stream, "10", "Find page by content (Perl regex)");
   } elsif (($host, $space, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/search\?([^#]+)!) {
-    oddmuse_serve_search($stream, $host, $space, decode_query($query));
+    oddmuse_serve_search($stream, $host, decode_utf8(uri_unescape($space)), decode_query($query));
   } elsif (($host, $space, $id, $query) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/comment/([^/#?]+)(?:\?([^#]+))?$!) {
-    oddmuse_comment($stream, $host, $space, free_to_normal(decode_utf8(uri_unescape($id))), decode_query($query));
+    oddmuse_comment($stream, $host, decode_utf8(uri_unescape($space)), free_to_normal(decode_utf8(uri_unescape($id))), decode_query($query));
   } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/atom$!) {
-    oddmuse_serve_atom($stream, $host, $space, 'rc');
+    oddmuse_serve_atom($stream, $host, decode_utf8(uri_unescape($space)), 'rc');
   } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/rss$!) {
-    oddmuse_serve_rss($stream, $host, $space, 'rc');
+    oddmuse_serve_rss($stream, $host, decode_utf8(uri_unescape($space)), 'rc');
   } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/blog/atom$!) {
-    oddmuse_serve_atom($stream, $host, $space, 'journal');
+    oddmuse_serve_atom($stream, $host, decode_utf8(uri_unescape($space)), 'journal');
   } elsif (($host, $space) = $url =~ m!^gemini://$hosts(?::$port)?(?:/($spaces))?/do/blog/rss$!) {
-    oddmuse_serve_rss($stream, $host, $space, 'journal');
+    oddmuse_serve_rss($stream, $host, decode_utf8(uri_unescape($space)), 'journal');
   } elsif (($query) = $url =~ m!^GET (\S*) HTTP/1\.[01]$!
 	   and ($host) = $headers->{host} =~ m!^$hosts(?::$port)(.*)$!) {
     $log->info("Redirecting to https://$host$query");

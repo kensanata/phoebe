@@ -301,7 +301,7 @@ sub oddmuse_serve_page {
   if (my ($type, $data) = $page =~ /^#FILE (\S+) ?(?:\S+)?\n(.*)/s) {
     oddmuse_serve_file_page($stream, $id, $type, $data);
   } else {
-    my $text = oddmuse_gemini_text($stream, $host, $space, $page);
+    my $text = oddmuse_gemini_text($stream, $host, $space, $page, $id);
     oddmuse_serve_gemini_page($stream, $host, $space, $id, $text, $revision);
   }
 }
@@ -314,7 +314,7 @@ sub oddmuse_text_new {
   my ($stream, $host, $space, $id, $revision) = @_;
   if (exists $oddmuse_wikis{$host}) {
     my $text = oddmuse_get_page(@_);
-    return oddmuse_gemini_text($stream, $host, $space, $text);
+    return oddmuse_gemini_text($stream, $host, $space, $text, $id);
   } else {
     return oddmuse_text_old(@_);
   }
@@ -395,7 +395,7 @@ sub oddmuse_serve_gemini_page {
     my $comments = oddmuse_get_page($stream, $host, $space, "Comments_on_$id");
     if ($comments) {
       $stream->write("\n\n## Comments\n");
-      $stream->write(encode_utf8 oddmuse_gemini_text($stream, $host, $space, $comments));
+      $stream->write(encode_utf8 oddmuse_gemini_text($stream, $host, $space, $comments, $id));
     }
   }
   $stream->write(encode_utf8 oddmuse_footer($stream, $host, $space, $id));
@@ -406,6 +406,7 @@ sub oddmuse_gemini_text {
   my $host = shift;
   my $space = shift;
   my $text = shift;
+  my $id = shift;
   # escape the preformatted blocks
   my $ref = 0;
   my @escaped;
@@ -921,13 +922,14 @@ sub oddmuse_serve_rss {
     if ($title =~ /:/) {
       ($ns, $title) = split(/:/, $title);
     }
+    my $id = free_to_normal($title);
     $stream->write(encode_utf8 "<title>" . quote_html($data->{title}) . "</title>\n");
-    my $link = "gemini://$host:$port/" . ($ns ? "$ns/" : "") . "page/" . uri_escape_utf8(free_to_normal($title));
+    my $link = "gemini://$host:$port/" . ($ns ? "$ns/" : "") . "page/" . uri_escape_utf8($id);
     $stream->write("<link>$link</link>\n");
     $stream->write("<guid>$link</guid>\n");
-    $link = "gemini://$host:$port/" . ($ns ? "$ns/" : "") . "page/Comments_on_" . uri_escape_utf8(free_to_normal($title));
+    $link = "gemini://$host:$port/" . ($ns ? "$ns/" : "") . "page/Comments_on_" . uri_escape_utf8($id);
     $stream->write("<comments>$link</comments>\n");
-    my $summary = quote_html(oddmuse_gemini_text($stream, $host, $space, $data->{description}));
+    my $summary = quote_html(oddmuse_gemini_text($stream, $host, $space, $data->{description}, $id));
     $stream->write(encode_utf8 "<description>$summary</description>\n") if $summary;
     # timestamp from 2020-07-22T20:59Z back to a number
     my $ts = $data->{"last-modified"};
@@ -975,11 +977,12 @@ sub oddmuse_serve_atom {
     $data = parse_data(shift @entries);
     $stream->write("<entry>\n");
     my $name = $data->{title};
+    my $id = free_to_normal($name);
     $stream->write(encode_utf8 "<title>$name</title>\n");
-    my $link = "gemini://$host:$port/page/" . uri_escape_utf8(free_to_normal($name));
+    my $link = "gemini://$host:$port/page/" . uri_escape_utf8($id);
     $stream->write("<link href=\"$link\"/>\n");
     $stream->write("<id>$link</id>\n");
-    my $summary = quote_html(oddmuse_gemini_text($stream, $host, $space, $data->{description}));
+    my $summary = quote_html(oddmuse_gemini_text($stream, $host, $space, $data->{description}, $id));
     $stream->write(encode_utf8 "<content type=\"text\">$summary</content>\n") if $summary;
     $stream->write("<updated>$data->{'last-modified'}</updated>\n");
     $stream->write("</entry>\n");

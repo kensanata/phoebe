@@ -802,7 +802,7 @@ sub utf8_item { my ($key, $value) = @_; $server->{$key} = decode(locale => $valu
       }
       for my $host (@host) {
 	$server->{host}->{$host} = 1;
-	$server->{port}->{$host} = [@port];
+	push(@{$server->{port}->{$host}}, @port);
 	# no $server->{cert_file} and $server->{key_file}
       }
       @host = @port = ();
@@ -815,7 +815,7 @@ sub utf8_item { my ($key, $value) = @_; $server->{$key} = decode(locale => $valu
       push @port, 1965 unless @port;
       if (not @host) {
 	$server->{host}->{'localhost'} = 1;
-	$server->{port}->{'localhost'} = [@port];
+	push(@{$server->{port}->{'localhost'}}, @port);
 	for my $port (@port) {
 	  $server->{cert_file}->{"localhost:$port"} = $cert_file;
 	  $server->{key_file}->{"localhost:$port"} = $key_file;
@@ -823,7 +823,7 @@ sub utf8_item { my ($key, $value) = @_; $server->{$key} = decode(locale => $valu
       }
       for my $host (@host) {
 	$server->{host}->{$host} = 1;
-	$server->{port}->{$host} = [@port];
+	push(@{$server->{port}->{$host}}, @port);
 	for my $port (@port) {
 	  $server->{cert_file}->{"$host:$port"} = $cert_file;
 	  $server->{key_file}->{"$host:$port"} = $key_file;
@@ -848,7 +848,7 @@ sub utf8_item { my ($key, $value) = @_; $server->{$key} = decode(locale => $valu
   for my $host (@host) {
     $default_certs = 1;
     $server->{host}->{$host} = 1;
-    $server->{port}->{$host} = [@port];
+    push(@{$server->{port}->{$host}}, @port);
     for my $port (@port) {
       $server->{cert_file}->{"$host:$port"} = 'cert.pem';
       $server->{key_file}->{"$host:$port"} = 'key.pem';
@@ -859,7 +859,7 @@ sub utf8_item { my ($key, $value) = @_; $server->{$key} = decode(locale => $valu
   if (not keys %{$server->{host}}) {
     $default_certs = 1;
     $server->{host}->{localhost} = 1;
-    $server->{port}->{localhost} = \@port;
+    push(@{$server->{port}->{localhost}}, @port);
     for my $port (@port) {
       $server->{cert_file}->{"localhost:$port"} = 'cert.pem';
       $server->{key_file}->{"localhost:$port"} = 'key.pem';

@@ -798,14 +798,14 @@ sub utf8_item { my ($key, $value) = @_; $server->{$key} = decode(locale => $valu
       push @port, 1965 unless @port;
       if (not @host and not $server->{host}->{'localhost'}) {
 	$server->{host}->{'localhost'} = 1;
-	$server->{port}->{'localhost'} = \@port;
+	$server->{port}->{'localhost'} = [@port];
       }
       for my $host (@host) {
 	$server->{host}->{$host} = 1;
-	$server->{port}->{$host} = \@port;
+	$server->{port}->{$host} = [@port];
 	# no $server->{cert_file} and $server->{key_file}
       }
-      @host = ();
+      @host = @port = ();
       return;
     }
     die "$val does not exist\n" unless -f $val;
@@ -815,7 +815,7 @@ sub utf8_item { my ($key, $value) = @_; $server->{$key} = decode(locale => $valu
       push @port, 1965 unless @port;
       if (not @host) {
 	$server->{host}->{'localhost'} = 1;
-	$server->{port}->{'localhost'} = \@port;
+	$server->{port}->{'localhost'} = [@port];
 	for my $port (@port) {
 	  $server->{cert_file}->{"localhost:$port"} = $cert_file;
 	  $server->{key_file}->{"localhost:$port"} = $key_file;
@@ -823,14 +823,14 @@ sub utf8_item { my ($key, $value) = @_; $server->{$key} = decode(locale => $valu
       }
       for my $host (@host) {
 	$server->{host}->{$host} = 1;
-	$server->{port}->{$host} = \@port;
+	$server->{port}->{$host} = [@port];
 	for my $port (@port) {
 	  $server->{cert_file}->{"$host:$port"} = $cert_file;
 	  $server->{key_file}->{"$host:$port"} = $key_file;
 	}
       }
       $cert_file = $key_file = undef;
-      @host = ();
+      @host = @port = ();
     }
   }
 
@@ -848,7 +848,7 @@ sub utf8_item { my ($key, $value) = @_; $server->{$key} = decode(locale => $valu
   for my $host (@host) {
     $default_certs = 1;
     $server->{host}->{$host} = 1;
-    $server->{port}->{$host} = \@port;
+    $server->{port}->{$host} = [@port];
     for my $port (@port) {
       $server->{cert_file}->{"$host:$port"} = 'cert.pem';
       $server->{key_file}->{"$host:$port"} = 'key.pem';
@@ -865,6 +865,9 @@ sub utf8_item { my ($key, $value) = @_; $server->{$key} = decode(locale => $valu
       $server->{key_file}->{"localhost:$port"} = 'key.pem';
     }
   }
+
+  # use Data::Dumper;
+  # warn Dumper($server);
 
   # if the certs don't exist, generate them
   if ($default_certs
@@ -964,20 +967,20 @@ sub start_servers {
   # If it is called under a different name, it's probably just being loaded as a
   # library, in which case we don't want to start the servers.
   if ($0 eq __FILE__) {
-    # Determine the IP numbers for each host.
+    # On every address, on every port, figure out what hosts to listen to.
     for my $host (keys %{$server->{host}}) {
       for my $address (get_ip_numbers($host)) {
-	$server->{address}->{$address} //= { hosts => [], ports => {} };
-	push(@{$server->{address}->{$address}->{hosts}}, $host);
+	$server->{address}->{$address} //= {};
 	for my $port (@{$server->{port}->{$host}}) {
-	  # collect unique ports
-	  $server->{address}->{$address}->{ports}->{$port} = 1;
+	  $server->{address}->{$address}->{$port} //= [];
+	  push(@{$server->{address}->{$address}->{$port}}, $host);
+	  $log->debug("planning to listen for $host on $address:$port");
 	}
       }
     }
     for my $address (keys %{$server->{address}}) {
-      my @hosts = @{$server->{address}->{$address}->{hosts}};
-      for my $port (keys %{$server->{address}->{$address}->{ports}}) {
+      for my $port (keys %{$server->{address}->{$address}}) {
+	my @hosts = @{$server->{address}->{$address}->{$port}};
 	my %args = (address => $address, port => $port);
 	my $msg = "@hosts: listening on $address:$port";
 	$args{tls} = 1;

@@ -268,6 +268,9 @@ sub main {
     }
     return 1;
   }
+  elsif ($url =~ m!^gemini://(?:$host)(?::$port)?/play/ijirait\.tar\.gz$!) {
+    export_archive($stream);
+  }
   return 0;
 }
 
@@ -374,6 +377,11 @@ sub look {
 }
 
 sub export {
+  my $stream = shift;
+  result($stream, "31", "ijirait.tar.gz"); # redirect in order to get a better filename
+}
+
+sub export_archive {
   my $stream = shift;
   success($stream, "application/gzip");
   my $tar = Archive::Tar->new;

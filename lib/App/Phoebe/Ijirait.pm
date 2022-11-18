@@ -61,6 +61,7 @@ package App::Phoebe::Ijirait;
 use App::Phoebe qw(@extensions $log $server @request_handlers success result);
 use Modern::Perl;
 use Archive::Tar;
+use IO::String;
 use Encode qw(encode_utf8 decode_utf8);
 use File::Slurper qw(read_binary write_binary read_text);
 use Mojo::JSON qw(decode_json encode_json);
@@ -374,10 +375,6 @@ sub look {
 }
 
 sub export {
-  # /ijirait/index.gmi
-  # /ijirait/rooms/$id.gmi
-  # /ijirait/things/$id/$thing.gmi
-  # /ijirait/people/$person.gmi
   my $stream = shift;
   success($stream, "application/gzip");
   my $tar = Archive::Tar->new;
@@ -416,7 +413,9 @@ sub export {
     }
     $tar->add_data("ijirait/rooms/$room->{id}.gmi", $bytes);
   }
-  $tar->write($stream->handle);
+  my $io = IO::String->new();
+  $tar->write($io);
+  $stream->write(gzip $io);
 }
 
 sub timespan {

@@ -38,7 +38,6 @@ WriteMakefile(
     'IO::Scalar' => 0,            # WebDAV.pm
     'HTTP::Date' => 0,            # WebDAV.pm
     'XML::LibXML' => 0,           # WebDAV.pm
-    'String::IO' => 0,            # Ijirait.pm
   },
   META_MERGE => {
     'meta-spec' => { version => 2 },

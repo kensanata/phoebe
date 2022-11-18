@@ -61,7 +61,6 @@ package App::Phoebe::Ijirait;
 use App::Phoebe qw(@extensions $log $server @request_handlers success result);
 use Modern::Perl;
 use Archive::Tar;
-use IO::String;
 use Encode qw(encode_utf8 decode_utf8);
 use File::Slurper qw(read_binary write_binary read_text);
 use Mojo::JSON qw(decode_json encode_json);
@@ -413,8 +412,10 @@ sub export {
     }
     $tar->add_data("ijirait/rooms/$room->{id}.gmi", $bytes);
   }
-  my $io = IO::String->new();
-  $tar->write($io);
+  my $io;
+  open(my $fh, ">", \$io) or $log->error("Error preparing string for tarball: $!");
+  $tar->write($fh) or $log->error("Error writing tarball: " . $tar->error);
+  close($fh);
   $stream->write(gzip $io);
 }
 

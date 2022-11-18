@@ -251,7 +251,10 @@ sub main {
   my $stream = shift;
   my $url = shift;
   my $port = App::Phoebe::port($stream);
-  if ($url =~ m!^gemini://(?:$host)(?::$port)?/play/ijirait(?:/([a-z]+))?(?:\?(.*))?!) {
+  if ($url =~ m!^gemini://(?:$host)(?::$port)?/play/ijirait\.tar\.gz$!) {
+    export_archive($stream);
+  }
+  elsif ($url =~ m!^gemini://(?:$host)(?::$port)?/play/ijirait(?:/([a-z]+))?(?:\?(.*))?!) {
     my $command = ($1 || "look") . ($2 ? " " . decode_utf8 uri_unescape($2) : "");
     $log->debug("Handling $url - $command");
     # some commands require no client certificate (and no person argument!)
@@ -267,9 +270,6 @@ sub main {
       type($stream, $p, $command);
     }
     return 1;
-  }
-  elsif ($url =~ m!^gemini://(?:$host)(?::$port)?/play/ijirait\.tar\.gz$!) {
-    export_archive($stream);
   }
   return 0;
 }
@@ -378,7 +378,7 @@ sub look {
 
 sub export {
   my $stream = shift;
-  result($stream, "31", "ijirait.tar.gz"); # redirect in order to get a better filename
+  result($stream, "31", "/play/ijirait.tar.gz"); # redirect in order to get a better filename
 }
 
 sub export_archive {
@@ -412,7 +412,7 @@ sub export_archive {
     my @people = grep { $_->{location} == $room->{id} } @{$data->{people}};
     $bytes .= "## People\n" if @people > 0;
     for my $o (@people) {
-      $bytes .= encode_utf8 "=> ../people/$o->{id}.gmi $o->name\n";
+      $bytes .= encode_utf8 "=> ../people/$o->{id}.gmi $o->{name}\n";
       my $bytes2 = encode_utf8 "# $o->{name}\n";
       $bytes2 .= encode_utf8 "$o->{description}\n";
       $bytes2 .= encode_utf8 "=> ../rooms/$room->{id}.gmi $room->{name}\n";

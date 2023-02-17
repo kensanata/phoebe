@@ -316,4 +316,30 @@ This is a list.
 And this is the end.});
 like($page, qr(^This is a list\.\n\n\* first\n\* second\n\nAnd this is the end\.$)m, "list");
 
+$page = App::Phoebe::Oddmuse::oddmuse_gemini_text(undef, $host, "", qq{
+[[image:https://alexschroeder.ch/podcast/logo-small.png]]});
+like($page, qr(^=> https://alexschroeder.ch/podcast/logo-small.png https://alexschroeder.ch/podcast/logo-small.png \(image\)\n)m, "image 1a");
+
+$page = App::Phoebe::Oddmuse::oddmuse_gemini_text(undef, $host, "", qq{
+[[image:https://alexschroeder.ch/podcast/logo-small.png|Halberds and Helmets]]});
+like($page, qr(^=> https://alexschroeder.ch/podcast/logo-small.png Halberds and Helmets \(image\)\n)m, "image 2a");
+
+$page = App::Phoebe::Oddmuse::oddmuse_gemini_text(undef, $host, "", qq{
+[[image:https://alexschroeder.ch/podcast/logo-small.png|Halberds and Helmets|Halberds and Helmets Podcast]]});
+like($page, qr(^=> https://alexschroeder.ch/podcast/logo-small.png Halberds and Helmets \(image\)\n)m, "image 3a1");
+like($page, qr(^=> gemini://localhost:1965/page/Halberds_and_Helmets_Podcast Halberds and Helmets \(follow-up\)\n)m, "image 3a2");
+
+$page = App::Phoebe::Oddmuse::oddmuse_gemini_text(undef, $host, "", qq{
+[[image/right:https://alexschroeder.ch/podcast/logo-small.png]]});
+like($page, qr(^=> https://alexschroeder.ch/podcast/logo-small.png https://alexschroeder.ch/podcast/logo-small.png \(image\)\n)m, "image 1b");
+
+$page = App::Phoebe::Oddmuse::oddmuse_gemini_text(undef, $host, "", qq{
+[[image/right:https://alexschroeder.ch/podcast/logo-small.png|Halberds and Helmets]]});
+like($page, qr(^=> https://alexschroeder.ch/podcast/logo-small.png Halberds and Helmets \(image\)\n)m, "image 2b");
+
+$page = App::Phoebe::Oddmuse::oddmuse_gemini_text(undef, $host, "", qq{
+[[image/right:https://alexschroeder.ch/podcast/logo-small.png|Halberds and Helmets|Halberds and Helmets Podcast]]});
+like($page, qr(^=> https://alexschroeder.ch/podcast/logo-small.png Halberds and Helmets \(image\)\n)m, "image 3b1");
+like($page, qr(^=> gemini://localhost:1965/page/Halberds_and_Helmets_Podcast Halberds and Helmets \(follow-up\)\n)m, "image 3b");
+
 done_testing();

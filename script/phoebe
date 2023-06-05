@@ -426,7 +426,7 @@ own F<config> file.
 
 =back
 
-When looking at the command line, Phoebe accumulates hostnames (C<--host>)and
+When looking at the command line, Phoebe accumulates hostnames (C<--host>) and
 ports (C<--port>) until both a certificate (C<--cert_file>) and a private key
 (C<--key_file>) have been provided, or you have indicated that no TLS is
 required (C<--no_cert>), at which point the process starts again.
@@ -991,7 +991,7 @@ sub start_servers {
 	  $args{tls_cert}->{$host} = $server->{cert_file}->{"$host:$port"};
 	  $args{tls_key}->{$host} = $server->{key_file}->{"$host:$port"};
 	  if ($args{tls_cert}->{$host} and $args{tls_key}->{$host}) {
-	    $log->debug("$host uses $args{tls_cert}->{$host} and $args{tls_key}->{$host}");
+	    $log->debug("$host:$port uses $args{tls_cert}->{$host} and $args{tls_key}->{$host}");
 	  } else {
 	    push(@hosts_without_cert, $host);
 	  }

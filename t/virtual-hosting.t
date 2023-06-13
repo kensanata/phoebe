@@ -112,10 +112,10 @@ like($page, qr/^30 gemini:\/\/localhost:$port\/berta\/page\/Haiku\r$/, "Haiku sa
 # List of all spaces
 
 $page = query_gemini("$base/do/spaces");
-like($page, qr/^=> gemini:\/\/localhost:$port\/berta\/ localhost\/berta$/m, "berta space listed");
-like($page, qr/^=> gemini:\/\/localhost:$port\/ localhost$/m, "localhost space listed");
-like($page, qr/^=> $base\/alex\/ 127\.0\.0\.1\/alex$/m, "alex space listed");
-like($page, qr/^=> $base\/ 127\.0\.0\.1$/m, "127.0.0.1 space listed");
+like($page, qr/^=> gemini:\/\/localhost\/berta\/ localhost\/berta$/m, "berta space listed");
+like($page, qr/^=> gemini:\/\/localhost\/ localhost$/m, "localhost space listed");
+like($page, qr/^=> gemini:\/\/127\.0\.0\.1\/alex\/ 127\.0\.0\.1\/alex$/m, "alex space listed");
+like($page, qr/^=> gemini:\/\/127\.0\.0\.1\/ 127\.0\.0\.1$/m, "127.0.0.1 space listed");
 
 # All changes ("unified changes")
 

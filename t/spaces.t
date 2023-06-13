@@ -114,7 +114,7 @@ like($page, qr/^=> $base\/page\/Alex Alex/m, "Alex found in unified changes");
 like($page, qr/^=> $base\/alex\/page\/Haiku/m, "Haiku found in unified changes");
 
 $page = query_gemini("$base/do/spaces");
-like($page, qr/^=> $base\/alex\/ alex/m, "Space alex found");
+like($page, qr/^=> gemini:\/\/$host\/alex\/ alex/m, "Space alex found");
 
 # add a special token to the alex space via config file
 

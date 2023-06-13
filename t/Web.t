@@ -51,7 +51,7 @@ for (qw(/raw /html /diff /history /do/changes /do/all/changes /do/rss /do/atom /
 }
 
 $page = query_web("GET / HTTP/1.0\r\nhost: $host:$port");
-like($page, qr!<a href="https://$host:$port/page/Alex">Alex</a>!, "main menu contains Alex");
+like($page, qr!<a href="/page/Alex">Alex</a>!, "main menu contains Alex");
 
 $page = query_web("GET /page/Alex HTTP/1.0\r\nhost: $host:$port");
 like($page, qr!<p>Alex Schroeder!, "Alex content");
@@ -69,26 +69,26 @@ like($page, qr!<pre class="poetry">\nHello\!\nYo\!\n</pre>!, "Class got passed")
 
 $page = query_web("GET /history/Alex HTTP/1.0\r\nhost: $host:$port");
 like($page, qr!History!, "History rendered");
-like($page, qr!<a href="https://$host:$port/page/Alex">Alex \(current\)</a>!, "Change entry");
+like($page, qr!<a href="/page/Alex">Alex \(current\)</a>!, "Change entry");
 
 $page = query_web("GET /diff/Alex/1 HTTP/1.0\r\nhost: $host:$port");
 like($page, qr!Differences for Alex!, "Diff rendered");
 
 $page = query_web("GET /do/changes HTTP/1.0\r\nhost: $host:$port");
 like($page, qr!Changes!, "Changes rendered");
-like($page, qr!<a href="https://$host:$port/page/Alex">Alex \(current\)</a>!, "Change entry");
+like($page, qr!<a href="/page/Alex">Alex \(current\)</a>!, "Change entry");
 
 $page = query_web("GET /do/all/changes HTTP/1.0\r\nhost: $host:$port");
-like($page, qr!<a href="https://$host:$port/do/all/latest/changes/100">Latest changes</a>!, "Link to latest changes");
-like($page, qr!<a href="https://$host:$port/page/Alex">Alex \(current\)</a>!, "Change entry");
+like($page, qr!<a href="/do/all/latest/changes/100">Latest changes</a>!, "Link to latest changes");
+like($page, qr!<a href="/page/Alex">Alex \(current\)</a>!, "Change entry");
 
 $page = query_web("GET /do/all/latest/changes HTTP/1.0\r\nhost: $host:$port");
-like($page, qr!<a href="https://$host:$port/do/all/changes/100">All changes</a>!, "Link to all changes");
-like($page, qr!<a href="https://$host:$port/page/Alex">Alex</a>!, "Change entry");
+like($page, qr!<a href="/do/all/changes/100">All changes</a>!, "Link to all changes");
+like($page, qr!<a href="/page/Alex">Alex</a>!, "Change entry");
 
 $page = query_web("GET /do/index HTTP/1.0\r\nhost: $host:$port");
 like($page, qr!All Pages!, "All Pages");
-like($page, qr!<a href="https://$host:$port/page/Alex">Alex</a>!, "Page entry");
+like($page, qr!<a href="/page/Alex">Alex</a>!, "Page entry");
 
 $page = query_web("GET /do/spaces HTTP/1.0\r\nhost: $host:$port");
 like($page, qr!All Spaces!, "All Spaces");

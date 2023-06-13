@@ -270,7 +270,7 @@ sub process_http {
       serve_files_via_http($stream, $host, space($stream, $host, $space));
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/do/spaces HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-      serve_spaces_via_http($stream, $host, $port);
+      serve_spaces_via_http($stream, $host);
     } elsif (($space, $id, $n) = $request =~ m!^GET (?:/($spaces))?/do/rss HTTP/1\.[01]$!
 	     and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
       serve_rss_via_http($stream, $host, space($stream, $host, $space));
@@ -347,9 +347,8 @@ sub link_html {
   if (not $id) {
     $id = "page/$title";
   }
-  my $port = port($stream);
   # don't encode the slash
-  return "<a href=\"https://$host:$port/"
+  return "<a href=\"/"
       . ($space && $space ne $host ? uri_escape_utf8($space) . "/" : "")
       . join("/", map { uri_escape_utf8($_) } split (/\//, $id))
       . "\">"
@@ -448,7 +447,6 @@ sub serve_files_via_http {
 sub serve_spaces_via_http {
   my $stream = shift;
   my $host = shift;
-  my $port = shift;
   $log->info("Serving all spaces via HTTP");
   $stream->write("HTTP/1.1 200 OK\r\n");
   $stream->write("Content-Type: text/html\r\n");
@@ -464,7 +462,7 @@ sub serve_spaces_via_http {
   $stream->write("<body>\n");
   $stream->write("<h1>All Spaces</h1>\n");
   $stream->write("<ul>\n");
-  my $spaces = space_links($stream, "https", $host, $port);
+  my $spaces = space_links($stream, "https", $host);
   for my $url (sort keys %$spaces) {
     $stream->write(encode_utf8 "<li><a href=\"$url\">$spaces->{$url}</a>\n");
   }

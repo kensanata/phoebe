@@ -543,7 +543,7 @@ sub process_gemini {
     } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/files$!) {
       serve_files($stream, $host, space($stream, $host, $space));
     } elsif (($host) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/spaces$!) {
-      serve_spaces($stream, $host, $port);
+      serve_spaces($stream, $host);
     } elsif (($host, $space) = $url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/data$!) {
       serve_data($stream, $host, space($stream, $host, $space));
     } elsif ($url =~ m!^(?:gemini:)?//($hosts)(?::$port)?(?:/($spaces))?/do/match$!) {
@@ -861,11 +861,10 @@ sub serve_files {
 sub serve_spaces {
   my $stream = shift;
   my $host = shift;
-  my $port = shift;
   success($stream);
   $log->info("Serving all spaces");
   $stream->write("# Spaces\n");
-  my $spaces = space_links($stream, "gemini", $host, $port);
+  my $spaces = space_links($stream, "gemini", $host);
   for my $url (sort keys %$spaces) {
     $stream->write(encode_utf8 "=> $url $spaces->{$url}\n");
   }
@@ -1992,20 +1991,19 @@ sub space_links {
   my $stream = shift;
   my $scheme = shift;
   my $host = shift;
-  my $port = shift;
   my %spaces;
   if (keys %{$server->{host}} > 1) {
     for (keys %{$server->{host}}) {
-      $spaces{"$scheme://$_:$port/"} = $_;
+      $spaces{"$scheme://$_/"} = $_;
     }
     for my $space (@{$server->{wiki_space}}) {
       my ($ahost, $aspace) = split(/\//m, $space, 2);
-      $spaces{"$scheme://$ahost:$port/$aspace/"} = $space;
+      $spaces{"$scheme://$ahost/$aspace/"} = $space;
     }
   } elsif (@{$server->{wiki_space}}) {
-    $spaces{"$scheme://$host:$port/"} = "Main space";
+    $spaces{"$scheme://$host/"} = "Main space";
     for (sort @{$server->{wiki_space}}) {
-      $spaces{"$scheme://$host:$port/$_/"} = $_;
+      $spaces{"$scheme://$host/$_/"} = $_;
     }
   }
   return \%spaces;

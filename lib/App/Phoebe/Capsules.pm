@@ -254,7 +254,7 @@ sub serve_capsule_delete {
 
 sub serve_capsule_access {
   my ($stream, $host, $capsule, $token) = @_;
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   my $target = first { $_->[1] eq $token } @capsule_tokens;
   if (not $fingerprint) {
     $log->info("Attempt to access a capsule without client certificate");
@@ -287,7 +287,7 @@ sub serve_capsule_sharing {
   return 1 unless is_my_capsule($stream, $name, $capsule, 'share');
   $log->info("Share capsule");
   my $token = capsule_name(sprintf "-------%04X%04X%04X", rand(0xffff), rand(0xffff), rand(0xffff));
-  push(@capsule_tokens, [time, $token, $stream->handle->get_fingerprint()]);
+  push(@capsule_tokens, [time, $token, $stream->handle->peer_certificates && $stream->handle->get_fingerprint()]);
   # forget old access tokens in ten minutes
   Mojo::IOLoop->timer(601 => \&capsule_token_cleanup);
   success($stream);
@@ -404,7 +404,7 @@ sub capsule_regex {
 sub capsule_name {
   my $stream = shift;
   # $stream can be a fingerprint string
-  my $fingerprint = ref $stream ? $stream->handle->get_fingerprint() : $stream;
+  my $fingerprint = ref $stream ? $stream->handle->peer_certificates && $stream->handle->get_fingerprint() : $stream;
   return unless $fingerprint;
   $fingerprint = $capsule_equivalent{$fingerprint} if $capsule_equivalent{$fingerprint};
   my @stack = map { hex } substr($fingerprint, 7, 12) =~ /(....)/g;

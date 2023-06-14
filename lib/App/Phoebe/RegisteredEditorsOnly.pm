@@ -113,7 +113,7 @@ sub protected_titan {
   my $hosts = host_regex();
   my $spaces = space_regex();
   my $port = port($stream);
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   if ($fingerprint and grep { $_ eq $fingerprint} @known_fingerprints) {
     $log->info("Successfully identified client certificate");
     return handle_titan($stream, $data);
@@ -138,7 +138,7 @@ sub protect_edit_requests {
   if ($request =~ m!^GET (?:/($spaces))?/do/edit/([^/#?]+) HTTP/1\.[01]$!
       or $request =~ m!^POST (?:/($spaces))?/do/edit/([^/#?]+) HTTP/1\.[01]$!) {
     # we don’t check $space and $host like we do in App::Phoebe::WebEdit!
-    my $fingerprint = $stream->handle->get_fingerprint();
+    my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
     if ($fingerprint and grep { $_ eq $fingerprint} @known_fingerprints) {
       $log->info("Successfully identified client certificate via the web");
       return 0; # let it be handled by process_edit_request in App::Phoebe::WebEdit!
@@ -169,7 +169,7 @@ sub registered_editor_login {
   my $hosts = host_regex();
   my $spaces = space_regex();
   my $port = port($stream);
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   my $host;
   if (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/login!) {
     if ($fingerprint and grep { $_ eq $fingerprint} @known_fingerprints) {

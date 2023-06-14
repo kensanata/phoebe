@@ -169,7 +169,7 @@ sub decode_query {
 sub serve_main_menu {
   my ($stream, $host) = @_;
   my $data = load_data($host);
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   success($stream);
   $log->info("Serving oracles");
   $stream->write("# Oracle\n");
@@ -241,7 +241,7 @@ sub serve_log {
 sub serve_questions {
   my ($stream, $host) = @_;
   my $data = load_data($host);
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   return result($stream, "60", "You need a client certificate to list your questions") unless $fingerprint;
   success($stream);
   $log->info("Serving own questions");
@@ -273,7 +273,7 @@ sub serve_question {
     return result($stream, "30", to_url($stream, $host, $oracle_space, ""));
   }
   success($stream);
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   if ($question->{status} eq 'answered'
       and (not $fingerprint
 	   or $fingerprint ne $question->{fingerprint})) {
@@ -359,7 +359,7 @@ sub serve_question {
 
 sub ask_question {
   my ($stream, $host, $text) = @_;
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   return result($stream, "60", "You need a client certificate to ask a question") unless $fingerprint;
   my $data = load_data($host);
   my $question = first { $_->{fingerprint} eq $fingerprint and $_->{status} ne 'published' } @$data;
@@ -394,7 +394,7 @@ sub ask_question {
 
 sub answer_question {
   my ($stream, $host, $number, $text) = @_;
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   if (not $fingerprint) {
     $log->info("Answering a question requires a certificate");
     result($stream, "60", "You need a client certificate to answer a question");
@@ -448,7 +448,7 @@ sub answer_question {
 
 sub delete_answer {
   my ($stream, $host, $question_number, $answer_number) = @_;
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   if (not $fingerprint) {
     $log->info("Deleting an answer requires a certificate");
     result($stream, "60", "You need a client certificate to delete an answer");
@@ -510,7 +510,7 @@ sub delete_answer {
 
 sub publish_question {
   my ($stream, $host, $number) = @_;
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   if (not $fingerprint) {
     $log->info("Publishing a question requires a certificate");
     result($stream, "60", "You need a client certificate to publish a question");
@@ -542,7 +542,7 @@ sub publish_question {
 
 sub delete_question {
   my ($stream, $host, $number) = @_;
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   if (not $fingerprint) {
     $log->info("Deleting a question requires a certificate");
     result($stream, "60", "You need a client certificate to delete a question");

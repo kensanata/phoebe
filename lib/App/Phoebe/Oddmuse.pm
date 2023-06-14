@@ -1042,7 +1042,7 @@ sub oddmuse_fingerprint_name {
   my $token = shift;
   # This requires SSL_verify_mode => SSL_VERIFY_PEER and SSL_verify_callback =>
   # \&verify_fingerprint (which must not reject self-signed certificates).
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   if (not $fingerprint) {
     result($stream, "60", "You need a client certificate with a common name to edit this wiki");
     return;

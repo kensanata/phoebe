@@ -141,7 +141,7 @@ sub valid_client_cert {
   my $host = shift;
   my $space = shift;
   my $id = shift;
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   if ($fingerprint and grep { $_ eq $fingerprint} @known_fingerprints) {
     $log->info("Successfully identified client certificate");
     return 1;
@@ -166,7 +166,7 @@ sub iapetus_login {
   my $hosts = host_regex();
   my $spaces = space_regex();
   my $port = port($stream);
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   my $host;
   if (($host) = $url =~ m!^gemini://($hosts)(?::$port)?/login!) {
     if ($fingerprint and grep { $_ eq $fingerprint} @known_fingerprints) {

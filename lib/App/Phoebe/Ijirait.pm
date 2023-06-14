@@ -111,7 +111,7 @@ our $commands = {
 };
 
 our $ijrait_commands_without_cert = {
-  who      => \&who,
+  "type who" => \&who,
 };
 
 # load world on startup
@@ -277,7 +277,7 @@ sub main {
 sub login {
   my ($stream) = @_;
   # you need a client certificate
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   if (!$fingerprint) {
     $log->info("Requested client certificate");
     result($stream, "60", "You need a client certificate to play");

@@ -1,9 +1,13 @@
 4.08
 
+- Fix segfault on systems where IO::Socket::SSL's get_fingerprint
+  crashed by testing with peer_certificates, first.
+
 - Fixed web so a setup behind a reverse proxy works (no longer mention
   host and port in links).
 
-- serve_spaces, serve_spaces_via_http and space_links no longer take a $port parameter.
+- serve_spaces, serve_spaces_via_http and space_links no longer take a
+  $port parameter.
 
 4.07
 

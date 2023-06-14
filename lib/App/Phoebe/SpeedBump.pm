@@ -325,7 +325,7 @@ sub speed_bump_compute_cidr_blocks {
 sub with_speed_bump_fingerprint {
   my $stream = shift;
   my $fun = shift;
-  my $fingerprint = $stream->handle->get_fingerprint();
+  my $fingerprint = $stream->handle->peer_certificates && $stream->handle->get_fingerprint();
   if ($fingerprint and grep { $_ eq $fingerprint} @known_fingerprints) {
     $fun->();
   } elsif ($fingerprint) {

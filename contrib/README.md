@@ -12,7 +12,7 @@ overwhelmed when hundreds of requests start pouring in.
 Example:
 
 ```
-$ curl --user-agent Mastodon https://transjovian.org:1965/
+$ curl --user-agent Mastodon https://transjovian.org/
 curl: (52) Empty reply from server
 ```
 

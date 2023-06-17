@@ -1,9 +1,9 @@
 # Contributing to Phoebe
 
 The simplest way to contribute is to improve the [Phoebe
-wiki](https://transjovian.org:1965/phoebe). Many changes can simply be
+wiki](https://transjovian.org/phoebe). Many changes can simply be
 added to the config file, and so many suggestions simply end up on the
-[Configuration](https://transjovian.org:1965/phoebe/page/Configuration)
+[Configuration](https://transjovian.org/phoebe/page/Configuration)
 page.
 
 If you have suggestions for the documentation of Phoebe itself, or

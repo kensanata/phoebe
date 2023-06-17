@@ -41,7 +41,7 @@ about scaling.
 The solution implemented is this: if the user agent of a HTTP request matches
 the regular expression, quit immediatly. The result:
 
-    $ curl --header "User-Agent: Pleroma" https://transjovian.org:1965/
+    $ curl --header "User-Agent: Pleroma" https://transjovian.org/
     Blocking Fediverse previews
 
 Yeah, we could respond with a error, but fediverse developers aren’t interested

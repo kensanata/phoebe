@@ -19,7 +19,7 @@ To take a look for yourself, check out the test wiki via the web or via the web.
 
 - [What is Gemini?](https://gemini.circumlunar.space/)
 - [Gemini link collection](https://git.sr.ht/~kr1sp1n/awesome-gemini)
-- [Test site, via the web](https://transjovian.org:1965/test)
+- [Test site, via the web](https://transjovian.org/test)
 - [Test site, via Gemini](gemini://transjovian.org/test)
 
 ## Reading the wiki
@@ -30,7 +30,7 @@ This repository comes with a Perl script called
 Other clients can be found here:
 
 - [Gemini software](https://gemini.circumlunar.space/software/)
-- [Gemini clients](https://transjovian.org:1965/gemini/page/Clients)
+- [Gemini clients](https://transjovian.org/gemini/page/Clients)
 
 See [App::Phoebe::Web](https://metacpan.org/pod/App%3A%3APhoebe%3A%3AWeb) to
 enable reading via the web.
@@ -80,7 +80,7 @@ A line starting with ">", followed by a space and some text is a quote.
 
 How do you edit a Phoebe wiki? You need to use a Titan-enabled client.
 
-[Titan](https://transjovian.org:1965/titan) is a companion protocol to Gemini:
+[Titan](https://transjovian.org/titan) is a companion protocol to Gemini:
 it allows clients to upload files to Gemini sites, if servers allow this. On
 Phoebe, you can edit "raw" pages. That is, at the bottom of a page you'll see a
 link to the "raw" page. If you follow it, you'll see the page content as plain

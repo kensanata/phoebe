@@ -101,7 +101,7 @@ my $speed_cidr_data;
 unshift(@extensions, \&speed_bump_admin, \&speed_bump);
 
 sub speed_bump {
-  my ($stream, $url) = @_;
+  my ($stream, $url, $headers) = @_;
   my $now = time;
   # go through the data we keep and delete it if the two time limits ellapsed
   # and the last visit is past the time window we're interested in
@@ -119,8 +119,9 @@ sub speed_bump {
   for my $cidr (keys %$speed_cidr_data) {
     delete($speed_cidr_data->{$cidr}) if $speed_cidr_data->{$cidr} < $now;
   }
+  # determine IP, possibly from a web header behind a reverse proxy
+  my $ip = $headers->{"x-forwarded-for"} || $stream->handle->peerhost;
   # check whether the range is blocked
-  my $ip = $stream->handle->peerhost;
   if (not $ip) {
       $log->info("IP number cannot be determined");
       result($stream, "44", "10");

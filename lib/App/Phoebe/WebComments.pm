@@ -77,7 +77,8 @@ sub process_comment_requests_via_http {
     return 1;
   } elsif (($space, $id) = $url =~ m!^POST (?:/($spaces))?/do/comment/([^/#?]+) HTTP/1\.[01]$!
 	   and ($host) = $headers->{host} =~ m!^($hosts)(?::$port)$!) {
-    append_comment_via_http($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $buffer);
+    append_comment_via_http($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)),
+                            $headers, $buffer);
     return 1;
   }
   return 0;
@@ -111,7 +112,7 @@ sub serve_comment_via_http {
 }
 
 sub append_comment_via_http {
-  my ($stream, $host, $space, $id, $buffer) = @_;
+  my ($stream, $host, $space, $id, $headers, $buffer) = @_;
   $log->info("Save comments for $id via HTTP");
   my %params;
   for (split(/&/, $buffer)) {
@@ -137,7 +138,7 @@ sub append_comment_via_http {
   }
   # We don't need to close the stream because this is called via process_gemini
   # which always closes the stream in the end.
-  with_lock($stream, $host, $space, sub { write_page_for_http($stream, $host, $space, $id, $text) } );
+  with_lock($stream, $host, $space, sub { write_page_for_http($stream, $host, $space, $id, $headers, $text) } );
 }
 
 sub write_page_for_http {
@@ -145,6 +146,7 @@ sub write_page_for_http {
   my $host = shift;
   my $space = shift;
   my $id = shift;
+  my $headers = shift;
   my $text = shift;
   $log->info("Writing page $id");
   my $dir = wiki_dir($host, $space);
@@ -154,7 +156,7 @@ sub write_page_for_http {
     my $old = read_text($file);
     if ($old eq $text) {
       $log->info("$id is unchanged");
-      my $message = to_url($stream, $host, $space, "page/$id", "https");
+      my $message = to_url($stream, $host, $space, "page/$id", "https", $headers);
       $stream->write("HTTP/1.1 302 Found\r\n");
       $stream->write("Location: $message\r\n");
       $stream->write("\r\n");
@@ -197,7 +199,7 @@ sub write_page_for_http {
     return http_error($stream, "Unable to save $id");
   } else {
     $log->info("Wrote $id");
-    my $message = to_url($stream, $host, $space, "page/$id", "https");
+    my $message = to_url($stream, $host, $space, "page/$id", "https", $headers);
     $stream->write("HTTP/1.1 302 Found\r\n");
     $stream->write("Location: $message\r\n");
     $stream->write("\r\n");

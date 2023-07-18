@@ -700,12 +700,15 @@ sub to_url {
   my $space = shift;
   my $id = shift;
   my $scheme = shift || "gemini";
-  my $port = port($stream);
+  my $headers = shift || {};
   if ($space) {
     $space = "" if $space eq $host;
     $space =~ s/.*\///;
     $space = uri_escape_utf8($space);
   }
+  # for the web behind a reverse proxy
+  $host = $headers->{"x-forwarded-host"} || $host;
+  my $port = $headers->{"x-forwarded-port"} || port($stream);
   # don't encode the slash
   return "$scheme://$host:$port/"
       . ($space ? "$space/" : "")

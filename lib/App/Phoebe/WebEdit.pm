@@ -81,7 +81,8 @@ sub process_edit_requests {
   } elsif (($space, $id) = $request =~ m!^POST (?:/($spaces))?/do/edit/([^/#?]+) HTTP/1\.[01]$!
 	   and is_editable($space)
 	   and ($host) = $headers->{host} =~ m!^($host_regex)(?::$port)$!) {
-    save_edit_via_http($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)), $headers, $buffer);
+    save_edit_via_http($stream, $host, space($stream, $host, $space), decode_utf8(uri_unescape($id)),
+                       $headers, $buffer);
   } else {
     return 0;
   }
@@ -152,7 +153,7 @@ sub save_edit_via_http {
   $text =~ s/\r\n/\n/g; # fix DOS EOL convention
   # We don't need to close the stream because this is called via process_gemini
   # which always closes the stream in the end.
-  with_lock($stream, $host, $space, sub { write_page_for_http($stream, $host, $space, $id, $text) } );
+  with_lock($stream, $host, $space, sub { write_page_for_http($stream, $host, $space, $id, $headers, $text) } );
 }
 
 sub write_page_for_http {
@@ -160,6 +161,7 @@ sub write_page_for_http {
   my $host = shift;
   my $space = shift;
   my $id = shift;
+  my $headers = shift;
   my $text = shift;
   $log->info("Writing page $id");
   my $dir = wiki_dir($host, $space);
@@ -169,7 +171,7 @@ sub write_page_for_http {
     my $old = read_text($file);
     if ($old eq $text) {
       $log->info("$id is unchanged");
-      my $message = to_url($stream, $host, $space, "page/$id", "https");
+      my $message = to_url($stream, $host, $space, "page/$id", "https", $headers);
       $stream->write("HTTP/1.1 302 Found\r\n");
       $stream->write("Location: $message\r\n");
       $stream->write("\r\n");
@@ -212,7 +214,7 @@ sub write_page_for_http {
     return http_error($stream, "Unable to save $id");
   } else {
     $log->info("Wrote $id");
-    my $message = to_url($stream, $host, $space, "page/$id", "https");
+    my $message = to_url($stream, $host, $space, "page/$id", "https", $headers);
     $stream->write("HTTP/1.1 302 Found\r\n");
     $stream->write("Location: $message\r\n");
     $stream->write("\r\n");

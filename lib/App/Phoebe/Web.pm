@@ -156,6 +156,7 @@ sub handle_http_header {
     } elsif ($_ eq "") {
       $data->{buffer} =~ s/^.*?\r\n\r\n//s; # possibly HTTP body
       # $log->debug("Handle HTTP request");
+      $data->{headers}->{"x-forwarded-port"} ||= 443 if $data->{headers}->{"x-forwarded-host"}; # default behind a proxy
       $data->{headers}->{host} .= ":" . port($stream) if $data->{headers}->{host} and $data->{headers}->{host} !~ /:\d+$/;
       $log->debug("HTTP headers: " . join(", ", map { "$_ => '$data->{headers}->{$_}'" } keys %{$data->{headers}}));
       my $length = $data->{headers}->{'content-length'} || 0;

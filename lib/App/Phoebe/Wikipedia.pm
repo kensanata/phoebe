@@ -184,6 +184,7 @@ sub wikipedia_text {
   my $stream = shift; # only used to pass to gemini_link for the port
   my $lang = shift;
   my $text = shift;
+  return 'No text available.' unless $text;
   # escape some stuff
   my $ref = 0;
   my @escaped;
@@ -315,9 +316,9 @@ sub wikipedia_serve_full {
     prop => 'wikitext',
     formatversion => '2',
     page => $term, });
-  result($stream, "20", "text/gemini;lang=$lang");
-  my $title = $result->{parse}->{title};
-  my $text = wikipedia_text($stream, $lang, $result->{parse}->{wikitext});
+  my $title = $result->{parse}->{title} or return result($stream, "52"); # GONE
+  my $text = wikipedia_text($stream, $lang, $result->{parse}->{wikitext}) or return result($stream, "51"); # NOT FOUND
+  result($stream, "20", "text/gemini; lang=$lang");
   $stream->write(encode_utf8 "# $title\n");
   $stream->write(encode_utf8 "$text\n\n");
   wikipedia_print_link($stream, $lang, $term, 'text', "Short text");

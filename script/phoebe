@@ -49,7 +49,7 @@ oriented.
 
 =head1 GEMTEXT
 
-Pages are written in gemtext, a lightweight hypertext format. You can use your
+Pages are written in Gemtext, a lightweight hypertext format. You can use your
 favourite text editor to write them.
 
 A text line is a paragraph of text.

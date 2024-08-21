@@ -13,7 +13,7 @@ Optionally, people can also access it using a regular web browser.
 
 Gemini itself is very simple network protocol, like Gopher or Finger, but with
 TLS. Gemtext is a very simple markup language, a bit like Markdown, but line
-oriented. See ["GEMTEXT"](#gemtext).
+oriented. See ["Gemtext"](#gemtext).
 
 To take a look for yourself, check out the test wiki via the web or via the web.
 
